@@ -2,7 +2,7 @@ const { defineConfig } = require("vite");
 const react = require("@vitejs/plugin-react");
 const dataHandler = require("./api/data");
 const loginHandler = require("./api/admin/login");
-const usersHandler = require("./api/admin/users");
+const productsHandler = require("./api/admin/products");
 
 function jsonResponse(res) {
   return {
@@ -38,7 +38,7 @@ function apiDevMiddleware() {
         const handlers = {
           "/api/data": dataHandler,
           "/api/admin/login": loginHandler,
-          "/api/admin/users": usersHandler,
+          "/api/admin/products": productsHandler,
         };
         const handler = handlers[url.pathname];
         if (!handler) return next();
