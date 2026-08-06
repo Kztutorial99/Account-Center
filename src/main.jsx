@@ -226,7 +226,7 @@ function App() {
         {!data.loading && products.length > 0 && (
           <div className="cx-grid">
             {products.map((p, i) => (
-              <ProductCard key={p.id || i} product={p} colorIdx={i} onBuy={(sel) => { setBuyItem(p); setBuySel(sel && sel.length ? sel : (p.accounts || []).slice(0, 1).map((a) => a.index)); }} />
+              <ProductCard key={p.id || i} product={p} colorIdx={i} onBuy={(sel) => { setBuyItem(p); setBuySel(Array.isArray(sel) ? sel : []); }} />
             ))}
           </div>
         )}
@@ -409,10 +409,10 @@ function StoreFooter({ navigate }) {
 function ProductCard({ product, colorIdx, onBuy }) {
   const color = ACCENT_COLORS[colorIdx % ACCENT_COLORS.length];
   const accounts = Array.isArray(product.accounts) ? product.accounts : [];
-  const [selected, setSelected] = useState(() => accounts.slice(0, 1).map((a) => a.index));
+  const [selected, setSelected] = useState([]);
   const toggle = (index) =>
     setSelected((prev) => prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]);
-  const total = selected.length ? sumSelected(product, selected) : Number(product.price) || 0;
+  const total = selected.length ? sumSelected(product, selected) : 0;
   return (
     <article className="cx-product-card">
       <div className="cx-product-body">
@@ -444,9 +444,9 @@ function ProductCard({ product, colorIdx, onBuy }) {
         <div className="cx-product-bottom">
           <span className="cx-product-price">
             {formatPrice(total)}
-            <small className="cx-product-price-note">{selected.length ? `${selected.length} akun dipilih` : "mulai dari"}</small>
+            <small className="cx-product-price-note">{selected.length ? `${selected.length} akun dipilih` : "pilih akun dulu"}</small>
           </span>
-          <button className="cx-product-buy" onClick={() => onBuy(selected)} aria-label={`Beli ${product.title}`}><ArrowRight size={13} /></button>
+          <button className="cx-product-buy" disabled={selected.length === 0} onClick={() => onBuy(selected)} aria-label={`Beli ${product.title}`}><ArrowRight size={13} /></button>
         </div>
       </div>
     </article>
