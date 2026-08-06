@@ -418,7 +418,6 @@ function App() {
       )}
 
       {notice && <div className="cx-toast"><Check size={14} />{notice}</div>}
-      <button className="cx-admin-shortcut" onClick={() => navigate("admin")}><LayoutDashboard size={13} /> Admin</button>
     </div>
   );
 }
