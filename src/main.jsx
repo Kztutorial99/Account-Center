@@ -6,7 +6,7 @@ import {
   FileText, LayoutDashboard, LockKeyhole, LogIn, LogOut, Menu,
   MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw,
   Search, Settings, ShieldCheck, ShoppingBag, Trash2, X,
-  User, Wallet, Mail, Phone, Clock,
+  User, Wallet, Mail, Phone, Clock, Sparkles, Send,
 } from "lucide-react";
 import "./styles.css";
 
@@ -427,6 +427,8 @@ function App() {
           </div>
         </div>
       )}
+
+      <AssistantWidget />
 
       {notice && <div className="cx-toast"><Check size={14} />{notice}</div>}
     </div>
@@ -1719,6 +1721,198 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   ASSISTEN AI (Qwen) — floating widget
+   Role ditentukan server dari cookie sesi:
+   admin → akses penuh, user → hanya data sendiri.
+════════════════════════════════════════════════════ */
+const ASSISTANT_HINTS = {
+  user: [
+    "Cek status akun saya",
+    "Saldo saya berapa sekarang?",
+    "Riwayat top up terakhir saya",
+    "Top up saya belum masuk, tolong bantu",
+  ],
+  admin: [
+    "Ringkasan toko hari ini",
+    "Ada top up pending? tampilkan",
+    "Cari user dengan email ...",
+    "User mana yang saldonya paling besar?",
+  ],
+};
+
+function AssistantWidget() {
+  const [open, setOpen] = useState(false);
+  const [info, setInfo] = useState({ loading: true, role: "", available: false, model: "", error: "" });
+  const [messages, setMessages] = useState([]);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const scroller = useRef(null);
+  const inputRef = useRef(null);
+
+  const loadInfo = () => {
+    setInfo((s) => ({ ...s, loading: true, error: "" }));
+    fetch("/api/assistant", { credentials: "same-origin" })
+      .then(async (r) => {
+        const p = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(p.error || "Assisten tidak tersedia");
+        return p;
+      })
+      .then((p) => setInfo({ loading: false, role: p.role, available: p.available, model: p.model || "", error: "" }))
+      .catch((e) => setInfo({ loading: false, role: "", available: false, model: "", error: e.message }));
+  };
+
+  useEffect(() => { if (open) loadInfo(); }, [open]);
+  useEffect(() => {
+    if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
+  }, [messages, busy]);
+
+  const isAdminMode = info.role === "admin";
+
+  const send = async (raw) => {
+    const content = String(raw == null ? draft : raw).trim();
+    if (!content || busy) return;
+    const next = [...messages, { role: "user", content }];
+    setMessages(next);
+    setDraft("");
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/assistant", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })) }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload.error || "Assisten gagal menjawab");
+      setMessages([...next, { role: "assistant", content: payload.reply, actions: payload.actions || [] }]);
+    } catch (e) {
+      setError(e.message);
+      setMessages(next);
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.focus();
+    }
+  };
+
+  const hints = ASSISTANT_HINTS[isAdminMode ? "admin" : "user"];
+
+  return (
+    <>
+      <button
+        className={`cx-ai-fab${open ? " open" : ""}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-label={open ? "Tutup Assisten" : "Buka Assisten"}
+      >
+        {open ? <X size={16} /> : <Sparkles size={16} />}
+        {!open && <span>Assisten</span>}
+      </button>
+
+      {open && (
+        <div className="cx-ai-panel" role="dialog" aria-label="Assisten CodeXa">
+          <div className="cx-ai-head">
+            <div className="cx-ai-avatar"><Sparkles size={14} /></div>
+            <div className="cx-ai-head-copy">
+              <strong>Assisten CodeXa</strong>
+              <small>
+                {info.loading ? "Menyiapkan..."
+                  : info.error ? "Perlu masuk dulu"
+                  : isAdminMode ? "Mode admin · akses penuh"
+                  : "Mode user · data akun kamu"}
+              </small>
+            </div>
+            {!info.loading && !info.error && (
+              <span className={`cx-ai-badge${isAdminMode ? " admin" : ""}`}>
+                {isAdminMode ? <ShieldCheck size={10} /> : <User size={10} />}
+                {isAdminMode ? "Admin" : "User"}
+              </span>
+            )}
+            <button className="cx-icon-btn" onClick={() => setOpen(false)} aria-label="Tutup"><X size={13} /></button>
+          </div>
+
+          <div className="cx-ai-body" ref={scroller}>
+            {info.loading && <div className="cx-ai-empty"><RefreshCw size={18} /><p>Menghubungkan ke Assisten...</p></div>}
+
+            {!info.loading && info.error && (
+              <div className="cx-ai-empty">
+                <LockKeyhole size={18} />
+                <p>{info.error}</p>
+                <button className="cx-btn cx-btn-ghost" onClick={loadInfo}>Coba lagi</button>
+              </div>
+            )}
+
+            {!info.loading && !info.error && !info.available && (
+              <div className="cx-ai-empty">
+                <LockKeyhole size={18} />
+                <p>Assisten belum aktif. Admin perlu mengatur QWEN_API_KEY di Vercel.</p>
+              </div>
+            )}
+
+            {!info.loading && !info.error && info.available && messages.length === 0 && (
+              <div className="cx-ai-intro">
+                <p>
+                  {isAdminMode
+                    ? "Mode admin aktif. Aku bisa baca & ubah data user, saldo, status akun, top up, dan produk."
+                    : "Hai! Aku bisa cek info & status akun kamu, saldo, riwayat top up, ubah profil, dan meneruskan masalahmu ke admin."}
+                </p>
+                <div className="cx-ai-hints">
+                  {hints.map((h) => (
+                    <button key={h} onClick={() => send(h)}>{h}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((m, i) => (
+              <div key={i} className={`cx-ai-msg ${m.role}`}>
+                <div className="cx-ai-bubble">{m.content}</div>
+                {m.role === "assistant" && m.actions && m.actions.length > 0 && (
+                  <div className="cx-ai-actions">
+                    {m.actions.map((a, j) => <span key={j}><Check size={9} />{a}</span>)}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {busy && (
+              <div className="cx-ai-msg assistant">
+                <div className="cx-ai-bubble cx-ai-typing"><i /><i /><i /></div>
+              </div>
+            )}
+
+            {error && <div className="cx-ai-error">{error}</div>}
+          </div>
+
+          {!info.loading && !info.error && info.available && (
+            <form
+              className="cx-ai-composer"
+              onSubmit={(e) => { e.preventDefault(); send(); }}
+            >
+              <input
+                ref={inputRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={isAdminMode ? "Perintah untuk Assisten admin..." : "Tanya apa saja soal akunmu..."}
+                maxLength={2000}
+                disabled={busy}
+              />
+              <button type="submit" className="cx-ai-send" disabled={busy || !draft.trim()} aria-label="Kirim">
+                {busy ? <RefreshCw size={13} /> : <Send size={13} />}
+              </button>
+            </form>
+          )}
+
+          {!info.loading && !info.error && info.available && !isAdminMode && (
+            <p className="cx-ai-foot"><ShieldCheck size={9} /> Assisten hanya bisa mengakses data akunmu sendiri.</p>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 
