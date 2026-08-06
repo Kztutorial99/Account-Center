@@ -1279,7 +1279,12 @@ function AuthPage({ onAuthenticated }) {
 /* ═══════════════════════════════════════════════════
    ACCOUNT PAGE (profil + saldo + top up)
 ════════════════════════════════════════════════════ */
-const TOPUP_METHODS = ["Transfer Bank", "DANA", "GoPay", "OVO", "QRIS"];
+const TOPUP_METHODS = ["QRIS", "Transfer Bank", "DANA", "GoPay", "OVO"];
+const QRIS_IMAGE   = "/qris-kztutorial.png";
+const QRIS_NAME    = "KZ.TUTORIAL";
+const QRIS_NMID    = "ID1026476486182";
+const WA_NUMBER    = "62895325844493";
+const TG_USERNAME  = "Kztutorial";
 const TOPUP_PRESETS = [25000, 50000, 100000, 250000, 500000];
 
 function AccountPage({ user, onBack, onNotice, onRefresh }) {
@@ -1290,6 +1295,23 @@ function AccountPage({ user, onBack, onNotice, onRefresh }) {
   const [note, setNote]       = useState("");
   const [busy, setBusy]       = useState(false);
   const [formError, setFormError] = useState("");
+  const [step, setStep]       = useState("form");
+  const [agreed, setAgreed]   = useState(false);
+  const [orderId, setOrderId] = useState("");
+
+  const amountNumber = Math.round(Number(amount) || 0);
+
+  const goConfirm = (e) => {
+    e.preventDefault(); setFormError("");
+    if (!Number.isFinite(amountNumber) || amountNumber < 10000) {
+      setFormError("Minimal top up Rp10.000."); return;
+    }
+    setOrderId("CX" + Date.now().toString().slice(-6));
+    setAgreed(false); setStep("confirm");
+  };
+
+  const proofMessage = () =>
+    `Halo ${QRIS_NAME}, saya mau konfirmasi pembayaran top up CodeXa.%0A%0AOrder ID: ${orderId}%0ANama: ${user.name}%0AEmail: ${user.email}%0ANominal: ${formatPrice(amountNumber)}%0AMetode: ${method}%0A%0A(bukti transfer saya lampirkan di chat ini)`;
 
   const load = () => {
     setState((x) => ({ ...x, loading: true, error: "" }));
@@ -1303,7 +1325,7 @@ function AccountPage({ user, onBack, onNotice, onRefresh }) {
     e.preventDefault(); setFormError(""); setBusy(true);
     try {
       await jsonRequest("/api/topup", { method: "POST", body: JSON.stringify({ amount: Number(amount), method, reference, note }) });
-      setAmount(""); setReference(""); setNote("");
+      setAmount(""); setReference(""); setNote(""); setStep("form"); setAgreed(false);
       onNotice("Permintaan top up dikirim, menunggu verifikasi admin");
       load(); onRefresh();
     } catch (err) { setFormError(err.message); }
@@ -1346,8 +1368,9 @@ function AccountPage({ user, onBack, onNotice, onRefresh }) {
         </div>
 
         <div className="cx-panel">
-          <div className="cx-panel-header"><h3>Top Up Saldo</h3><span className="cx-panel-sub">Verifikasi manual oleh admin</span></div>
-          <form className="cx-topup-form" onSubmit={submitTopup}>
+          <div className="cx-panel-header"><h3>Top Up Saldo</h3><span className="cx-panel-sub">QRIS statis · verifikasi manual admin</span></div>
+          {step === "form" ? (
+          <form className="cx-topup-form" onSubmit={goConfirm}>
             <div className="cx-topup-presets">
               {TOPUP_PRESETS.map((v) => (
                 <button type="button" key={v} className={`cx-chip${Number(amount) === v ? " active" : ""}`} onClick={() => setAmount(String(v))}>
@@ -1367,19 +1390,70 @@ function AccountPage({ user, onBack, onNotice, onRefresh }) {
                 </select>
               </InputWrap>
             </Field>
-            <Field label="Nomor referensi / bukti transfer" hint="Nomor transaksi atau link bukti transfer.">
+            {formError && <p className="cx-form-error">{formError}</p>}
+            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full">
+              Cek &amp; konfirmasi nominal <ArrowRight size={13} />
+            </button>
+          </form>
+          ) : step === "confirm" ? (
+          <div className="cx-topup-form">
+            <div className="cx-confirm-box">
+              <span>Pastikan nominal sudah benar sebelum bayar</span>
+              <strong>{formatPrice(amountNumber)}</strong>
+              <small>Metode: {method} · Order ID {orderId}</small>
+            </div>
+            <label className="cx-confirm-check">
+              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+              <span>Saya sudah memeriksa, nominal <strong>{formatPrice(amountNumber)}</strong> sudah benar.</span>
+            </label>
+            <div className="cx-confirm-actions">
+              <button type="button" className="cx-btn cx-btn-ghost" onClick={() => setStep("form")}>Ubah nominal</button>
+              <button type="button" className="cx-btn cx-btn-primary" disabled={!agreed} onClick={() => setStep("pay")}>
+                Lanjut bayar <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+          ) : (
+          <form className="cx-topup-form" onSubmit={submitTopup}>
+            <div className="cx-confirm-box">
+              <span>Bayar tepat sejumlah</span>
+              <strong>{formatPrice(amountNumber)}</strong>
+              <small>Order ID {orderId} · {QRIS_NAME} · NMID {QRIS_NMID}</small>
+            </div>
+            <div className="cx-qris-wrap">
+              <img src={QRIS_IMAGE} alt={`QRIS statis ${QRIS_NAME}`} loading="lazy" />
+            </div>
+            <ol className="cx-qris-steps">
+              <li>Buka aplikasi bank / e-wallet, pilih menu QRIS atau Scan.</li>
+              <li>Scan QR di atas, masukkan nominal <strong>{formatPrice(amountNumber)}</strong>.</li>
+              <li>Selesaikan pembayaran, simpan bukti transfer.</li>
+              <li>Kirim bukti ke admin via WhatsApp atau Telegram, lalu ajukan top up di bawah.</li>
+            </ol>
+            <div className="cx-confirm-actions">
+              <a className="cx-btn cx-btn-ghost" href={`https://wa.me/${WA_NUMBER}?text=${proofMessage()}`} target="_blank" rel="noreferrer">
+                <Phone size={13} /> Bukti via WhatsApp
+              </a>
+              <a className="cx-btn cx-btn-ghost" href={`https://t.me/${TG_USERNAME}`} target="_blank" rel="noreferrer">
+                Bukti via Telegram
+              </a>
+            </div>
+            <Field label="Nomor referensi / bukti transfer" hint="Nomor transaksi QRIS atau link bukti.">
               <InputWrap icon={FileText}>
-                <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="TRX-123456 / link bukti" />
+                <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder={`${orderId} / TRX-123456`} />
               </InputWrap>
             </Field>
             <Field label="Catatan (opsional)">
-              <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Contoh: transfer dari BCA a/n ..." />
+              <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Contoh: bayar QRIS dari DANA a/n ..." />
             </Field>
             {formError && <p className="cx-form-error">{formError}</p>}
-            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy}>
-              {busy ? <><RefreshCw size={13} /> Mengirim...</> : <><Plus size={13} /> Ajukan Top Up</>}
-            </button>
+            <div className="cx-confirm-actions">
+              <button type="button" className="cx-btn cx-btn-ghost" onClick={() => setStep("confirm")}>Kembali</button>
+              <button type="submit" className="cx-btn cx-btn-primary" disabled={busy}>
+                {busy ? <><RefreshCw size={13} /> Mengirim...</> : <><Plus size={13} /> Saya sudah bayar</>}
+              </button>
+            </div>
           </form>
+          )}
         </div>
       </div>
 

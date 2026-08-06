@@ -627,3 +627,27 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-user-row .cx-user-ident { grid-column: 1 / -1; }
   .cx-user-date { display: none; }
 }
+
+/* ─── QRIS top up (konfirmasi nominal → bayar) ─── */
+.cx-confirm-box {
+  display: grid; gap: 4px; padding: 14px 16px; border-radius: 14px;
+  border: 1px solid var(--cx-border, rgba(255,255,255,.1));
+  background: rgba(255,255,255,.03); text-align: center;
+}
+.cx-confirm-box span { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; opacity: .65; }
+.cx-confirm-box strong { font-size: 26px; font-weight: 700; }
+.cx-confirm-box small { font-size: 11px; opacity: .6; }
+.cx-confirm-check {
+  display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; line-height: 1.5;
+  padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--cx-border, rgba(255,255,255,.14));
+  cursor: pointer;
+}
+.cx-confirm-check input { margin-top: 2px; accent-color: currentColor; }
+.cx-confirm-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.cx-confirm-actions > * { flex: 1 1 140px; justify-content: center; text-decoration: none; }
+.cx-qris-wrap {
+  display: flex; justify-content: center; padding: 12px; border-radius: 16px;
+  background: #fff; border: 1px solid var(--cx-border, rgba(255,255,255,.1));
+}
+.cx-qris-wrap img { width: 100%; max-width: 300px; height: auto; display: block; }
+.cx-qris-steps { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 12.5px; line-height: 1.5; opacity: .8; }
