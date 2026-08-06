@@ -434,3 +434,37 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 
 /* no sideways scrolling on any screen */
 html, body { max-width: 100%; overflow-x: hidden; }
+
+/* ── Preview kredensial tersensor (publik) ───────────── */
+.cx-cred-preview {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--b1);
+  border-radius: 10px;
+  background: var(--surface2, rgba(127, 127, 127, .05));
+}
+.cx-cred-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.cx-cred-row span {
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  flex: none;
+}
+.cx-cred-row code {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--ink2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
