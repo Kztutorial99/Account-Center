@@ -863,3 +863,9 @@ html, body { max-width: 100%; overflow-x: hidden; }
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   vertical-align: middle;
 }
+
+.cx-role-tag.is-user {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--ink2) 10%, transparent);
+  border-color: color-mix(in srgb, var(--ink2) 22%, transparent);
+}

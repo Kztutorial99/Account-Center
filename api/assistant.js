@@ -40,13 +40,14 @@ module.exports = async function handler(request, response) {
     const active = cfg.enabled && cfg.hasKey;
 
     // Siapa pemanggilnya + role efektifnya.
+    // Sesi user selalu diprioritaskan: kalau seseorang login sebagai user di
+    // browser yang juga punya cookie admin panel, Assisten tetap mode user.
     let role = "";
-    let user = null;
-    if (adminCookie) {
+    const user = await currentUser(sql, request);
+    if (user) {
+      role = user.role === "admin" ? "admin" : "user";
+    } else if (adminCookie) {
       role = "admin";
-    } else {
-      user = await currentUser(sql, request);
-      if (user) role = user.role === "admin" ? "admin" : "user";
     }
 
     // GET → info kemampuan assisten untuk pemanggil ini (dipakai UI).

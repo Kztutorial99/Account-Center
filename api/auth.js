@@ -46,14 +46,16 @@ module.exports = async function handler(request, response) {
       const rows = await sql`
         INSERT INTO codexa_users (id, name, email, phone, password_hash, balance)
         VALUES (${id}, ${name}, ${email}, ${phone}, ${hashPassword(password)}, 0)
-        RETURNING id, name, email, phone, balance, created_at AS "createdAt"
+        RETURNING id, name, email, phone, balance, role, created_at AS "createdAt"
       `;
       setSession(response, id);
-      return response.status(201).json({ user: { ...rows[0], balance: Number(rows[0].balance) || 0 } });
+      return response.status(201).json({
+        user: { ...rows[0], balance: Number(rows[0].balance) || 0, role: rows[0].role === "admin" ? "admin" : "user" },
+      });
     }
 
     const rows = await sql`
-      SELECT id, name, email, phone, balance, status, password_hash AS "passwordHash", created_at AS "createdAt"
+      SELECT id, name, email, phone, balance, status, role, password_hash AS "passwordHash", created_at AS "createdAt"
       FROM codexa_users WHERE email = ${email} LIMIT 1
     `;
     const row = rows[0];
@@ -68,6 +70,7 @@ module.exports = async function handler(request, response) {
       user: {
         id: row.id, name: row.name, email: row.email, phone: row.phone,
         balance: Number(row.balance) || 0, createdAt: row.createdAt,
+        role: row.role === "admin" ? "admin" : "user",
       },
     });
   } catch (error) {

@@ -475,7 +475,12 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
                   <div className="cx-account-head">
                     <div className="cx-avatar cx-avatar-lg">{initials}</div>
                     <div>
-                      <strong>{user && user.name}</strong>
+                      <strong>
+                        {user && user.name}
+                        <span className={`cx-role-tag${user && user.role === "admin" ? "" : " is-user"}`}>
+                          {user && user.role === "admin" ? "Admin" : "User"}
+                        </span>
+                      </strong>
                       <small>{user && user.email}</small>
                     </div>
                   </div>
@@ -1603,6 +1608,15 @@ function ProfilePage({ user, onBack, onTopup }) {
             <li><Phone size={13} /><span>WhatsApp</span><strong>{user.phone || "-"}</strong></li>
             <li><BadgeCheck size={13} /><span>ID Akun</span><strong className="cx-mono">{String(user.id).slice(0, 8)}</strong></li>
             <li><ShieldCheck size={13} /><span>Status</span><strong>Terverifikasi</strong></li>
+            <li>
+              <ShieldCheck size={13} /><span>Role akun</span>
+              <strong>
+                {user.role === "admin" ? "Admin" : "User"}
+                <span className={`cx-role-tag${user.role === "admin" ? "" : " is-user"}`}>
+                  {user.role === "admin" ? "Akses penuh" : "Akses standar"}
+                </span>
+              </strong>
+            </li>
           </ul>
 
           <div className="cx-balance-card">
