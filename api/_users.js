@@ -38,6 +38,8 @@ async function ensureTables(sql) {
       reviewed_at TIMESTAMPTZ
     )
   `;
+  await sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'`;
+  await sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT ''`;
 }
 
 /* ── password hashing (scrypt) ── */
@@ -90,10 +92,11 @@ async function currentUser(sql, request) {
   const id = sessionUserId(request);
   if (!id) return null;
   const rows = await sql`
-    SELECT id, name, email, phone, balance, created_at AS "createdAt"
+    SELECT id, name, email, phone, balance, status, created_at AS "createdAt"
     FROM codexa_users WHERE id = ${id} LIMIT 1
   `;
   if (!rows.length) return null;
+  if (rows[0].status && rows[0].status !== "active") return null;
   return { ...rows[0], balance: Number(rows[0].balance) || 0 };
 }
 
