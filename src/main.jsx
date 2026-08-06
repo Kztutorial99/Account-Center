@@ -25,6 +25,33 @@ const sumSelected = (product, selected) =>
     .reduce((total, a) => total + accountPriceOf(a, product), 0);
 const ACCENT_COLORS = ["#e36d78", "#7bc48b", "#6c83da", "#a983de", "#67b6a1", "#dba66a"];
 
+/* ─── provider icons (icons8) ─── */
+const PROVIDER_ICONS = {
+  "google": "https://img.icons8.com/color/48/google-logo.png",
+  "facebook": "https://img.icons8.com/color/48/facebook-new.png",
+  "email/password": "https://img.icons8.com/color/48/new-post.png",
+  "apple": "https://img.icons8.com/ios-filled/50/mac-os.png",
+  "microsoft": "https://img.icons8.com/color/48/microsoft.png",
+  "lainnya": "https://img.icons8.com/color/48/key-security.png",
+};
+const providerIconUrl = (t) =>
+  PROVIDER_ICONS[String(t || "").trim().toLowerCase()] || PROVIDER_ICONS["lainnya"];
+
+function ProviderIcon({ type, size = 16, className = "" }) {
+  return (
+    <img
+      src={providerIconUrl(type)}
+      alt={type || "Provider"}
+      title={type || "Provider"}
+      width={size}
+      height={size}
+      loading="lazy"
+      className={`cx-provider-icon ${className}`.trim()}
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
 async function jsonRequest(url, opts = {}) {
   const r = await fetch(url, { credentials: "same-origin", ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) } });
   const p = await r.json().catch(() => ({}));
@@ -240,8 +267,8 @@ function App() {
           <div className="cx-modal cx-buy-modal" onClick={(e) => e.stopPropagation()}>
             <div className="cx-buy-visual" style={{ background: `${ACCENT_COLORS[products.indexOf(buyItem) % ACCENT_COLORS.length]}11` }}>
               <div className="cx-buy-visual-mono">DIGITAL ACCOUNT · {buyItem.loginType}</div>
-              <div className="cx-buy-symbol" style={{ color: `${ACCENT_COLORS[products.indexOf(buyItem) % ACCENT_COLORS.length]}22` }}>
-                {(buyItem.loginType || "A")[0].toUpperCase()}
+              <div className="cx-buy-symbol">
+                <ProviderIcon type={buyItem.loginType} size={64} />
               </div>
               <div className="cx-buy-visual-mono">{buyItem.stock} STOK TERSEDIA</div>
             </div>
@@ -249,7 +276,8 @@ function App() {
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <button className="cx-icon-btn" onClick={() => setBuyItem(null)}><X size={14} /></button>
               </div>
-              <p style={{ color: "var(--faint)", fontSize: 10, fontFamily: "ui-monospace,monospace", letterSpacing: ".1em", textTransform: "uppercase", margin: "4px 0 6px" }}>
+              <p style={{ color: "var(--faint)", fontSize: 10, fontFamily: "ui-monospace,monospace", letterSpacing: ".1em", textTransform: "uppercase", margin: "4px 0 6px", display: "flex", alignItems: "center", gap: 6 }}>
+                <ProviderIcon type={buyItem.loginType} size={14} />
                 {buyItem.loginType}
               </p>
               <h2 style={{ margin: "0 0 8px", font: "600 20px Inter", letterSpacing: "-.03em" }}>{buyItem.title}</h2>
@@ -321,8 +349,8 @@ function App() {
               : <div style={{ flex: 1, overflowY: "auto" }}>
                   {cart.map((item, i) => (
                     <div key={i} className="cx-cart-item">
-                      <div className="cx-cart-thumb" style={{ background: ACCENT_COLORS[i % ACCENT_COLORS.length] }}>
-                        {(item.loginType || "A")[0].toUpperCase()}
+                      <div className="cx-cart-thumb cx-cart-thumb-icon">
+                        <ProviderIcon type={item.loginType} size={20} />
                       </div>
                       <div className="cx-cart-item-copy">
                         <strong>{item.title}</strong>
@@ -417,7 +445,10 @@ function ProductCard({ product, colorIdx, onBuy }) {
     <article className="cx-product-card">
       <div className="cx-product-body">
         <div className="cx-product-head">
-          <p className="cx-product-type" style={{ color }}>{product.loginType}</p>
+          <p className="cx-product-type" style={{ color, display: "flex", alignItems: "center", gap: 6 }}>
+            <ProviderIcon type={product.loginType} size={15} />
+            {product.loginType}
+          </p>
           <span className="cx-product-badge">{product.stock} stok</span>
         </div>
         <h3 className="cx-product-title">{product.title}</h3>
@@ -707,7 +738,7 @@ function AdminPage({ onBack, onNotice }) {
                 : listings.slice(0, 5).map((l) => (
                   <div key={l.id} className="cx-activity-item">
                     <div className="cx-activity-icon" style={{ color: ACCENT_COLORS[listings.indexOf(l) % ACCENT_COLORS.length] }}>
-                      <Package size={12} strokeWidth={1.7} />
+                      <ProviderIcon type={l.loginType} size={14} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="cx-activity-title" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.title}</div>
@@ -747,7 +778,10 @@ function AdminPage({ onBack, onNotice }) {
                         <div key={l.id} className="cx-table-row">
                           <div className="cx-product-name">
                             <strong>{l.title}</strong>
-                            <small>{l.loginType}</small>
+                            <small style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                              <ProviderIcon type={l.loginType} size={13} />
+                              {l.loginType}
+                            </small>
                           </div>
                           <span className="cx-mono">{(() => {
                             const prices = (l.accounts || []).map((a) => Number(a.price) || Number(l.price) || 0);
