@@ -550,3 +550,63 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .cx-buy-symbol .cx-provider-icon { filter: drop-shadow(0 6px 18px rgba(0,0,0,.35)); }
 .cx-cart-thumb-icon { background: var(--s2, rgba(255,255,255,.05)); border: 1px solid var(--b2); }
 .cx-activity-icon .cx-provider-icon { display: block; }
+
+/* ═══ AUTH / ACCOUNT / TOP UP ═══ */
+.cx-auth-box { max-width: 400px; }
+.cx-auth-tabs { display: flex; gap: 4px; background: var(--b1); border-radius: 6px; padding: 3px; margin: 14px 0 16px; }
+.cx-auth-tabs button { flex: 1; border: 0; background: none; padding: 7px 0; font: 600 11.5px Inter, sans-serif; color: var(--muted); border-radius: 4px; cursor: pointer; }
+.cx-auth-tabs button.active { background: var(--bg, #fff); color: var(--ink2); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.cx-auth-switch { margin-top: 16px; font-size: 11px; color: var(--muted); }
+.cx-auth-switch button { border: 0; background: none; color: var(--indigo2, #6366f1); font-weight: 600; cursor: pointer; padding: 0; font-size: 11px; }
+
+.cx-account-menu { position: relative; }
+.cx-account-trigger { display: flex; align-items: center; gap: 8px; border: 1px solid var(--b1); background: none; border-radius: 999px; padding: 3px 9px 3px 3px; cursor: pointer; color: inherit; }
+.cx-account-trigger:hover { border-color: var(--b3, #d4d4d8); }
+.cx-account-trigger-copy { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.25; }
+.cx-account-trigger-copy strong { font: 600 11px Inter, sans-serif; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-account-trigger-copy small { font-size: 9.5px; color: var(--muted); font-family: ui-monospace, monospace; }
+.cx-account-overlay { position: fixed; inset: 0; z-index: 40; }
+.cx-account-dropdown { position: absolute; right: 0; top: calc(100% + 8px); width: 250px; background: #fff; border: 1px solid var(--b1); border-radius: 8px; box-shadow: 0 14px 34px rgba(15,23,42,.14); padding: 8px; z-index: 50; }
+.cx-account-head { display: flex; gap: 10px; align-items: center; padding: 8px; }
+.cx-account-head strong { display: block; font: 600 12px Inter, sans-serif; }
+.cx-account-head small { display: block; font-size: 10px; color: var(--muted); word-break: break-all; }
+.cx-account-balance { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 8px; padding: 9px 10px; border-radius: 6px; background: var(--b1); font-size: 11px; }
+.cx-account-balance span { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.cx-account-balance strong { font: 600 12.5px ui-monospace, monospace; }
+.cx-account-item { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; background: none; padding: 8px 10px; border-radius: 6px; font: 500 11.5px Inter, sans-serif; color: var(--ink2); cursor: pointer; text-align: left; }
+.cx-account-item:hover { background: var(--b1); }
+.cx-account-item-danger { color: var(--red, #c97980); }
+.cx-avatar-lg { width: 36px; height: 36px; font-size: 12px; }
+.cx-avatar-xl { width: 52px; height: 52px; font-size: 16px; border-radius: 10px; }
+
+.cx-account-page { padding: 28px 0 64px; }
+.cx-account-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 16px; }
+@media (max-width: 860px) { .cx-account-grid { grid-template-columns: 1fr; } }
+.cx-profile-card { padding: 18px; }
+.cx-profile-head { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+.cx-profile-head h2 { margin: 0; font: 600 17px Inter, sans-serif; letter-spacing: -.02em; }
+.cx-profile-head p { margin: 3px 0 0; font-size: 11px; color: var(--muted); }
+.cx-profile-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.cx-profile-list li { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px solid var(--b1); font-size: 11.5px; }
+.cx-profile-list li span { color: var(--muted); min-width: 78px; }
+.cx-profile-list li strong { margin-left: auto; font-weight: 600; text-align: right; word-break: break-all; }
+.cx-mono { font-family: ui-monospace, monospace; }
+.cx-balance-card { margin-top: 16px; padding: 14px; border-radius: 8px; background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(99,102,241,.03)); border: 1px solid rgba(99,102,241,.22); }
+.cx-balance-card span { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.cx-balance-card strong { display: block; margin-top: 6px; font: 600 24px ui-monospace, monospace; letter-spacing: -.02em; }
+.cx-balance-card small { display: block; margin-top: 4px; font-size: 10.5px; color: var(--muted); }
+
+.cx-topup-form { padding: 14px; }
+.cx-topup-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.cx-chip { border: 1px solid var(--b1); background: none; border-radius: 999px; padding: 5px 11px; font: 500 10.5px ui-monospace, monospace; cursor: pointer; color: var(--ink2); }
+.cx-chip.active { border-color: var(--indigo2, #6366f1); color: var(--indigo2, #6366f1); background: rgba(99,102,241,.08); }
+.cx-topup-form textarea { width: 100%; border: 1px solid var(--b1); border-radius: 5px; padding: 8px 10px; font: 400 11.5px Inter, sans-serif; resize: vertical; background: none; color: inherit; }
+.cx-topup-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--b1); flex-wrap: wrap; }
+.cx-topup-row strong { display: block; font: 600 12.5px ui-monospace, monospace; }
+.cx-topup-row small { display: block; font-size: 10.5px; color: var(--muted); }
+.cx-topup-date { margin-left: auto; font-size: 10.5px; color: var(--faint); }
+.cx-topup-empty { padding: 20px 14px; color: var(--faint); font-size: 11px; }
+.cx-topup-badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 3px 9px; font: 600 10px Inter, sans-serif; }
+.cx-topup-badge.ok { background: rgba(123,196,139,.14); color: #4f9a63; }
+.cx-topup-badge.bad { background: rgba(201,121,128,.14); color: #c97980; }
+.cx-topup-badge.wait { background: rgba(219,166,106,.16); color: #b9822f; }
