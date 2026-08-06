@@ -53,12 +53,15 @@ module.exports = async function handler(request, response) {
     }
 
     const rows = await sql`
-      SELECT id, name, email, phone, balance, password_hash AS "passwordHash", created_at AS "createdAt"
+      SELECT id, name, email, phone, balance, status, password_hash AS "passwordHash", created_at AS "createdAt"
       FROM codexa_users WHERE email = ${email} LIMIT 1
     `;
     const row = rows[0];
     if (!row || !verifyPassword(password, row.passwordHash)) {
       return response.status(401).json({ error: "Email atau password salah" });
+    }
+    if (row.status && row.status !== "active") {
+      return response.status(403).json({ error: "Akun kamu dinonaktifkan. Hubungi admin." });
     }
     setSession(response, row.id);
     return response.status(200).json({
