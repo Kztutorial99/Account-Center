@@ -152,7 +152,8 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 .cx-product-title { font: 600 13px Inter; color: var(--ink); margin: 0 0 5px; letter-spacing: -.02em; }
 .cx-product-desc { color: var(--muted); font-size: 11px; line-height: 1.55; margin: 0 0 14px; }
 .cx-product-bottom { display: flex; align-items: center; justify-content: space-between; }
-.cx-product-price { font: 600 15px ui-monospace,monospace; color: var(--ink); }
+.cx-product-price { font: 600 15px ui-monospace,monospace; color: var(--ink); display: grid; gap: 2px; }
+.cx-product-price-note { font: 500 9px Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
 .cx-product-buy { width: 28px; height: 28px; border-radius: 4px; display: grid; place-items: center; background: var(--indigo); color: #fff; border: 0; cursor: pointer; transition: background .15s; }
 .cx-product-buy:hover { background: #4f46e5; }
 
@@ -497,7 +498,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .cx-account-editor { display: grid; gap: 8px; }
 .cx-account-row {
   display: grid;
-  grid-template-columns: 22px 1fr 1fr 30px;
+  grid-template-columns: 22px 1.4fr 1fr 96px 30px;
   align-items: center;
   gap: 8px;
 }
@@ -509,7 +510,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 @media (max-width: 560px) {
   .cx-account-row {
     grid-template-columns: 1fr 30px;
-    grid-template-areas: "no del" "email email" "pass pass";
+    grid-template-areas: "no del" "email email" "pass pass" "price price";
     row-gap: 6px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--b1);
@@ -517,5 +518,28 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-account-row > .cx-account-no { grid-area: no; }
   .cx-account-row > .cx-input-wrap:nth-of-type(1) { grid-area: email; }
   .cx-account-row > .cx-input-wrap:nth-of-type(2) { grid-area: pass; }
+  .cx-account-row > .cx-input-wrap:nth-of-type(3) { grid-area: price; }
   .cx-account-row > .cx-icon-btn { grid-area: del; justify-self: end; }
+}
+
+/* ── PILIH AKUN (checkbox per akun) ─────────── */
+.cx-cred-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 6px 6px;
+  transition: background .15s;
+}
+.cx-cred-pick:hover { background: rgba(129, 140, 248, .06); }
+.cx-cred-pick.is-picked { background: rgba(129, 140, 248, .1); }
+.cx-cred-check { width: 14px; height: 14px; flex: none; accent-color: var(--indigo); cursor: pointer; }
+.cx-cred-price {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink2);
+  flex: none;
+  white-space: nowrap;
 }

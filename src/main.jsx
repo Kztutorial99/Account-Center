@@ -13,7 +13,16 @@ import "./styles.css";
 const formatPrice = (v) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(v) || 0);
 const formatDate  = (v) => v ? new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(v)) : "-";
 const LOGIN_TYPES  = ["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"];
-const emptyListing = { title: "", description: "", loginType: "Google", price: "", status: "available", accounts: [{ email: "", password: "" }], deliveryDetails: "" };
+const emptyListing = { title: "", description: "", loginType: "Google", price: "", status: "available", accounts: [{ email: "", password: "", price: "" }], deliveryDetails: "" };
+const accountPriceOf = (account, product) => {
+  const n = Number(account && account.price);
+  if (Number.isFinite(n) && n > 0) return n;
+  return Number(product && product.price) || 0;
+};
+const sumSelected = (product, selected) =>
+  (product.accounts || [])
+    .filter((a) => selected.includes(a.index))
+    .reduce((total, a) => total + accountPriceOf(a, product), 0);
 const ACCENT_COLORS = ["#e36d78", "#7bc48b", "#6c83da", "#a983de", "#67b6a1", "#dba66a"];
 
 async function jsonRequest(url, opts = {}) {
@@ -55,7 +64,7 @@ function App() {
   const [cart, setCart]       = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [buyItem, setBuyItem]   = useState(null);
-  const [qty, setQty]           = useState(1);
+  const [buySel, setBuySel]     = useState([]);
   const [data, setData]         = useState({ products: [], loading: true, error: "" });
 
   const loadCatalog = () => {
@@ -88,7 +97,13 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const showNotice = (msg) => { setNotice(msg); window.setTimeout(() => setNotice(""), 2800); };
-  const addToCart  = (product) => { setCart((c) => [...c, product]); showNotice(`${product.title} ditambahkan`); setBuyItem(null); };
+  const addToCart  = (product, selected) => {
+    const picks = (product.accounts || []).filter((a) => selected.includes(a.index));
+    const total = sumSelected(product, selected);
+    setCart((c) => [...c, { ...product, selectedAccounts: picks, qty: picks.length || 1, price: total || Number(product.price) || 0 }]);
+    showNotice(`${product.title} (${picks.length || 1} akun) ditambahkan`);
+    setBuyItem(null);
+  };
   const removeFromCart = (i) => setCart((c) => c.filter((_, idx) => idx !== i));
 
   /* ── admin page ── */
@@ -211,7 +226,7 @@ function App() {
         {!data.loading && products.length > 0 && (
           <div className="cx-grid">
             {products.map((p, i) => (
-              <ProductCard key={p.id || i} product={p} colorIdx={i} onBuy={() => { setBuyItem(p); setQty(1); }} />
+              <ProductCard key={p.id || i} product={p} colorIdx={i} onBuy={(sel) => { setBuyItem(p); setBuySel(sel && sel.length ? sel : (p.accounts || []).slice(0, 1).map((a) => a.index)); }} />
             ))}
           </div>
         )}
@@ -249,30 +264,39 @@ function App() {
               </ul>
               {Array.isArray(buyItem.accounts) && buyItem.accounts.length > 0 && (
                 <div className="cx-cred-preview cx-cred-preview-lg">
-                  <div className="cx-cred-head">Daftar akun ({buyItem.accounts.length}) — disensor sampai pembayaran</div>
-                  {buyItem.accounts.map((account) => (
-                    <div className="cx-cred-item" key={account.index}>
-                      <span className="cx-cred-no">#{account.index}</span>
-                      <div className="cx-cred-pair">
-                        <div className="cx-cred-row"><span>Email</span><code>{account.maskedEmail || "—"}</code></div>
-                        <div className="cx-cred-row"><span>Password</span><code>{account.maskedPassword || "—"}</code></div>
-                      </div>
-                    </div>
-                  ))}
+                  <div className="cx-cred-head">Pilih akun yang mau dibeli ({buySel.length}/{buyItem.accounts.length} dipilih)</div>
+                  {buyItem.accounts.map((account) => {
+                    const checked = buySel.includes(account.index);
+                    return (
+                      <label className={`cx-cred-item cx-cred-pick${checked ? " is-picked" : ""}`} key={account.index}>
+                        <input
+                          type="checkbox"
+                          className="cx-cred-check"
+                          checked={checked}
+                          onChange={() => setBuySel((prev) => prev.includes(account.index) ? prev.filter((i) => i !== account.index) : [...prev, account.index])}
+                        />
+                        <span className="cx-cred-no">#{account.index}</span>
+                        <div className="cx-cred-pair">
+                          <div className="cx-cred-row"><span>Email</span><code>{account.maskedEmail || "—"}</code></div>
+                          <div className="cx-cred-row"><span>Password</span><code>{account.maskedPassword || "—"}</code></div>
+                        </div>
+                        <span className="cx-cred-price">{formatPrice(accountPriceOf(account, buyItem))}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               )}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                <label style={{ fontSize: 11, color: "var(--ink2)", fontWeight: 600 }}>Jumlah:</label>
-                <div className="cx-input-wrap" style={{ width: 80 }}>
-                  <input type="number" min="1" max={buyItem.stock} value={qty} onChange={(e) => setQty(Math.max(1, Math.min(buyItem.stock, Number(e.target.value))))} />
-                </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+                <label style={{ fontSize: 11, color: "var(--ink2)", fontWeight: 600 }}>Jumlah akun dipilih: {buySel.length}</label>
+                <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => setBuySel((buyItem.accounts || []).map((a) => a.index))}>Pilih semua</button>
+                <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => setBuySel([])}>Kosongkan</button>
               </div>
               <div style={{ borderTop: "1px solid var(--b1)", paddingTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div className="cx-buy-price">
                   <small>Total harga</small>
-                  <strong>{formatPrice((Number(buyItem.price) || 0) * qty)}</strong>
+                  <strong>{formatPrice(sumSelected(buyItem, buySel))}</strong>
                 </div>
-                <button className="cx-btn cx-btn-primary" onClick={() => addToCart(buyItem)}>
+                <button className="cx-btn cx-btn-primary" disabled={buySel.length === 0} onClick={() => addToCart(buyItem, buySel)}>
                   <ShoppingBag size={13} /> Tambah ke keranjang
                 </button>
               </div>
@@ -302,7 +326,7 @@ function App() {
                       </div>
                       <div className="cx-cart-item-copy">
                         <strong>{item.title}</strong>
-                        <small>{formatPrice(item.price)}</small>
+                        <small>{item.qty ? `${item.qty} akun · ` : ""}{formatPrice(item.price)}</small>
                       </div>
                       <button className="cx-icon-btn" onClick={() => removeFromCart(i)}><X size={12} /></button>
                     </div>
@@ -311,7 +335,7 @@ function App() {
             }
             {cart.length > 0 && (
               <div className="cx-cart-summary">
-                <div><span>Subtotal ({cart.length} item)</span><strong>{formatPrice(cart.reduce((a, c) => a + (Number(c.price) || 0), 0))}</strong></div>
+                <div><span>Subtotal ({cart.reduce((a, c) => a + (Number(c.qty) || 1), 0)} akun)</span><strong>{formatPrice(cart.reduce((a, c) => a + (Number(c.price) || 0), 0))}</strong></div>
                 <p className="cx-checkout-note"><ShieldCheck size={11} /> Detail akun dikirim setelah pembayaran terverifikasi</p>
                 <button className="cx-btn cx-btn-primary cx-btn-full" onClick={() => showNotice("Fitur checkout segera hadir!")}>
                   Lanjut ke pembayaran <ArrowRight size={13} />
@@ -384,6 +408,11 @@ function StoreFooter({ navigate }) {
 ════════════════════════════════════════════════════ */
 function ProductCard({ product, colorIdx, onBuy }) {
   const color = ACCENT_COLORS[colorIdx % ACCENT_COLORS.length];
+  const accounts = Array.isArray(product.accounts) ? product.accounts : [];
+  const [selected, setSelected] = useState(() => accounts.slice(0, 1).map((a) => a.index));
+  const toggle = (index) =>
+    setSelected((prev) => prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]);
+  const total = selected.length ? sumSelected(product, selected) : Number(product.price) || 0;
   return (
     <article className="cx-product-card">
       <div className="cx-product-body">
@@ -393,23 +422,31 @@ function ProductCard({ product, colorIdx, onBuy }) {
         </div>
         <h3 className="cx-product-title">{product.title}</h3>
         <p className="cx-product-desc">{product.description || "Akun digital siap digunakan. Detail dikirim setelah pembayaran."}</p>
-        {Array.isArray(product.accounts) && product.accounts.length > 0 && (
+        {accounts.length > 0 && (
           <div className="cx-cred-preview">
-            <div className="cx-cred-head">{product.accounts.length} data akun tersedia</div>
-            {product.accounts.map((account) => (
-              <div className="cx-cred-item" key={account.index}>
-                <span className="cx-cred-no">#{account.index}</span>
-                <div className="cx-cred-pair">
-                  <div className="cx-cred-row"><span>Email</span><code>{account.maskedEmail || "—"}</code></div>
-                  <div className="cx-cred-row"><span>Password</span><code>{account.maskedPassword || "—"}</code></div>
-                </div>
-              </div>
-            ))}
+            <div className="cx-cred-head">Ceklis akun yang mau dibeli ({selected.length}/{accounts.length})</div>
+            {accounts.map((account) => {
+              const checked = selected.includes(account.index);
+              return (
+                <label className={`cx-cred-item cx-cred-pick${checked ? " is-picked" : ""}`} key={account.index}>
+                  <input type="checkbox" className="cx-cred-check" checked={checked} onChange={() => toggle(account.index)} />
+                  <span className="cx-cred-no">#{account.index}</span>
+                  <div className="cx-cred-pair">
+                    <div className="cx-cred-row"><span>Email</span><code>{account.maskedEmail || "—"}</code></div>
+                    <div className="cx-cred-row"><span>Password</span><code>{account.maskedPassword || "—"}</code></div>
+                  </div>
+                  <span className="cx-cred-price">{formatPrice(accountPriceOf(account, product))}</span>
+                </label>
+              );
+            })}
           </div>
         )}
         <div className="cx-product-bottom">
-          <span className="cx-product-price">{formatPrice(product.price)}</span>
-          <button className="cx-product-buy" onClick={onBuy} aria-label={`Beli ${product.title}`}><ArrowRight size={13} /></button>
+          <span className="cx-product-price">
+            {formatPrice(total)}
+            <small className="cx-product-price-note">{selected.length ? `${selected.length} akun dipilih` : "mulai dari"}</small>
+          </span>
+          <button className="cx-product-buy" onClick={() => onBuy(selected)} aria-label={`Beli ${product.title}`}><ArrowRight size={13} /></button>
         </div>
       </div>
     </article>
@@ -463,30 +500,32 @@ function AdminPage({ onBack, onNotice }) {
           ...listing,
           price: String(listing.price ?? ""),
           accounts: Array.isArray(listing.accounts) && listing.accounts.length
-            ? listing.accounts.map((a) => ({ email: a.email || a.username || "", password: a.password || "" }))
-            : [{ email: "", password: "" }],
+            ? listing.accounts.map((a) => ({ email: a.email || a.username || "", password: a.password || "", price: String(a.price ?? listing.price ?? "") }))
+            : [{ email: "", password: "", price: String(listing.price ?? "") }],
         }
-      : { ...emptyListing, accounts: [{ email: "", password: "" }] });
+      : { ...emptyListing, accounts: [{ email: "", password: "", price: "" }] });
   };
 
   const updateForm = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
   const updateAccount = (index, key, val) =>
     setForm((f) => ({ ...f, accounts: (f.accounts || []).map((a, i) => (i === index ? { ...a, [key]: val } : a)) }));
-  const addAccount = () => setForm((f) => ({ ...f, accounts: [...(f.accounts || []), { email: "", password: "" }] }));
+  const addAccount = () => setForm((f) => ({ ...f, accounts: [...(f.accounts || []), { email: "", password: "", price: String(f.price || "") }] }));
   const removeAccount = (index) =>
     setForm((f) => {
       const next = (f.accounts || []).filter((_, i) => i !== index);
-      return { ...f, accounts: next.length ? next : [{ email: "", password: "" }] };
+      return { ...f, accounts: next.length ? next : [{ email: "", password: "", price: String(f.price || "") }] };
     });
 
   const save = async () => {
     setSaving(true); setApiError("");
     try {
+      const basePrice = Number(form.price) || 0;
       const accounts = (form.accounts || [])
-        .map((a) => ({ email: (a.email || "").trim(), password: (a.password || "").trim() }))
+        .map((a) => ({ email: (a.email || "").trim(), password: (a.password || "").trim(), price: Number(a.price) > 0 ? Number(a.price) : basePrice }))
         .filter((a) => a.email || a.password);
-      const body = { ...form, accounts, price: Number(form.price) || 0, stock: accounts.length };
+      const price = accounts.length ? Math.min(...accounts.map((a) => a.price)) : basePrice;
+      const body = { ...form, accounts, price, stock: accounts.length };
       if (form.id) await jsonRequest("/api/admin/products", { method: "PATCH", body: JSON.stringify(body) });
       else await jsonRequest("/api/admin/products", { method: "POST", body: JSON.stringify(body) });
       setForm(null); loadListings(); onNotice(form.id ? "Produk diperbarui" : "Produk ditambahkan");
@@ -710,7 +749,12 @@ function AdminPage({ onBack, onNotice }) {
                             <strong>{l.title}</strong>
                             <small>{l.loginType}</small>
                           </div>
-                          <span className="cx-mono">{formatPrice(l.price)}</span>
+                          <span className="cx-mono">{(() => {
+                            const prices = (l.accounts || []).map((a) => Number(a.price) || Number(l.price) || 0);
+                            const min = prices.length ? Math.min(...prices) : Number(l.price) || 0;
+                            const max = prices.length ? Math.max(...prices) : min;
+                            return min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
+                          })()}</span>
                           <span className="cx-mono" style={{ color: Number(l.stock) === 0 ? "var(--red)" : Number(l.stock) <= 3 ? "var(--amber)" : "var(--ink2)" }}>{l.stock}</span>
                           <span className={`cx-status ${l.status === "available" ? "cx-status-ok" : Number(l.stock) <= 3 ? "cx-status-low" : "cx-status-out"}`}>
                             {l.status === "available" ? "Aktif" : "Habis"}
@@ -764,7 +808,7 @@ function AdminPage({ onBack, onNotice }) {
                     </select>
                   </InputWrap>
                 </Field>
-                <Field label="Harga (IDR)">
+                <Field label="Harga default per akun (IDR)" hint="Dipakai untuk akun yang harganya dikosongkan">
                   <InputWrap><input type="number" value={form.price} onChange={(e) => updateForm("price", e.target.value)} placeholder="35000" /></InputWrap>
                 </Field>
                 <Field label="Stok (otomatis dari jumlah akun)">
@@ -779,7 +823,7 @@ function AdminPage({ onBack, onNotice }) {
                   </InputWrap>
                 </Field>
               </div>
-              <div className="cx-form-divider">DATA AKUN <small>1 baris = 1 stok · hanya terlihat oleh admin</small></div>
+              <div className="cx-form-divider">DATA AKUN <small>1 baris = 1 stok · harga bisa diatur per akun</small></div>
               <div className="cx-account-editor">
                 {(form.accounts || []).map((account, index) => (
                   <div className="cx-account-row" key={index}>
@@ -801,6 +845,14 @@ function AdminPage({ onBack, onNotice }) {
                       <button type="button" onClick={() => setRevealed((v) => !v)} style={{ color: "var(--muted)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
                         {revealed ? <EyeOff size={12} /> : <Eye size={12} />}
                       </button>
+                    </InputWrap>
+                    <InputWrap>
+                      <input
+                        type="number"
+                        value={account.price ?? ""}
+                        onChange={(e) => updateAccount(index, "price", e.target.value)}
+                        placeholder={String(form.price || "Harga")}
+                      />
                     </InputWrap>
                     <button
                       type="button"

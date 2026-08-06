@@ -21,12 +21,18 @@ function decryptCredentials(value) {
   decipher.setAuthTag(Buffer.from(tagText, "base64url"));
   return JSON.parse(Buffer.concat([decipher.update(Buffer.from(encryptedText, "base64url")), decipher.final()]).toString("utf8"));
 }
-function normalizeAccounts(body) {
+function accountPrice(value, fallback) {
+  const n = Number(value);
+  if (Number.isFinite(n) && n >= 0) return Math.round(n);
+  return Math.max(0, Math.round(Number(fallback) || 0));
+}
+function normalizeAccounts(body, basePrice) {
   const raw = Array.isArray(body.accounts) ? body.accounts : [];
   const list = raw
     .map((item) => ({
       email: text(item && (item.email || item.username), 320),
       password: text(item && item.password, 500),
+      price: accountPrice(item && item.price, basePrice),
     }))
     .filter((item) => item.email || item.password);
   if (list.length) return list;
@@ -34,15 +40,18 @@ function normalizeAccounts(body) {
   const legacy = {
     email: text(body.email, 320) || text(body.username, 320),
     password: text(body.password, 500),
+    price: accountPrice(body.price, basePrice),
   };
   return legacy.email || legacy.password ? [legacy] : [];
 }
 
 function validate(body, requireId = false) {
   const id = text(body.id, 160); const title = text(body.title, 160); const description = text(body.description, 500);
-  const loginType = text(body.loginType, 40); const price = Number(body.price); const status = text(body.status || "available", 20);
-  const accounts = normalizeAccounts(body);
+  const loginType = text(body.loginType, 40); const status = text(body.status || "available", 20);
+  const accounts = normalizeAccounts(body, body.price);
   const stock = accounts.length;
+  // Harga listing = harga akun termurah (harga per akun diatur admin di tiap baris)
+  const price = accounts.length ? Math.min(...accounts.map((a) => a.price)) : Number(body.price);
   if (requireId && !id) return { error: "id listing wajib diisi" };
   if (!title) return { error: "Nama listing wajib diisi" };
   if (!LOGIN_TYPES.has(loginType)) return { error: "Tipe login tidak valid" };
@@ -50,20 +59,25 @@ function validate(body, requireId = false) {
   if (!STATUSES.has(status)) return { error: "Status listing tidak valid" };
   if (!accounts.length) return { error: "Minimal 1 data akun (email & password) wajib diisi" };
   if (accounts.some((a) => !a.email || !a.password)) return { error: "Setiap data akun harus punya email dan password" };
+  if (accounts.some((a) => !Number.isInteger(a.price) || a.price < 0)) return { error: "Harga tiap akun harus angka bulat positif" };
   const seen = new Set();
   for (const a of accounts) { const k = a.email.toLowerCase(); if (seen.has(k)) return { error: `Email duplikat: ${a.email}` }; seen.add(k); }
   return { id, title, description, loginType, price, stock, status, credentials: { accounts, deliveryDetails: text(body.deliveryDetails, 3000) } };
 }
 
 async function ensureTable(sql) { await sql`CREATE TABLE IF NOT EXISTS codexa_account_listings (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', login_type TEXT NOT NULL, price BIGINT NOT NULL DEFAULT 0, stock INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'sold')), credential_blob TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`; }
-function withAccounts(credentials) {
+function withAccounts(credentials, basePrice) {
   const c = credentials || {};
-  if (Array.isArray(c.accounts) && c.accounts.length) return c;
-  const legacy = { email: c.email || c.username || "", password: c.password || "" };
+  const fallback = Math.max(0, Math.round(Number(basePrice) || 0));
+  if (Array.isArray(c.accounts) && c.accounts.length) {
+    return { ...c, accounts: c.accounts.map((a) => ({ email: a.email || a.username || "", password: a.password || "", price: accountPrice(a.price, fallback) })) };
+  }
+  const legacy = { email: c.email || c.username || "", password: c.password || "", price: fallback };
   return { accounts: legacy.email || legacy.password ? [legacy] : [], deliveryDetails: c.deliveryDetails || "" };
 }
+
 function view(row) {
-  const credentials = withAccounts(row.credentials);
+  const credentials = withAccounts(row.credentials, row.price);
   return { id: row.id, title: row.title, description: row.description, loginType: row.loginType, price: Number(row.price), stock: credentials.accounts.length, status: row.status, accounts: credentials.accounts, deliveryDetails: credentials.deliveryDetails || "", createdAt: row.createdAt, updatedAt: row.updatedAt };
 }
 module.exports = async function handler(request, response) {

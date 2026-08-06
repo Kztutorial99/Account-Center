@@ -69,17 +69,22 @@ module.exports = async function handler(request, response) {
         : (credentials.email || credentials.username || credentials.password
             ? [{ email: credentials.email || credentials.username || "", password: credentials.password || "" }]
             : []);
-      const maskedAccounts = accounts.map((account, index) => ({
-        index: index + 1,
-        maskedEmail: maskEmail(account.email || account.username || ""),
-        maskedPassword: maskPassword(account.password),
-      }));
+      const basePrice = Math.max(0, Math.round(Number(row.price) || 0));
+      const maskedAccounts = accounts.map((account, index) => {
+        const n = Number(account.price);
+        return {
+          index: index + 1,
+          price: Number.isFinite(n) && n >= 0 ? Math.round(n) : basePrice,
+          maskedEmail: maskEmail(account.email || account.username || ""),
+          maskedPassword: maskPassword(account.password),
+        };
+      });
       return {
         id: row.id,
         title: row.title,
         description: row.description,
         loginType: row.loginType,
-        price: Number(row.price),
+        price: maskedAccounts.length ? Math.min(...maskedAccounts.map((a) => a.price)) : Number(row.price),
         stock: maskedAccounts.length || row.stock,
         status: row.status,
         accounts: maskedAccounts,
