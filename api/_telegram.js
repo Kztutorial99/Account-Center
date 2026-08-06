@@ -112,8 +112,28 @@ function reviewKeyboard(topupId) {
  * Kirim notifikasi top up baru ke chat admin.
  * Tidak pernah melempar error — kegagalan Telegram tidak boleh menggagalkan top up.
  */
-async function notifyNewTopup({ topup, user }) {
+async function notifyNewTopup({ topup, user, proof }) {
   if (!telegramEnabled()) return null;
+
+  const caption = topupMessage({ topup, user, status: "pending" });
+  const file = decodeProof(proof);
+
+  if (file) {
+    const form = new FormData();
+    form.append("chat_id", String(adminChatId()));
+    form.append("caption", clampCaption(caption));
+    form.append("parse_mode", "HTML");
+    form.append("reply_markup", JSON.stringify(reviewKeyboard(topup.id)));
+    form.append(
+      "photo",
+      new Blob([file.buffer], { type: file.mime }),
+      `bukti-${topup.reference || topup.id}.${file.ext}`,
+    );
+    const sent = await callTelegramForm("sendPhoto", form);
+    if (sent && sent.ok) return sent;
+    // Kalau kirim foto gagal, tetap kabari admin lewat teks biasa.
+  }
+
   return callTelegram("sendMessage", {
     chat_id: adminChatId(),
     text: topupMessage({ topup, user, status: "pending" }),
@@ -123,8 +143,42 @@ async function notifyNewTopup({ topup, user }) {
   });
 }
 
+/** Kirim foto bukti transfer + caption + tombol verifikasi. */
+async function callTelegramForm(method, form) {
+  if (!botToken()) return null;
+  try {
+    const res = await fetch(`${API_BASE}/bot${botToken()}/${method}`, { method: "POST", body: form });
+    const data = await res.json().catch(() => null);
+    if (!data || data.ok !== true) {
+      console.error("Telegram", method, "gagal:", (data && data.description) || res.status);
+    }
+    return data;
+  } catch (error) {
+    console.error("Telegram", method, "error:", error && error.message);
+    return null;
+  }
+}
+
+/** Ubah data URL base64 jadi { buffer, mime, ext }. Null kalau tidak valid. */
+function decodeProof(dataUrl) {
+  if (typeof dataUrl !== "string") return null;
+  const match = /^data:(image\/(png|jpe?g|webp));base64,([A-Za-z0-9+/=\s]+)$/i.exec(dataUrl.trim());
+  if (!match) return null;
+  const buffer = Buffer.from(match[3].replace(/\s/g, ""), "base64");
+  if (!buffer.length || buffer.length > 6 * 1024 * 1024) return null;
+  const mime = match[1].toLowerCase();
+  const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
+  return { buffer, mime, ext };
+}
+
+/** Caption Telegram dibatasi 1024 karakter. */
+const clampCaption = (value) => (value.length > 1024 ? `${value.slice(0, 1000)}\n…` : value);
+
 module.exports = {
   callTelegram,
+  callTelegramForm,
+  decodeProof,
+  clampCaption,
   telegramEnabled,
   adminChatId,
   topupMessage,
