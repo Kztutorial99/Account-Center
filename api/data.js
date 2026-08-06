@@ -30,36 +30,24 @@ function decryptCredentials(value) {
   } catch (_) { return null; }
 }
 
-// Sensor bagian tengah email: 2 huruf awal + •••• + 1 huruf akhir @domain
+// Sensor email: tampilkan awal local-part + **** , domain tetap terlihat
+// contoh: aliyahputri@gmail.com -> aliya****@gmail.com
 function maskEmail(raw) {
   const value = typeof raw === "string" ? raw.trim() : "";
   if (!value) return "";
   const at = value.lastIndexOf("@");
-  if (at < 1) {
-    if (value.length <= 3) return value[0] + "•••";
-    return value.slice(0, 2) + "••••" + value.slice(-1);
-  }
-  const local = value.slice(0, at);
-  const domain = value.slice(at + 1);
-  let maskedLocal;
-  if (local.length <= 2) maskedLocal = local[0] + "••••";
-  else if (local.length <= 4) maskedLocal = local[0] + "••••" + local.slice(-1);
-  else maskedLocal = local.slice(0, 2) + "••••" + local.slice(-1);
-  const dot = domain.indexOf(".");
-  let maskedDomain = domain;
-  if (dot > 1) {
-    const name = domain.slice(0, dot);
-    const tld = domain.slice(dot);
-    maskedDomain = (name.length <= 2 ? name[0] + "••" : name[0] + "••••" + name.slice(-1)) + tld;
-  }
-  return maskedLocal + "@" + maskedDomain;
+  const local = at > 0 ? value.slice(0, at) : value;
+  const domain = at > 0 ? value.slice(at) : "";
+  if (local.length <= 2) return local[0] + "****" + domain;
+  const keep = Math.min(5, local.length - 1);
+  return local.slice(0, keep) + "****" + domain;
 }
 
 // Password disensor seluruhnya
 function maskPassword(raw) {
   const value = typeof raw === "string" ? raw.trim() : "";
   if (!value) return "";
-  return "•".repeat(Math.min(Math.max(value.length, 6), 12));
+  return "*".repeat(6);
 }
 
 module.exports = async function handler(request, response) {
