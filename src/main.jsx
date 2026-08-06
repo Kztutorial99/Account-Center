@@ -1422,6 +1422,31 @@ function ProfilePage({ user, onBack, onTopup }) {
   );
 }
 
+/* Kompres bukti transfer di browser supaya upload ringan (maks 1400px, JPEG). */
+function compressProof(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) { reject(new Error("File harus berupa gambar (JPG/PNG).")); return; }
+    if (file.size > 12 * 1024 * 1024) { reject(new Error("Ukuran gambar maksimal 12MB.")); return; }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Gagal membaca file bukti."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Gambar tidak bisa dibaca."));
+      img.onload = () => {
+        const max = 1400;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 /* ─── Halaman Top Up (berdiri sendiri) ─── */
 function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const [state, load] = useTopupData(user);
@@ -1436,14 +1461,18 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const [agreed, setAgreed]     = useState(false);
   const [orderId, setOrderId]   = useState("");
   const trxIdRef = useRef(null);
+  const proofRef = useRef(null);
   const [showTrxRequired, setShowTrxRequired] = useState(false);
+  const [proof, setProof] = useState("");
+  const [proofName, setProofName] = useState("");
+  const [proofBusy, setProofBusy] = useState(false);
 
   const amountNumber = Math.round(Number(amount) || 0);
   const isOther  = false;
   const appLabel = app;
   const methodLabel = `QRIS · ${appLabel}`;
   const pendingTotal = state.topups.filter((t) => t.status === "pending").reduce((a, t) => a + t.amount, 0);
-  const dataReady = trxId.trim().length >= 4 && (!isOther || otherApp.trim());
+  const dataReady = trxId.trim().length >= 4 && Boolean(proof) && (!isOther || otherApp.trim());
 
   const goConfirm = (e) => {
     e.preventDefault(); setFormError("");
@@ -1465,40 +1494,37 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
     return parts.join(" | ").slice(0, 300);
   };
 
-  const proofMessage = () =>
-    encodeURIComponent(
-      `Halo ${QRIS_NAME}, saya mau konfirmasi pembayaran top up CodeXa.\n\n` +
-      `Order ID: ${orderId}\n` +
-      `Nama: ${user.name}\n` +
-      `Email: ${user.email}\n` +
-      `Nominal: ${formatPrice(amountNumber)}\n` +
-      `Bayar QRIS via: ${appLabel}\n` +
-      `No. ID Transaksi: ${trxId.trim() || "-"}\n` +
-      `Catatan: ${note.trim() || "-"}\n\n` +
-      `(bukti transfer saya lampirkan di chat ini)`
-    );
-
-  const handleProofClick = (e) => {
-    e.preventDefault();
-    setShowTrxRequired(true);
-    setFormError("* wajib masukan id transaksi");
-    trxIdRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    setTimeout(() => trxIdRef.current?.focus(), 350);
+  const pickProof = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    setProofBusy(true); setFormError("");
+    try {
+      const dataUrl = await compressProof(file);
+      setProof(dataUrl); setProofName(file.name);
+    } catch (err) { setFormError(err.message); }
+    finally { setProofBusy(false); }
   };
 
   const submitTopup = async (e) => {
     e.preventDefault(); setFormError(""); setShowTrxRequired(false);
     if (!trxId.trim()) { setFormError("Nomor ID transaksi wajib diisi."); setShowTrxRequired(true); return; }
+    if (!proof) {
+      setFormError("Unggah bukti transfer dulu, bot yang akan mengirimnya ke admin.");
+      proofRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setBusy(true);
 
     try {
       await jsonRequest("/api/topup", {
         method: "POST",
-        body: JSON.stringify({ amount: amountNumber, method: methodLabel, reference: trxId.trim(), note: fullNote() }),
+        body: JSON.stringify({ amount: amountNumber, method: methodLabel, reference: trxId.trim(), note: fullNote(), proof }),
       });
       setAmount(""); setTrxId(""); setNote(""); setOtherApp(""); setApp(QRIS_APPS[0].id);
+      setProof(""); setProofName("");
       setStep("form"); setAgreed(false);
-      onNotice("Permintaan top up dikirim, menunggu verifikasi admin");
+      onNotice("Bukti transfer terkirim otomatis ke admin, menunggu verifikasi");
       load(); onRefresh();
     } catch (err) { setFormError(err.message); }
     finally { setBusy(false); }
@@ -1524,7 +1550,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
           </div>
 
           <div className="cx-steps-bar">
-            {["Nominal", "Konfirmasi", "Bayar & bukti"].map((s, i) => {
+            {["Nominal", "Konfirmasi", "Bayar & unggah bukti"].map((s, i) => {
               const idx = step === "form" ? 0 : step === "confirm" ? 1 : 2;
               return (
                 <span key={s} className={`cx-step${i === idx ? " active" : ""}${i < idx ? " done" : ""}`}>
@@ -1615,7 +1641,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
               <li>Buka aplikasi <strong>{appLabel}</strong>, pilih menu QRIS / Scan.</li>
               <li>Scan QR di atas, masukkan nominal <strong>{formatPrice(amountNumber)}</strong>.</li>
               <li>Selesaikan pembayaran, catat <strong>nomor ID transaksi</strong> pada struk.</li>
-              <li>Lengkapi data di bawah, baru kirim bukti ke admin.</li>
+              <li>Lengkapi data + unggah bukti di bawah, bot langsung kirim ke admin.</li>
             </ol>
 
             <Field label="Nomor ID transaksi" hint="Wajib. Nomor referensi / transaction ID dari struk pembayaran." error={showTrxRequired ? "* wajib masukan id transaksi" : ""}>
@@ -1636,33 +1662,31 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
 
             {formError && <p className="cx-form-error">{formError}</p>}
 
-            <div className="cx-proof-block">
-              <div className="cx-proof-title">
-                {dataReady ? "Kirim bukti transfer ke admin" : "Lengkapi data di atas dulu untuk kirim bukti"}
-              </div>
-              <div className="cx-proof-actions">
-                {dataReady ? (
-                  <>
-                    <a className="cx-btn cx-btn-ghost cx-proof-wa" href={`https://wa.me/${WA_NUMBER}?text=${proofMessage()}`} target="_blank" rel="noreferrer">
-                      <IconWhatsApp size={16} /> Bukti via WhatsApp
-                    </a>
-                    <a className="cx-btn cx-btn-ghost cx-proof-tg" href={`https://t.me/${TG_USERNAME}?text=${proofMessage()}`} target="_blank" rel="noreferrer">
-                      <IconTelegram size={16} /> Bukti via Telegram
-                    </a>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" className="cx-btn cx-btn-ghost cx-proof-wa" onClick={handleProofClick}><IconWhatsApp size={16} /> Bukti via WhatsApp</button>
-                    <button type="button" className="cx-btn cx-btn-ghost cx-proof-tg" onClick={handleProofClick}><IconTelegram size={16} /> Bukti via Telegram</button>
-                  </>
-                )}
-              </div>
+            <div className="cx-proof-block" ref={proofRef}>
+              <div className="cx-proof-title">Unggah bukti transfer — bot yang kirim ke admin</div>
+              {proof ? (
+                <div className="cx-proof-preview">
+                  <img src={proof} alt="Pratinjau bukti transfer" />
+                  <div className="cx-proof-meta">
+                    <strong>{proofName || "bukti-transfer.jpg"}</strong>
+                    <small>Siap dikirim otomatis ke admin lewat bot Telegram.</small>
+                    <button type="button" className="cx-btn cx-btn-ghost" onClick={() => { setProof(""); setProofName(""); }}>Ganti gambar</button>
+                  </div>
+                </div>
+              ) : (
+                <label className={`cx-proof-drop${proofBusy ? " busy" : ""}`}>
+                  <input type="file" accept="image/*" onChange={pickProof} disabled={proofBusy} hidden />
+                  <FileText size={18} />
+                  <span>{proofBusy ? "Memproses gambar..." : "Pilih / foto struk pembayaran"}</span>
+                  <small>JPG atau PNG. Tidak perlu kirim manual ke WhatsApp/Telegram.</small>
+                </label>
+              )}
             </div>
 
             <div className="cx-confirm-actions">
               <button type="button" className="cx-btn cx-btn-ghost" onClick={() => setStep("confirm")}>Kembali</button>
               <button type="submit" className="cx-btn cx-btn-primary" disabled={busy || !dataReady}>
-                {busy ? <><RefreshCw size={13} /> Mengirim...</> : <><Plus size={13} /> Saya sudah bayar</>}
+                {busy ? <><RefreshCw size={13} /> Mengirim...</> : <><Plus size={13} /> Kirim bukti &amp; konfirmasi</>}
               </button>
             </div>
           </form>
