@@ -2,31 +2,25 @@
 
 /* ── TOKENS ─────────────────────────────────── */
 :root {
-  --bg:      #0d0d10;
-  --side:    #101014;
-  --s1:      #111115;
-  --s2:      #16161b;
-  --s3:      #1c1c22;
-  --b1:      #1d1d25;
-  --b2:      #202027;
-  --b3:      #24242d;
-  --ink:     #ececf1;
-  --ink2:    #c7c7ce;
-  --muted:   #777783;
-  --faint:   #5e5e69;
-  --indigo:  #6366f1;
-  --indigo2: #818cf8;
-  --indigo3: #a6a9ff;
-  --green:   #74bd8a;
-  --red:     #c97980;
-  --amber:   #d3a461;
-  --radius:  4px;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: var(--ink);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
+  --bg: #100a1a;
+  --side: #140d20;
+  --s1: #1a1129;
+  --s2: #221735;
+  --s3: #2b1e44;
+  --b1: #2d2150;
+  --b2: #362861;
+  --b3: #423275;
+  --ink: #f5f0ff;
+  --ink2: #d8ccf0;
+  --muted: #9089b0;
+  --faint: #6e6789;
+  --indigo: #a855f7;
+  --indigo2: #c084fc;
+  --indigo3: #d8b4fe;
+  --green: #86efac;
+  --red: #fda4af;
+  --amber: #fcd34d;
+  --radius: 14px;
 }
 
 /* ── RESET ──────────────────────────────────── */
