@@ -13,7 +13,7 @@ import "./styles.css";
 const formatPrice = (v) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(v) || 0);
 const formatDate  = (v) => v ? new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(v)) : "-";
 const LOGIN_TYPES  = ["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"];
-const emptyListing = { title: "", description: "", loginType: "Google", price: "", stock: "", status: "available", username: "", email: "", password: "", deliveryDetails: "" };
+const emptyListing = { title: "", description: "", loginType: "Google", price: "", status: "available", accounts: [{ email: "", password: "" }], deliveryDetails: "" };
 const ACCENT_COLORS = ["#e36d78", "#7bc48b", "#6c83da", "#a983de", "#67b6a1", "#dba66a"];
 
 async function jsonRequest(url, opts = {}) {
@@ -244,11 +244,23 @@ function App() {
               <ul className="cx-feature-list">
                 <li><Check size={13} /><span>Login type: <strong style={{ color: "var(--ink2)" }}>{buyItem.loginType}</strong></span></li>
                 <li><Check size={13} /><span>Stok tersisa: <strong style={{ color: "var(--ink2)" }}>{buyItem.stock}</strong></span></li>
-                <li><Check size={13} /><span>Email akun: <strong style={{ color: "var(--ink2)", fontFamily: "ui-monospace,monospace" }}>{buyItem.maskedEmail || "—"}</strong></span></li>
-                <li><Check size={13} /><span>Password akun: <strong style={{ color: "var(--ink2)", fontFamily: "ui-monospace,monospace" }}>{buyItem.maskedPassword || "—"}</strong></span></li>
                 <li><Check size={13} /><span>Detail akun dikirim otomatis setelah verifikasi</span></li>
                 <li><Check size={13} /><span>Garansi penggantian jika akun bermasalah</span></li>
               </ul>
+              {Array.isArray(buyItem.accounts) && buyItem.accounts.length > 0 && (
+                <div className="cx-cred-preview cx-cred-preview-lg">
+                  <div className="cx-cred-head">Daftar akun ({buyItem.accounts.length}) — disensor sampai pembayaran</div>
+                  {buyItem.accounts.map((account) => (
+                    <div className="cx-cred-item" key={account.index}>
+                      <span className="cx-cred-no">#{account.index}</span>
+                      <div className="cx-cred-pair">
+                        <div className="cx-cred-row"><span>Email</span><code>{account.maskedEmail || "—"}</code></div>
+                        <div className="cx-cred-row"><span>Password</span><code>{account.maskedPassword || "—"}</code></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                 <label style={{ fontSize: 11, color: "var(--ink2)", fontWeight: 600 }}>Jumlah:</label>
                 <div className="cx-input-wrap" style={{ width: 80 }}>
@@ -382,14 +394,18 @@ function ProductCard({ product, colorIdx, onBuy }) {
         <p className="cx-product-type">{product.loginType}</p>
         <h3 className="cx-product-title">{product.title}</h3>
         <p className="cx-product-desc">{product.description || "Akun digital siap digunakan. Detail dikirim setelah pembayaran."}</p>
-        {(product.maskedEmail || product.maskedPassword) && (
+        {Array.isArray(product.accounts) && product.accounts.length > 0 && (
           <div className="cx-cred-preview">
-            {product.maskedEmail && (
-              <div className="cx-cred-row"><span>Email</span><code>{product.maskedEmail}</code></div>
-            )}
-            {product.maskedPassword && (
-              <div className="cx-cred-row"><span>Password</span><code>{product.maskedPassword}</code></div>
-            )}
+            <div className="cx-cred-head">{product.accounts.length} data akun tersedia</div>
+            {product.accounts.map((account) => (
+              <div className="cx-cred-item" key={account.index}>
+                <span className="cx-cred-no">#{account.index}</span>
+                <div className="cx-cred-pair">
+                  <div className="cx-cred-row"><span>Email</span><code>{account.maskedEmail || "—"}</code></div>
+                  <div className="cx-cred-row"><span>Password</span><code>{account.maskedPassword || "—"}</code></div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
         <div className="cx-product-bottom">
@@ -443,17 +459,36 @@ function AdminPage({ onBack, onNotice }) {
   const openForm = (listing = null) => {
     setApiError(""); setRevealed(false);
     setForm(listing
-      ? { ...emptyListing, ...listing, price: String(listing.price ?? ""), stock: String(listing.stock ?? ""), password: listing.password || "" }
-      : { ...emptyListing });
+      ? {
+          ...emptyListing,
+          ...listing,
+          price: String(listing.price ?? ""),
+          accounts: Array.isArray(listing.accounts) && listing.accounts.length
+            ? listing.accounts.map((a) => ({ email: a.email || a.username || "", password: a.password || "" }))
+            : [{ email: "", password: "" }],
+        }
+      : { ...emptyListing, accounts: [{ email: "", password: "" }] });
   };
 
   const updateForm = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
+  const updateAccount = (index, key, val) =>
+    setForm((f) => ({ ...f, accounts: (f.accounts || []).map((a, i) => (i === index ? { ...a, [key]: val } : a)) }));
+  const addAccount = () => setForm((f) => ({ ...f, accounts: [...(f.accounts || []), { email: "", password: "" }] }));
+  const removeAccount = (index) =>
+    setForm((f) => {
+      const next = (f.accounts || []).filter((_, i) => i !== index);
+      return { ...f, accounts: next.length ? next : [{ email: "", password: "" }] };
+    });
+
   const save = async () => {
     setSaving(true); setApiError("");
     try {
-      const body = { ...form, price: Number(form.price) || 0, stock: Number(form.stock) || 0 };
-      if (form.id) await jsonRequest(`/api/admin/products/${form.id}`, { method: "PUT", body: JSON.stringify(body) });
+      const accounts = (form.accounts || [])
+        .map((a) => ({ email: (a.email || "").trim(), password: (a.password || "").trim() }))
+        .filter((a) => a.email || a.password);
+      const body = { ...form, accounts, price: Number(form.price) || 0, stock: accounts.length };
+      if (form.id) await jsonRequest("/api/admin/products", { method: "PATCH", body: JSON.stringify(body) });
       else await jsonRequest("/api/admin/products", { method: "POST", body: JSON.stringify(body) });
       setForm(null); loadListings(); onNotice(form.id ? "Produk diperbarui" : "Produk ditambahkan");
     } catch (e) { setApiError(e.message); }
@@ -462,7 +497,7 @@ function AdminPage({ onBack, onNotice }) {
 
   const deleteListing = async (id) => {
     if (!window.confirm("Hapus produk ini?")) return;
-    try { await jsonRequest(`/api/admin/products/${id}`, { method: "DELETE" }); loadListings(); onNotice("Produk dihapus"); }
+    try { await jsonRequest("/api/admin/products", { method: "DELETE", body: JSON.stringify({ id }) }); loadListings(); onNotice("Produk dihapus"); }
     catch (e) { setApiError(e.message); }
   };
 
@@ -733,8 +768,8 @@ function AdminPage({ onBack, onNotice }) {
                 <Field label="Harga (IDR)">
                   <InputWrap><input type="number" value={form.price} onChange={(e) => updateForm("price", e.target.value)} placeholder="35000" /></InputWrap>
                 </Field>
-                <Field label="Stok">
-                  <InputWrap><input type="number" value={form.stock} onChange={(e) => updateForm("stock", e.target.value)} placeholder="10" /></InputWrap>
+                <Field label="Stok (otomatis dari jumlah akun)">
+                  <InputWrap><input value={(form.accounts || []).filter((a) => a.email || a.password).length} readOnly /></InputWrap>
                 </Field>
                 <Field label="Status">
                   <InputWrap>
@@ -745,19 +780,45 @@ function AdminPage({ onBack, onNotice }) {
                   </InputWrap>
                 </Field>
               </div>
-              <div className="cx-form-divider">DETAIL AKUN <small>Hanya terlihat oleh admin</small></div>
-              <div className="cx-form-grid">
-                <Field label="Username / Email Akun">
-                  <InputWrap><input value={form.username || ""} onChange={(e) => updateForm("username", e.target.value)} placeholder="user@email.com" /></InputWrap>
-                </Field>
-                <Field label="Password Akun">
-                  <InputWrap>
-                    <input type={revealed ? "text" : "password"} value={form.password || ""} onChange={(e) => updateForm("password", e.target.value)} placeholder="••••••••" />
-                    <button type="button" onClick={() => setRevealed((v) => !v)} style={{ color: "var(--muted)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
-                      {revealed ? <EyeOff size={12} /> : <Eye size={12} />}
+              <div className="cx-form-divider">DATA AKUN <small>1 baris = 1 stok · hanya terlihat oleh admin</small></div>
+              <div className="cx-account-editor">
+                {(form.accounts || []).map((account, index) => (
+                  <div className="cx-account-row" key={index}>
+                    <span className="cx-account-no">#{index + 1}</span>
+                    <InputWrap>
+                      <input
+                        value={account.email}
+                        onChange={(e) => updateAccount(index, "email", e.target.value)}
+                        placeholder="user@email.com"
+                      />
+                    </InputWrap>
+                    <InputWrap>
+                      <input
+                        type={revealed ? "text" : "password"}
+                        value={account.password}
+                        onChange={(e) => updateAccount(index, "password", e.target.value)}
+                        placeholder="••••••••"
+                      />
+                      <button type="button" onClick={() => setRevealed((v) => !v)} style={{ color: "var(--muted)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
+                        {revealed ? <EyeOff size={12} /> : <Eye size={12} />}
+                      </button>
+                    </InputWrap>
+                    <button
+                      type="button"
+                      className="cx-icon-btn"
+                      onClick={() => removeAccount(index)}
+                      disabled={(form.accounts || []).length <= 1}
+                      aria-label={`Hapus akun #${index + 1}`}
+                    >
+                      <X size={12} />
                     </button>
-                  </InputWrap>
-                </Field>
+                  </div>
+                ))}
+                <button type="button" className="cx-btn cx-btn-ghost cx-btn-sm" onClick={addAccount}>
+                  <Plus size={11} /> Tambah data akun
+                </button>
+              </div>
+              <div className="cx-form-grid" style={{ marginTop: 12 }}>
                 <div className="cx-full-span">
                   <Field label="Detail Pengiriman">
                     <InputWrap><textarea value={form.deliveryDetails || ""} onChange={(e) => updateForm("deliveryDetails", e.target.value)} placeholder="Info tambahan yang dikirim ke pembeli setelah bayar..." /></InputWrap>
