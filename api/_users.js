@@ -38,6 +38,27 @@ async function ensureTables(sql) {
       reviewed_at TIMESTAMPTZ
     )
   `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS codexa_reports (
+      id TEXT PRIMARY KEY,
+      ticket TEXT NOT NULL UNIQUE,
+      user_id TEXT REFERENCES codexa_users(id) ON DELETE SET NULL,
+      user_name TEXT NOT NULL DEFAULT '',
+      user_email TEXT NOT NULL DEFAULT '',
+      category TEXT NOT NULL DEFAULT 'lainnya',
+      summary TEXT NOT NULL,
+      detail TEXT NOT NULL DEFAULT '',
+      urgency TEXT NOT NULL DEFAULT 'sedang',
+      status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','in_progress','resolved','closed')),
+      source TEXT NOT NULL DEFAULT 'assistant',
+      admin_note TEXT NOT NULL DEFAULT '',
+      telegram_sent BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS codexa_reports_user_idx ON codexa_reports (user_id, created_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS codexa_reports_status_idx ON codexa_reports (status, created_at DESC)`;
   await sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'`;
   await sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'`;

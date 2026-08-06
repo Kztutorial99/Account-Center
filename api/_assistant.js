@@ -25,6 +25,7 @@ const {
 const DEFAULT_BASE = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
 const MAX_STEPS = 6;
 const STATUSES = ["active", "suspended", "banned"];
+const REPORT_STATUSES = ["open", "in_progress", "resolved", "closed"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Konfigurasi efektif: dari admin panel (database) dulu, baru env var.
@@ -155,6 +156,49 @@ const userTools = {
     },
   },
 
+  get_my_reports: {
+    schema: {
+      name: "get_my_reports",
+      description:
+        "Ambil daftar laporan/keluhan yang pernah dibuat user yang sedang login beserta status penanganannya " +
+        "(open, in_progress, resolved, closed) dan catatan balasan admin. Pakai ini kalau user menanyakan " +
+        "kabar laporannya, status tiket, atau sebelum membuat laporan baru supaya tidak dobel.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["all", "open", "in_progress", "resolved", "closed"], description: "Filter status. Default all." },
+          limit: { type: "integer", description: "Maksimum baris, 1-20. Default 10." },
+        },
+        required: [],
+      },
+    },
+    handler: async (args, ctx) => {
+      const limit = Math.min(20, Math.max(1, num(args.limit, 10)));
+      const status = REPORT_STATUSES.includes(args.status) ? args.status : "";
+      const rows = await ctx.sql`
+        SELECT ticket, category, summary, detail, urgency, status, admin_note AS "adminNote",
+               created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM codexa_reports
+        WHERE user_id = ${ctx.user.id} AND (${status} = '' OR status = ${status})
+        ORDER BY created_at DESC LIMIT ${limit}
+      `;
+      return ok({
+        total: rows.length,
+        laporan: rows.map((r) => ({
+          tiket: r.ticket,
+          kategori: r.category,
+          masalah: r.summary,
+          detail: r.detail || "-",
+          urgensi: r.urgency,
+          status: r.status,
+          balasanAdmin: r.adminNote || "-",
+          dibuat: waktuWib(r.createdAt),
+          diperbarui: waktuWib(r.updatedAt),
+        })),
+      });
+    },
+  },
+
   contact_admin: {
     schema: {
       name: "contact_admin",
@@ -183,35 +227,59 @@ const userTools = {
       const detail = text(args.detail, 1200);
       const urgency = ["rendah", "sedang", "tinggi"].includes(args.urgency) ? args.urgency : "sedang";
       if (summary.length < 5) return fail("Ringkasan masalah terlalu pendek");
-      if (!telegramEnabled() || !adminChatId()) return fail("Kanal admin belum dikonfigurasi. Minta user menghubungi admin manual.");
 
       const ticket = `AI-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
-      const flag = urgency === "tinggi" ? "🔴" : urgency === "rendah" ? "🟢" : "🟡";
-      const lines = [
-        `${flag} <b>LAPORAN DARI ASSISTEN AI</b>`,
-        `<b>Tiket:</b> <code>${escapeHtml(ticket)}</code>`,
-        `<b>Kategori:</b> ${escapeHtml(category)} · <b>Urgensi:</b> ${escapeHtml(urgency)}`,
-        "",
-        `<b>User:</b> ${escapeHtml(ctx.user.name)}`,
-        `<b>Email:</b> ${escapeHtml(ctx.user.email)}`,
-        `<b>Telepon:</b> ${escapeHtml(ctx.user.phone || "-")}`,
-        `<b>Saldo:</b> ${escapeHtml(money(ctx.user.balance))}`,
-        `<b>ID User:</b> <code>${escapeHtml(ctx.user.id)}</code>`,
-        "",
-        `<b>Masalah:</b>`,
-        escapeHtml(summary),
-      ];
-      if (detail) lines.push("", `<b>Detail:</b>`, escapeHtml(detail));
-      lines.push("", `<i>${escapeHtml(waktuWib())} WIB</i>`);
+      const id = `rep_${crypto.randomBytes(8).toString("hex")}`;
 
-      const sent = await callTelegram("sendMessage", {
-        chat_id: adminChatId(),
-        text: lines.join("\n"),
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
+      // user_id hanya diisi kalau memang user terdaftar (sesi admin panel pakai id "admin").
+      const owner = await ctx.sql`SELECT id FROM codexa_users WHERE id = ${ctx.user.id} LIMIT 1`;
+      const ownerId = owner.length ? ctx.user.id : null;
+
+      await ctx.sql`
+        INSERT INTO codexa_reports
+          (id, ticket, user_id, user_name, user_email, category, summary, detail, urgency, status, source)
+        VALUES
+          (${id}, ${ticket}, ${ownerId}, ${ctx.user.name || ""}, ${ctx.user.email || ""},
+           ${category}, ${summary}, ${detail}, ${urgency}, 'open', 'assistant')
+      `;
+
+      let telegramSent = false;
+      if (telegramEnabled() && adminChatId()) {
+        const flag = urgency === "tinggi" ? "🔴" : urgency === "rendah" ? "🟢" : "🟡";
+        const lines = [
+          `${flag} <b>LAPORAN DARI ASSISTEN AI</b>`,
+          `<b>Tiket:</b> <code>${escapeHtml(ticket)}</code>`,
+          `<b>Kategori:</b> ${escapeHtml(category)} · <b>Urgensi:</b> ${escapeHtml(urgency)}`,
+          "",
+          `<b>User:</b> ${escapeHtml(ctx.user.name)}`,
+          `<b>Email:</b> ${escapeHtml(ctx.user.email)}`,
+          `<b>Telepon:</b> ${escapeHtml(ctx.user.phone || "-")}`,
+          `<b>Saldo:</b> ${escapeHtml(money(ctx.user.balance))}`,
+          `<b>ID User:</b> <code>${escapeHtml(ctx.user.id)}</code>`,
+          "",
+          `<b>Masalah:</b>`,
+          escapeHtml(summary),
+        ];
+        if (detail) lines.push("", `<b>Detail:</b>`, escapeHtml(detail));
+        lines.push("", `<i>${escapeHtml(waktuWib())} WIB</i>`);
+        const sent = await callTelegram("sendMessage", {
+          chat_id: adminChatId(),
+          text: lines.join("\n"),
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+        });
+        telegramSent = !!(sent && sent.ok === true);
+        if (telegramSent) {
+          await ctx.sql`UPDATE codexa_reports SET telegram_sent = TRUE WHERE id = ${id}`;
+        }
+      }
+
+      return ok({
+        ticket,
+        tersimpan: true,
+        notifikasiTelegram: telegramSent,
+        message: `Laporan tersimpan dengan nomor tiket ${ticket} dan sudah masuk ke daftar laporan admin.`,
       });
-      if (!sent || sent.ok !== true) return fail("Gagal mengirim laporan ke admin, coba lagi sebentar lagi.");
-      return ok({ ticket, message: `Laporan terkirim ke admin dengan nomor tiket ${ticket}.` });
     },
   },
 };
@@ -474,6 +542,129 @@ const adminTools = {
     },
   },
 
+  admin_list_reports: {
+    schema: {
+      name: "admin_list_reports",
+      description:
+        "Daftar laporan/keluhan user yang masuk lewat Assisten (tersimpan di database). Laporan yang belum ditangani " +
+        "tampil paling atas. Pakai ini untuk tahu masalah apa saja yang sedang dialami user.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["all", "open", "in_progress", "resolved", "closed"], description: "Filter status. Default all." },
+          category: { type: "string", enum: ["all", "topup", "saldo", "akun", "produk", "refund", "lainnya"], description: "Filter kategori. Default all." },
+          query: { type: "string", description: "Cari di nama user, email, tiket, atau isi masalah." },
+          limit: { type: "integer", description: "Maksimum baris, 1-50. Default 20." },
+        },
+        required: [],
+      },
+    },
+    handler: async (args, ctx) => {
+      const limit = Math.min(50, Math.max(1, num(args.limit, 20)));
+      const status = REPORT_STATUSES.includes(args.status) ? args.status : "";
+      const category = ["topup", "saldo", "akun", "produk", "refund", "lainnya"].includes(args.category) ? args.category : "";
+      const q = `%${text(args.query, 80).toLowerCase()}%`;
+      const rows = await ctx.sql`
+        SELECT ticket, user_id AS "userId", user_name AS "userName", user_email AS "userEmail",
+               category, summary, detail, urgency, status, admin_note AS "adminNote",
+               telegram_sent AS "telegramSent", created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM codexa_reports
+        WHERE (${status} = '' OR status = ${status})
+          AND (${category} = '' OR category = ${category})
+          AND (${q} = '%%' OR LOWER(user_name) LIKE ${q} OR LOWER(user_email) LIKE ${q}
+               OR LOWER(ticket) LIKE ${q} OR LOWER(summary) LIKE ${q} OR LOWER(detail) LIKE ${q})
+        ORDER BY (status = 'open') DESC, (status = 'in_progress') DESC,
+                 CASE urgency WHEN 'tinggi' THEN 0 WHEN 'sedang' THEN 1 ELSE 2 END,
+                 created_at DESC
+        LIMIT ${limit}
+      `;
+      return ok({
+        total: rows.length,
+        laporan: rows.map((r) => ({
+          tiket: r.ticket,
+          userId: r.userId || "-",
+          user: r.userName || "-",
+          email: r.userEmail || "-",
+          kategori: r.category,
+          masalah: r.summary,
+          detail: r.detail || "-",
+          urgensi: r.urgency,
+          status: r.status,
+          catatanAdmin: r.adminNote || "-",
+          telegram: r.telegramSent ? "terkirim" : "tidak",
+          dibuat: waktuWib(r.createdAt),
+          diperbarui: waktuWib(r.updatedAt),
+        })),
+      });
+    },
+  },
+
+  admin_report_stats: {
+    schema: {
+      name: "admin_report_stats",
+      description: "Ringkasan laporan user: jumlah per status, per kategori, dan jumlah laporan urgensi tinggi yang belum selesai.",
+      parameters: { type: "object", properties: {}, required: [] },
+    },
+    handler: async (_args, ctx) => {
+      const [s] = await ctx.sql`
+        SELECT COUNT(*)::int AS total,
+               COUNT(*) FILTER (WHERE status = 'open')::int AS open,
+               COUNT(*) FILTER (WHERE status = 'in_progress')::int AS proses,
+               COUNT(*) FILTER (WHERE status = 'resolved')::int AS selesai,
+               COUNT(*) FILTER (WHERE status = 'closed')::int AS ditutup,
+               COUNT(*) FILTER (WHERE urgency = 'tinggi' AND status IN ('open','in_progress'))::int AS mendesak
+        FROM codexa_reports
+      `;
+      const kategori = await ctx.sql`
+        SELECT category, COUNT(*)::int AS total FROM codexa_reports GROUP BY category ORDER BY total DESC
+      `;
+      return ok({
+        laporan: {
+          total: s.total, belumDitangani: s.open, sedangDiproses: s.proses,
+          selesai: s.selesai, ditutup: s.ditutup, mendesak: s.mendesak,
+        },
+        perKategori: kategori.map((k) => ({ kategori: k.category, total: k.total })),
+      });
+    },
+  },
+
+  admin_update_report: {
+    schema: {
+      name: "admin_update_report",
+      description:
+        "Perbarui satu laporan user: ubah status penanganan dan/atau tulis catatan balasan admin. " +
+        "Catatan ini bisa dibaca user lewat Assisten, jadi tulis dengan bahasa yang sopan.",
+      parameters: {
+        type: "object",
+        properties: {
+          ticket: { type: "string", description: "Nomor tiket laporan, contoh AI-1A2B3C." },
+          status: { type: "string", enum: ["open", "in_progress", "resolved", "closed"] },
+          adminNote: { type: "string", description: "Catatan/balasan admin untuk user." },
+        },
+        required: ["ticket"],
+      },
+    },
+    handler: async (args, ctx) => {
+      const ticket = text(args.ticket, 40).toUpperCase();
+      if (!ticket) return fail("Nomor tiket wajib diisi");
+      const status = REPORT_STATUSES.includes(args.status) ? args.status : "";
+      const note = typeof args.adminNote === "string" ? text(args.adminNote, 800) : null;
+      if (!status && note === null) return fail("Tidak ada perubahan. Sebutkan status baru atau catatan admin.");
+
+      const rows = await ctx.sql`
+        UPDATE codexa_reports
+        SET status = COALESCE(NULLIF(${status}, ''), status),
+            admin_note = COALESCE(${note}, admin_note),
+            updated_at = NOW()
+        WHERE ticket = ${ticket}
+        RETURNING ticket, user_name AS "userName", status, admin_note AS "adminNote"
+      `;
+      if (!rows.length) return fail("Laporan dengan tiket itu tidak ditemukan");
+      const r = rows[0];
+      return ok({ laporan: { tiket: r.ticket, user: r.userName || "-", status: r.status, catatanAdmin: r.adminNote || "-" } });
+    },
+  },
+
   admin_list_topups: {
     schema: {
       name: "admin_list_topups",
@@ -702,7 +893,16 @@ function systemPrompt(ctx) {
       "- Boleh memanggil beberapa tool berurutan untuk menyelesaikan satu permintaan.",
       "- Jangan pernah menampilkan password hash atau kredensial akun produk.",
       "",
-      "GAYA: Bahasa Indonesia, ringkas, langsung ke inti. Format angka rupiah apa adanya dari tool. Pakai bullet/tabel sederhana untuk data banyak.",
+      "- Laporan/keluhan user dari Assisten tersimpan di database. Pakai admin_list_reports untuk melihat daftarnya, admin_report_stats untuk ringkasan, dan admin_update_report untuk mengubah status atau menulis balasan yang bisa dibaca user.",
+      "",
+      "GAYA: Bahasa Indonesia, ringkas, langsung ke inti. Format angka rupiah apa adanya dari tool.",
+      "",
+      "FORMAT JAWABAN (wajib):",
+      "- Jawab rapi dan mudah dibaca di chat sempit (HP). Kalimat pendek, satu ide per baris.",
+      "- Boleh pakai markdown sederhana yang sudah didukung UI: **tebal** untuk label/angka penting, daftar dengan \"- \" atau \"1. \", dan `kode` untuk id/tiket.",
+      "- JANGAN pakai tabel markdown (pipa |), heading (#), blok kode tiga backtick, atau markdown bertumpuk seperti ***ini***.",
+      "- Data banyak ditulis sebagai daftar: satu item per baris dengan label **tebal** lalu nilainya.",
+      "- Maksimal sekitar 8 baris kecuali user minta detail. Tutup dengan satu langkah lanjutan yang jelas bila perlu.",
     ].join("\n");
   }
 
@@ -724,7 +924,17 @@ function systemPrompt(ctx) {
     "- Setelah terkirim, sampaikan nomor tiketnya ke user dan beri tahu admin akan menindaklanjuti.",
     "- Jangan spam: cukup sekali per masalah dalam satu percakapan.",
     "",
+    "- Laporan tersimpan permanen di database, jadi admin pasti melihatnya walau notifikasi Telegram gagal.",
+    "- Kalau user menanyakan kabar/status laporannya, panggil get_my_reports dan sampaikan status + catatan admin bila ada. Cek juga tool ini sebelum membuat laporan baru supaya tidak dobel.",
+    "",
     "GAYA: Bahasa Indonesia santai tapi sopan, ringkas, solutif. Sapa user dengan namanya sesekali.",
+    "",
+    "FORMAT JAWABAN (wajib):",
+    "- Jawab rapi dan mudah dibaca di chat sempit (HP). Kalimat pendek, satu ide per baris.",
+    "- Boleh pakai markdown sederhana yang sudah didukung UI: **tebal** untuk label/angka penting, daftar dengan \"- \" atau \"1. \", dan `kode` untuk id/tiket.",
+    "- JANGAN pakai tabel markdown (pipa |), heading (#), blok kode tiga backtick, atau markdown bertumpuk seperti ***ini***.",
+    "- Data banyak ditulis sebagai daftar: satu item per baris dengan label **tebal** lalu nilainya.",
+    "- Maksimal sekitar 8 baris kecuali user minta detail. Tutup dengan satu langkah lanjutan yang jelas bila perlu.",
   ].join("\n");
 }
 

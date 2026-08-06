@@ -1992,6 +1992,79 @@ const ASSISTANT_HINTS = {
   ],
 };
 
+/* ── Markdown ringan untuk balasan Assisten ──
+   Model sering menulis **tebal**, daftar, dan `kode`. Tanpa renderer, simbolnya
+   ikut tampil mentah di bubble chat. Ini parser kecil tanpa dependensi. ── */
+function renderInline(raw, keyPrefix) {
+  const nodes = [];
+  const re = /(\*\*[^*\n]+\*\*|__[^_\n]+__|`[^`\n]+`|\*[^*\n]+\*|_[^_\n]+_)/g;
+  let last = 0;
+  let n = 0;
+  let m;
+  while ((m = re.exec(raw)) !== null) {
+    if (m.index > last) nodes.push(raw.slice(last, m.index));
+    const tok = m[0];
+    const key = `${keyPrefix}-${n++}`;
+    if (tok.startsWith("**") || tok.startsWith("__")) nodes.push(<strong key={key}>{tok.slice(2, -2)}</strong>);
+    else if (tok.startsWith("`")) nodes.push(<code key={key}>{tok.slice(1, -1)}</code>);
+    else nodes.push(<em key={key}>{tok.slice(1, -1)}</em>);
+    last = m.index + tok.length;
+  }
+  if (last < raw.length) nodes.push(raw.slice(last));
+  return nodes.length ? nodes : [raw];
+}
+
+function parseBlocks(text) {
+  const blocks = [];
+  String(text || "")
+    .replace(/\r/g, "")
+    .replace(/```/g, "")
+    .split("\n")
+    .forEach((line) => {
+      const t = line.trim();
+      if (!t) return;
+      const last = blocks[blocks.length - 1];
+      const heading = t.match(/^#{1,6}\s+(.*)$/);
+      if (heading) { blocks.push({ kind: "h", text: heading[1] }); return; }
+      const bullet = t.match(/^[-*•]\s+(.*)$/);
+      if (bullet) {
+        if (last && last.kind === "ul") last.items.push(bullet[1]);
+        else blocks.push({ kind: "ul", items: [bullet[1]] });
+        return;
+      }
+      const numbered = t.match(/^\d+[.)]\s+(.*)$/);
+      if (numbered) {
+        if (last && last.kind === "ol") last.items.push(numbered[1]);
+        else blocks.push({ kind: "ol", items: [numbered[1]] });
+        return;
+      }
+      // baris tabel markdown → jadikan teks biasa yang rapi
+      if (/^\|.*\|$/.test(t)) {
+        const cells = t.split("|").map((c) => c.trim()).filter(Boolean);
+        if (cells.every((c) => /^:?-{2,}:?$/.test(c))) return;
+        blocks.push({ kind: "p", text: cells.join(" · ") });
+        return;
+      }
+      blocks.push({ kind: "p", text: t });
+    });
+  return blocks;
+}
+
+function RichText({ text }) {
+  const blocks = parseBlocks(text);
+  if (!blocks.length) return null;
+  return (
+    <div className="cx-md">
+      {blocks.map((b, i) => {
+        if (b.kind === "h") return <p key={i} className="cx-md-h">{renderInline(b.text, `h${i}`)}</p>;
+        if (b.kind === "ul") return <ul key={i}>{b.items.map((it, j) => <li key={j}>{renderInline(it, `u${i}-${j}`)}</li>)}</ul>;
+        if (b.kind === "ol") return <ol key={i}>{b.items.map((it, j) => <li key={j}>{renderInline(it, `o${i}-${j}`)}</li>)}</ol>;
+        return <p key={i}>{renderInline(b.text, `p${i}`)}</p>;
+      })}
+    </div>
+  );
+}
+
 function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
   const controlled = typeof openProp === "boolean";
   const [openState, setOpenState] = useState(false);
@@ -2137,7 +2210,9 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
 
             {messages.map((m, i) => (
               <div key={i} className={`cx-ai-msg ${m.role}`}>
-                <div className="cx-ai-bubble">{m.content}</div>
+                <div className="cx-ai-bubble">
+                  {m.role === "assistant" ? <RichText text={m.content} /> : m.content}
+                </div>
                 {m.role === "assistant" && m.actions && m.actions.length > 0 && (
                   <div className="cx-ai-actions">
                     {m.actions.map((a, j) => <span key={j}><Check size={9} />{a}</span>)}
