@@ -1291,24 +1291,26 @@ function AuthPage({ onAuthenticated }) {
    PROFIL & TOP UP (halaman terpisah)
 ════════════════════════════════════════════════════ */
 const QRIS_APPS = [
-  { id: "DANA",                    short: "DANA",  color: "#118EEA", tint: "rgba(17,142,234,.14)" },
-  { id: "GoPay",                   short: "gopay", color: "#00AA13", tint: "rgba(0,170,19,.14)" },
-  { id: "OVO",                     short: "OVO",   color: "#4C3494", tint: "rgba(76,52,148,.16)" },
-  { id: "ShopeePay",               short: "SPay",  color: "#EE4D2D", tint: "rgba(238,77,45,.14)" },
-  { id: "LinkAja",                 short: "Link",  color: "#E22B2B", tint: "rgba(226,43,43,.14)" },
-  { id: "QRIS BCA mobile / myBCA", short: "BCA",   color: "#0066AE", tint: "rgba(0,102,174,.14)" },
-  { id: "QRIS BRImo",              short: "BRI",   color: "#00529C", tint: "rgba(0,82,156,.14)" },
-  { id: "QRIS Livin' by Mandiri",  short: "Livin", color: "#003D79", tint: "rgba(0,61,121,.14)" },
-  { id: "QRIS SeaBank",            short: "Sea",   color: "#F26F21", tint: "rgba(242,111,33,.14)" },
-  { id: "Lainnya",                 short: "•••",   color: "#6366F1", tint: "rgba(99,102,241,.14)" },
+  { id: "DANA",                    short: "DANA",  icon: "/wallets/dana.svg",          color: "#118EEA", tint: "rgba(17,142,234,.14)" },
+  { id: "GoPay",                   short: "gopay", icon: "/wallets/gopay.svg",         color: "#00AA13", tint: "rgba(0,170,19,.14)" },
+  { id: "OVO",                     short: "OVO",   icon: "/wallets/ovo.svg",           color: "#4C3494", tint: "rgba(76,52,148,.16)" },
+  { id: "ShopeePay",               short: "SPay",  icon: "/wallets/shopee-pay.svg",    color: "#EE4D2D", tint: "rgba(238,77,45,.14)" },
+  { id: "LinkAja",                 short: "Link",  icon: "/wallets/linkaja.svg",       color: "#E22B2B", tint: "rgba(226,43,43,.14)" },
+  { id: "QRIS BCA mobile / myBCA", short: "BCA",   icon: "/wallets/bca-mobile.svg",    color: "#0066AE", tint: "rgba(0,102,174,.14)" },
+  { id: "QRIS BRImo",              short: "BRI",   icon: "/wallets/brimo.svg",         color: "#00529C", tint: "rgba(0,82,156,.14)" },
+  { id: "QRIS Livin\' by Mandiri",  short: "Livin", icon: "/wallets/mandiri-livin.svg", color: "#003D79", tint: "rgba(0,61,121,.14)" },
+  { id: "QRIS SeaBank",            short: "Sea",   icon: "/wallets/seabank.svg",       color: "#F26F21", tint: "rgba(242,111,33,.14)" },
+  { id: "Lainnya",                 short: "\u2022\u2022\u2022",   icon: null,                         color: "#6366F1", tint: "rgba(99,102,241,.14)" },
 ];
 const appMeta = (id) => QRIS_APPS.find((a) => a.id === id) || QRIS_APPS[QRIS_APPS.length - 1];
 
 function AppLogo({ app, size = 34 }) {
   const m = appMeta(app);
   return (
-    <span className="cx-applogo" style={{ width: size, height: size, background: m.tint, color: m.color, borderColor: m.color }}>
-      {m.short}
+    <span className="cx-applogo" style={{ width: size * 1.55, height: size, background: m.tint, color: m.color, borderColor: m.color }}>
+      {m.icon
+        ? <img src={m.icon} alt={m.id} className="cx-applogo-img" loading="lazy" />
+        : m.short}
     </span>
   );
 }
