@@ -39,6 +39,7 @@ module.exports = async function handler(request, response) {
       return response.status(400).json({ error: `Minimal top up Rp${MIN_TOPUP.toLocaleString("id-ID")}` });
     }
     if (amount > MAX_TOPUP) return response.status(400).json({ error: "Nominal top up terlalu besar" });
+    if (!reference) return response.status(400).json({ error: "Nomor ID transaksi wajib diisi" });
 
     const pending = await sql`
       SELECT COUNT(*)::int AS total FROM codexa_topups WHERE user_id = ${user.id} AND status = 'pending'

@@ -3,7 +3,29 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/admin", "destination": "/" },
-    { "source": "/admin/:path*", "destination": "/" }
+    {
+      "source": "/admin",
+      "destination": "/"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/"
+    },
+    {
+      "source": "/account",
+      "destination": "/"
+    },
+    {
+      "source": "/topup",
+      "destination": "/"
+    },
+    {
+      "source": "/orders",
+      "destination": "/"
+    },
+    {
+      "source": "/help",
+      "destination": "/"
+    }
   ]
 }
