@@ -599,6 +599,82 @@ function AdminPage({ onBack, onNotice }) {
   const [userQuery, setUserQuery]         = useState("");
   const [userForm, setUserForm]           = useState(null);
   const [savingUser, setSavingUser]       = useState(false);
+  const [aiCfg, setAiCfg]                 = useState(null);
+  const [aiForm, setAiForm]               = useState(null);
+  const [savingAi, setSavingAi]           = useState(false);
+  const [aiNotice, setAiNotice]           = useState("");
+  const [aiError, setAiError]             = useState("");
+  const [testingAi, setTestingAi]         = useState(false);
+
+  const loadSettings = () =>
+    jsonRequest("/api/admin/settings", { method: "GET" })
+      .then((p) => {
+        setAiCfg(p.assistant);
+        setAiForm({
+          enabled: p.assistant.enabled !== false,
+          apiKey: "",
+          baseUrl: p.assistant.baseUrl || "",
+          modelAdmin: p.assistant.modelAdmin || "",
+          modelUser: p.assistant.modelUser || "",
+          maxSteps: String(p.assistant.maxSteps ?? 6),
+          temperature: String(p.assistant.temperature ?? 0.3),
+          extraPrompt: p.assistant.extraPrompt || "",
+        });
+      })
+      .catch((e) => setAiError(e.message));
+
+  const updateAiForm = (key, val) => setAiForm((f) => ({ ...f, [key]: val }));
+
+  const saveSettings = async () => {
+    setSavingAi(true); setAiError(""); setAiNotice("");
+    try {
+      const payload = {
+        enabled: aiForm.enabled,
+        baseUrl: aiForm.baseUrl,
+        modelAdmin: aiForm.modelAdmin,
+        modelUser: aiForm.modelUser,
+        maxSteps: Number(aiForm.maxSteps) || 6,
+        temperature: Number(aiForm.temperature),
+      };
+      payload.extraPrompt = aiForm.extraPrompt;
+      if (aiForm.apiKey.trim()) payload.apiKey = aiForm.apiKey.trim();
+      const p = await jsonRequest("/api/admin/settings", { method: "PATCH", body: JSON.stringify(payload) });
+      setAiCfg(p.assistant);
+      setAiForm((f) => ({ ...f, apiKey: "" }));
+      onNotice("Pengaturan Assisten disimpan");
+    } catch (e) { setAiError(e.message); }
+    finally { setSavingAi(false); }
+  };
+
+  const clearApiKey = async () => {
+    if (!window.confirm("Hapus API key Assisten yang tersimpan?")) return;
+    setSavingAi(true); setAiError(""); setAiNotice("");
+    try {
+      const p = await jsonRequest("/api/admin/settings", { method: "PATCH", body: JSON.stringify({ apiKey: "__CLEAR__" }) });
+      setAiCfg(p.assistant); onNotice("API key dihapus");
+    } catch (e) { setAiError(e.message); }
+    finally { setSavingAi(false); }
+  };
+
+  const testAssistant = async () => {
+    setTestingAi(true); setAiError(""); setAiNotice("");
+    try {
+      const p = await jsonRequest("/api/admin/settings", { method: "POST", body: JSON.stringify({}) });
+      setAiNotice(`${p.message} (model ${p.model})`);
+    } catch (e) { setAiError(e.message); }
+    finally { setTestingAi(false); }
+  };
+
+  const setUserRole = async (id, role) => {
+    try {
+      await jsonRequest("/api/admin/users", {
+        method: "PATCH",
+        body: JSON.stringify({ id, action: role === "admin" ? "promote" : "demote" }),
+      });
+      loadUsersData();
+      onNotice(role === "admin" ? "User dijadikan admin" : "Akses admin dicabut");
+    } catch (e) { setApiError(e.message); }
+  };
 
   const loadUsersData = () => {
     jsonRequest("/api/admin/topups", { method: "GET" })
@@ -613,7 +689,7 @@ function AdminPage({ onBack, onNotice }) {
     setApiError("");
     setUserForm({
       id: u.id, name: u.name || "", email: u.email || "", phone: u.phone || "",
-      balance: String(u.balance ?? 0), status: u.status || "active",
+      balance: String(u.balance ?? 0), status: u.status || "active", role: u.role === "admin" ? "admin" : "user",
       note: u.note || "", password: "",
       createdAt: u.createdAt, topupTotal: u.topupTotal || 0,
     });
@@ -655,7 +731,7 @@ function AdminPage({ onBack, onNotice }) {
 
   const checkAuth = () =>
     jsonRequest("/api/admin/login", { method: "GET" })
-      .then((p) => { setAuthenticated(p.authenticated); if (p.authenticated) { loadListings(); loadUsersData(); } })
+      .then((p) => { setAuthenticated(p.authenticated); if (p.authenticated) { loadListings(); loadUsersData(); loadSettings(); } })
       .catch(() => setAuthenticated(false));
 
   useEffect(() => { checkAuth(); }, []);
@@ -670,7 +746,7 @@ function AdminPage({ onBack, onNotice }) {
 
   const login = async (e) => {
     e.preventDefault(); setLoginError("");
-    try { await jsonRequest("/api/admin/login", { method: "POST", body: JSON.stringify({ password }) }); setAuthenticated(true); setPassword(""); loadListings(); loadUsersData(); }
+    try { await jsonRequest("/api/admin/login", { method: "POST", body: JSON.stringify({ password }) }); setAuthenticated(true); setPassword(""); loadListings(); loadUsersData(); loadSettings(); }
     catch (e) { setLoginError(e.message); }
   };
 
@@ -778,6 +854,7 @@ function AdminPage({ onBack, onNotice }) {
     { label: "Produk",      shortcut: "⌘P", icon: Package,        dot: true },
     { label: "Pesanan",     shortcut: "⌘O", icon: ShoppingBag,    dot: listings.length > 0 },
     { label: "Pengguna",    shortcut: "⌘U", icon: User,           dot: users.some((u) => u.status !== "active") },
+    { label: "Assisten",    shortcut: "⌘I", icon: Sparkles,       dot: !(aiCfg && aiCfg.enabled && aiCfg.hasKey) },
     { label: "Pengaturan",  shortcut: "⌘,", icon: Settings },
   ];
 
@@ -848,6 +925,122 @@ function AdminPage({ onBack, onNotice }) {
 
         {/* Content */}
         <div className="cx-admin-content">
+          {activeNav === "Assisten" ? (
+            <>
+              <div className="cx-admin-top">
+                <div>
+                  <div className="cx-admin-date">Konfigurasi AI</div>
+                  <h1>Assisten</h1>
+                </div>
+                <div className="cx-admin-actions">
+                  <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={loadSettings}><RefreshCw size={11} /> Refresh</button>
+                  <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={testAssistant} disabled={testingAi || !aiCfg?.hasKey}>
+                    <Sparkles size={11} /> {testingAi ? "Menguji..." : "Tes Koneksi"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="cx-stat-grid">
+                {[
+                  { label: "Status", value: aiCfg ? (aiCfg.enabled ? (aiCfg.hasKey ? "Aktif" : "Belum ada key") : "Dimatikan") : "—", delta: aiCfg?.hasKey ? "siap dipakai" : "isi API key dulu", up: Boolean(aiCfg?.enabled && aiCfg?.hasKey) },
+                  { label: "API Key", value: aiCfg?.keyPreview || "kosong", delta: aiCfg?.keySource === "panel" ? "dari admin panel" : aiCfg?.keySource === "env" ? "dari env Vercel" : "belum diatur", up: Boolean(aiCfg?.hasKey) },
+                  { label: "Model Admin", value: aiCfg?.modelAdmin || "—", delta: "akses penuh", up: true },
+                  { label: "Model User", value: aiCfg?.modelUser || "—", delta: "data sendiri saja", up: true },
+                ].map(({ label, value, delta, up }) => (
+                  <div key={label} className="cx-stat-card">
+                    <span className="cx-stat-label">{label}</span>
+                    <strong className="cx-stat-value" style={{ fontSize: 15, wordBreak: "break-all" }}>{value}</strong>
+                    <span className="cx-stat-delta" style={{ color: up ? "var(--green)" : "var(--amber)" }}>{delta}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="cx-panel">
+                <div className="cx-panel-header">
+                  <h3>Token API & Model</h3>
+                  <span className="cx-panel-sub">
+                    {aiCfg?.updatedAt ? `terakhir diubah ${formatDate(aiCfg.updatedAt)}` : "tersimpan di database, tanpa redeploy"}
+                  </span>
+                </div>
+                <div style={{ padding: 14 }}>
+                  {!aiForm ? (
+                    <p style={{ color: "var(--faint)", fontSize: 11 }}>Memuat pengaturan...</p>
+                  ) : (
+                    <>
+                      <div className="cx-form-grid">
+                        <div className="cx-full-span">
+                          <Field label="QWEN_API_KEY" hint={aiCfg?.hasKey ? `Tersimpan: ${aiCfg.keyPreview} (${aiCfg.keySource === "panel" ? "panel" : "env Vercel"}). Kosongkan bila tidak diubah.` : "Belum ada key. Assisten tidak bisa dipakai sampai key diisi."}>
+                            <InputWrap icon={LockKeyhole}>
+                              <input
+                                type="text"
+                                value={aiForm.apiKey}
+                                onChange={(e) => updateAiForm("apiKey", e.target.value)}
+                                placeholder="sk-... / API key DashScope"
+                                autoComplete="off"
+                              />
+                            </InputWrap>
+                          </Field>
+                        </div>
+                        <Field label="Model untuk Admin">
+                          <InputWrap><input value={aiForm.modelAdmin} onChange={(e) => updateAiForm("modelAdmin", e.target.value)} placeholder="qwen3.8-max" /></InputWrap>
+                        </Field>
+                        <Field label="Model untuk User">
+                          <InputWrap><input value={aiForm.modelUser} onChange={(e) => updateAiForm("modelUser", e.target.value)} placeholder="qwen3.7-flash" /></InputWrap>
+                        </Field>
+                        <div className="cx-full-span">
+                          <Field label="Base URL Penyedia AI" hint="Kosongkan untuk memakai endpoint DashScope International">
+                            <InputWrap><input value={aiForm.baseUrl} onChange={(e) => updateAiForm("baseUrl", e.target.value)} placeholder="https://dashscope-intl.aliyuncs.com/compatible-mode/v1" /></InputWrap>
+                          </Field>
+                        </div>
+                        <Field label="Maks. Langkah Tool" hint="1 - 10, default 6">
+                          <InputWrap><input type="number" min="1" max="10" value={aiForm.maxSteps} onChange={(e) => updateAiForm("maxSteps", e.target.value)} /></InputWrap>
+                        </Field>
+                        <Field label="Temperature" hint="0 = presisi, 1 = kreatif">
+                          <InputWrap><input type="number" step="0.1" min="0" max="2" value={aiForm.temperature} onChange={(e) => updateAiForm("temperature", e.target.value)} /></InputWrap>
+                        </Field>
+                        <div className="cx-full-span">
+                          <Field label="Instruksi Tambahan" hint="Ditambahkan ke system prompt Assisten (opsional)">
+                            <InputWrap><textarea value={aiForm.extraPrompt} onChange={(e) => updateAiForm("extraPrompt", e.target.value)} placeholder="Contoh: Selalu tawarkan promo top up mingguan." /></InputWrap>
+                          </Field>
+                        </div>
+                        <div className="cx-full-span">
+                          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 11, color: "var(--ink2)" }}>
+                            <input type="checkbox" checked={aiForm.enabled} onChange={(e) => updateAiForm("enabled", e.target.checked)} />
+                            Assisten aktif untuk user & admin
+                          </label>
+                        </div>
+                      </div>
+                      {aiError && <p className="cx-form-error">{aiError}</p>}
+                      {aiNotice && <p style={{ color: "var(--green)", fontSize: 11, marginTop: 8 }}>{aiNotice}</p>}
+                      <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+                        <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={saveSettings} disabled={savingAi}>
+                          {savingAi ? <><RefreshCw size={11} /> Menyimpan...</> : <><Check size={11} /> Simpan Pengaturan</>}
+                        </button>
+                        {aiCfg?.keySource === "panel" && (
+                          <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={clearApiKey} disabled={savingAi}>
+                            <Trash2 size={11} /> Hapus API Key
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="cx-panel" style={{ marginTop: 18 }}>
+                <div className="cx-panel-header">
+                  <h3>Hak Akses Assisten</h3>
+                  <span className="cx-panel-sub">role menentukan tool yang boleh dipakai</span>
+                </div>
+                <div style={{ padding: 14, fontSize: 11, color: "var(--muted)", lineHeight: 1.7 }}>
+                  <p><strong style={{ color: "var(--ink2)" }}>Admin</strong> — bisa membaca & mengubah data semua user, saldo, status akun, top up, dan produk.</p>
+                  <p><strong style={{ color: "var(--ink2)" }}>User biasa</strong> — hanya data akunnya sendiri, dan bisa eskalasi masalah ke admin.</p>
+                  <p>Atur role tiap akun di panel <strong style={{ color: "var(--ink2)" }}>Pengguna</strong> (ikon perisai) atau lewat form edit user.</p>
+                </div>
+              </div>
+            </>
+          ) : (
+          <>
           <div className="cx-admin-top">
             <div>
               <div className="cx-admin-date">{new Date().toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
@@ -934,7 +1127,12 @@ function AdminPage({ onBack, onNotice }) {
                   <div className="cx-user-ident">
                     <div className="cx-avatar">{String(u.name || "U").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</div>
                     <div style={{ minWidth: 0 }}>
-                      <strong>{u.name}</strong>
+                      <strong>
+                        {u.name}
+                        {u.role === "admin" && (
+                          <span className="cx-role-tag"><ShieldCheck size={9} /> Admin</span>
+                        )}
+                      </strong>
                       <small>{u.email}{u.phone ? ` · ${u.phone}` : ""}</small>
                     </div>
                   </div>
@@ -950,6 +1148,14 @@ function AdminPage({ onBack, onNotice }) {
                     {u.status === "active"
                       ? <button className="cx-row-btn" onClick={() => setUserStatus(u.id, "suspend")} aria-label="Tangguhkan"><LockKeyhole size={11} /></button>
                       : <button className="cx-row-btn" onClick={() => setUserStatus(u.id, "activate")} aria-label="Aktifkan"><BadgeCheck size={11} /></button>}
+                    <button
+                      className="cx-row-btn"
+                      onClick={() => setUserRole(u.id, u.role === "admin" ? "user" : "admin")}
+                      aria-label={u.role === "admin" ? "Cabut admin" : "Jadikan admin"}
+                      title={u.role === "admin" ? "Cabut akses admin" : "Jadikan admin"}
+                    >
+                      <ShieldCheck size={11} />
+                    </button>
                     <button className="cx-row-btn" onClick={() => openUserForm(u)} aria-label="Edit user"><Pencil size={11} /></button>
                     <button className="cx-row-btn danger" onClick={() => deleteUser(u)} aria-label="Hapus user"><Trash2 size={11} /></button>
                   </div>
@@ -1037,6 +1243,8 @@ function AdminPage({ onBack, onNotice }) {
               }
             </div>
           </div>
+          </>
+          )}
         </div>
 
         {/* Status bar */}
@@ -1075,6 +1283,14 @@ function AdminPage({ onBack, onNotice }) {
                       <option value="active">Aktif</option>
                       <option value="suspended">Ditangguhkan</option>
                       <option value="banned">Diblokir</option>
+                    </select>
+                  </InputWrap>
+                </Field>
+                <Field label="Role" hint="Admin bisa memakai Assisten mode admin">
+                  <InputWrap>
+                    <select value={userForm.role} onChange={(e) => updateUserForm("role", e.target.value)}>
+                      <option value="user">User biasa</option>
+                      <option value="admin">Admin</option>
                     </select>
                   </InputWrap>
                 </Field>
@@ -1746,7 +1962,7 @@ const ASSISTANT_HINTS = {
 
 function AssistantWidget() {
   const [open, setOpen] = useState(false);
-  const [info, setInfo] = useState({ loading: true, role: "", available: false, model: "", error: "" });
+  const [info, setInfo] = useState({ loading: true, role: "", available: false, model: "", reason: "", error: "" });
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1762,8 +1978,8 @@ function AssistantWidget() {
         if (!r.ok) throw new Error(p.error || "Assisten tidak tersedia");
         return p;
       })
-      .then((p) => setInfo({ loading: false, role: p.role, available: p.available, model: p.model || "", error: "" }))
-      .catch((e) => setInfo({ loading: false, role: "", available: false, model: "", error: e.message }));
+      .then((p) => setInfo({ loading: false, role: p.role, available: p.available, model: p.model || "", reason: p.reason || "", error: "" }))
+      .catch((e) => setInfo({ loading: false, role: "", available: false, model: "", reason: "", error: e.message }));
   };
 
   useEffect(() => { if (open) loadInfo(); }, [open]);
@@ -1849,7 +2065,14 @@ function AssistantWidget() {
             {!info.loading && !info.error && !info.available && (
               <div className="cx-ai-empty">
                 <LockKeyhole size={18} />
-                <p>Assisten belum aktif. Admin perlu mengatur QWEN_API_KEY di Vercel.</p>
+                <p>
+                  {info.reason === "disabled"
+                    ? "Assisten sedang dimatikan oleh admin. Coba lagi nanti."
+                    : info.role === "admin"
+                      ? "Assisten belum aktif. Isi API key di Admin Panel → Assisten."
+                      : "Assisten belum aktif. Admin sedang menyiapkannya, coba lagi nanti."}
+                </p>
+                <button className="cx-btn cx-btn-ghost" onClick={loadInfo}>Coba lagi</button>
               </div>
             )}
 

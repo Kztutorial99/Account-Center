@@ -845,3 +845,21 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-ai-panel { right: 8px; left: 8px; width: auto; bottom: 68px; height: calc(100vh - 100px); }
   .cx-ai-fab { right: 12px; bottom: 12px; }
 }
+
+/* Tag role admin di daftar pengguna */
+.cx-role-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  vertical-align: middle;
+}

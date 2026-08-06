@@ -27,11 +27,23 @@ const MAX_STEPS = 6;
 const STATUSES = ["active", "suspended", "banned"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const baseUrl = () => (process.env.QWEN_BASE_URL || DEFAULT_BASE).replace(/\/+$/, "");
-const modelFor = (role) =>
-  role === "admin"
-    ? process.env.QWEN_MODEL || "qwen3.8-max"
-    : process.env.QWEN_MODEL_USER || process.env.QWEN_MODEL || "qwen3.7-flash";
+// Konfigurasi efektif: dari admin panel (database) dulu, baru env var.
+const envConfig = () => ({
+  enabled: true,
+  apiKey: (process.env.QWEN_API_KEY || "").trim(),
+  baseUrl: (process.env.QWEN_BASE_URL || DEFAULT_BASE).replace(/\/+$/, ""),
+  modelAdmin: (process.env.QWEN_MODEL || "qwen3.8-max").trim(),
+  modelUser: (process.env.QWEN_MODEL_USER || process.env.QWEN_MODEL || "qwen3.7-flash").trim(),
+  maxSteps: MAX_STEPS,
+  temperature: 0.3,
+  extraPrompt: "",
+});
+const configOf = (cfg) => ({ ...envConfig(), ...(cfg || {}) });
+const baseUrl = (cfg) => configOf(cfg).baseUrl;
+const modelFor = (role, cfg) => {
+  const c = configOf(cfg);
+  return role === "admin" ? c.modelAdmin : c.modelUser;
+};
 
 const num = (v, fallback = 0) => (Number.isFinite(Number(v)) ? Number(v) : fallback);
 const money = (v) => rupiah(num(v));
@@ -720,10 +732,11 @@ function systemPrompt(ctx) {
    LOOP TOOL-CALLING KE QWEN
 ════════════════════════════════════════════════════ */
 
-async function callQwen(payload) {
-  const key = process.env.QWEN_API_KEY;
+async function callQwen(payload, cfg) {
+  const c = configOf(cfg);
+  const key = c.apiKey;
   if (!key) throw new Error("QWEN_API_KEY belum dikonfigurasi");
-  const res = await fetch(`${baseUrl()}/chat/completions`, {
+  const res = await fetch(`${baseUrl(c)}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify(payload),
@@ -743,14 +756,23 @@ async function callQwen(payload) {
  * @returns {{reply:string, actions:string[], usage:object}}
  */
 async function runAssistant({ ctx, history }) {
-  const model = modelFor(ctx.role);
+  const cfg = configOf(ctx.cfg);
+  const model = modelFor(ctx.role, cfg);
   const tools = schemasForRole(ctx.role);
-  const messages = [{ role: "system", content: systemPrompt(ctx) }, ...history];
+  const basePrompt = systemPrompt(ctx);
+  const prompt = cfg.extraPrompt
+    ? `${basePrompt}\n\nINSTRUKSI TAMBAHAN DARI ADMIN:\n${cfg.extraPrompt}`
+    : basePrompt;
+  const messages = [{ role: "system", content: prompt }, ...history];
   const actions = [];
   let usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+  const steps = Math.min(10, Math.max(1, Number(cfg.maxSteps) || MAX_STEPS));
 
-  for (let step = 0; step < MAX_STEPS; step += 1) {
-    const data = await callQwen({ model, messages, tools, tool_choice: "auto", parallel_tool_calls: true });
+  for (let step = 0; step < steps; step += 1) {
+    const data = await callQwen(
+      { model, messages, tools, tool_choice: "auto", parallel_tool_calls: true, temperature: cfg.temperature },
+      cfg,
+    );
     if (data.usage) {
       usage = {
         prompt_tokens: usage.prompt_tokens + num(data.usage.prompt_tokens),

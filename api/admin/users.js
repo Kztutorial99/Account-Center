@@ -3,6 +3,7 @@ const { isAdmin } = require("./_auth");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STATUSES = ["active", "suspended", "banned"];
+const ROLES = ["user", "admin"];
 
 module.exports = async function handler(request, response) {
   if (!isAdmin(request)) return response.status(401).json({ error: "Sesi admin tidak valid" });
@@ -13,7 +14,7 @@ module.exports = async function handler(request, response) {
     /* ── LIST ── */
     if (request.method === "GET") {
       const users = await sql`
-        SELECT u.id, u.name, u.email, u.phone, u.balance, u.status, u.note,
+        SELECT u.id, u.name, u.email, u.phone, u.balance, u.status, u.role, u.note,
                u.created_at AS "createdAt",
                COALESCE(SUM(CASE WHEN t.status = 'approved' THEN t.amount ELSE 0 END), 0) AS "topupTotal",
                COUNT(t.id) FILTER (WHERE t.status = 'pending') AS "pendingCount",
@@ -31,6 +32,7 @@ module.exports = async function handler(request, response) {
           topupTotal: Number(u.topupTotal) || 0,
           pendingCount: Number(u.pendingCount) || 0,
           status: u.status || "active",
+          role: u.role === "admin" ? "admin" : "user",
         })),
       });
     }
@@ -59,6 +61,12 @@ module.exports = async function handler(request, response) {
     // aksi cepat: ubah status saja
     const action = text(body.action, 20);
     if (action) {
+      // aksi role: jadikan admin / turunkan ke user
+      if (action === "promote" || action === "demote") {
+        const role = action === "promote" ? "admin" : "user";
+        await sql`UPDATE codexa_users SET role = ${role} WHERE id = ${id}`;
+        return response.status(200).json({ ok: true, role });
+      }
       const map = { activate: "active", suspend: "suspended", ban: "banned" };
       const status = map[action];
       if (!status) return response.status(400).json({ error: "Aksi tidak dikenal" });
@@ -71,12 +79,14 @@ module.exports = async function handler(request, response) {
     const phone = text(body.phone, 30);
     const note = text(body.note, 300);
     const status = text(body.status, 20) || "active";
+    const role = text(body.role, 10) || "user";
     const password = typeof body.password === "string" ? body.password : "";
     const balanceRaw = body.balance;
 
     if (name.length < 2) return response.status(400).json({ error: "Nama minimal 2 karakter" });
     if (!EMAIL_RE.test(email)) return response.status(400).json({ error: "Format email tidak valid" });
     if (!STATUSES.includes(status)) return response.status(400).json({ error: "Status tidak valid" });
+    if (!ROLES.includes(role)) return response.status(400).json({ error: "Role tidak valid" });
     if (password && password.length < 6) return response.status(400).json({ error: "Password minimal 6 karakter" });
 
     const balance = Math.max(0, Math.round(Number(balanceRaw) || 0));
@@ -88,7 +98,7 @@ module.exports = async function handler(request, response) {
     await sql`
       UPDATE codexa_users
       SET name = ${name}, email = ${email}, phone = ${phone},
-          balance = ${balance}, status = ${status}, note = ${note}
+          balance = ${balance}, status = ${status}, role = ${role}, note = ${note}
       WHERE id = ${id}
     `;
     if (password) {

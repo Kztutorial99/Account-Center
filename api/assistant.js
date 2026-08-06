@@ -1,10 +1,14 @@
 /**
  * POST /api/assistant  — chat dengan Assisten CodeXa.
  *
- * Role ditentukan SERVER-SIDE dari cookie sesi:
- *   - cookie admin valid  → role "admin" (akses penuh)
- *   - cookie user valid   → role "user"  (hanya data sendiri)
- *   - tidak ada sesi      → 401
+ * Role ditentukan SERVER-SIDE:
+ *   - cookie admin valid            → role "admin" (akses penuh)
+ *   - user login dengan role admin  → role "admin"
+ *   - user login biasa              → role "user"  (hanya data sendiri)
+ *   - tidak ada sesi                → 401
+ *
+ * Konfigurasi (API key, model, dll) diambil dari admin panel (database),
+ * dengan fallback ke env var QWEN_*.
  *
  * Body: { messages: [{ role: "user"|"assistant", content: string }, ...] }
  * Respons: { reply, role, model, actions, usage }
@@ -13,6 +17,7 @@
 const { db, ensureTables, currentUser, bodyOf } = require("./_users");
 const { isAdmin } = require("./admin/_auth");
 const { runAssistant, modelFor, schemasForRole } = require("./_assistant");
+const { assistantConfig } = require("./_settings");
 
 const MAX_HISTORY = 24;
 const MAX_CHARS = 4000;
@@ -28,27 +33,31 @@ function sanitizeHistory(raw) {
 
 module.exports = async function handler(request, response) {
   try {
-    const admin = isAdmin(request);
+    const adminCookie = isAdmin(request);
+    const sql = db();
+    await ensureTables(sql);
+    const cfg = await assistantConfig(sql);
+    const active = cfg.enabled && cfg.hasKey;
+
+    // Siapa pemanggilnya + role efektifnya.
+    let role = "";
+    let user = null;
+    if (adminCookie) {
+      role = "admin";
+    } else {
+      user = await currentUser(sql, request);
+      if (user) role = user.role === "admin" ? "admin" : "user";
+    }
 
     // GET → info kemampuan assisten untuk pemanggil ini (dipakai UI).
     if (request.method === "GET") {
-      if (admin) {
-        return response.status(200).json({
-          available: Boolean(process.env.QWEN_API_KEY),
-          role: "admin",
-          model: modelFor("admin"),
-          tools: schemasForRole("admin").map((t) => t.function.name),
-        });
-      }
-      const sql = db();
-      await ensureTables(sql);
-      const user = await currentUser(sql, request);
-      if (!user) return response.status(401).json({ error: "Silakan masuk dulu untuk memakai Assisten" });
+      if (!role) return response.status(401).json({ error: "Silakan masuk dulu untuk memakai Assisten" });
       return response.status(200).json({
-        available: Boolean(process.env.QWEN_API_KEY),
-        role: "user",
-        model: modelFor("user"),
-        tools: schemasForRole("user").map((t) => t.function.name),
+        available: active,
+        reason: active ? "" : cfg.enabled ? "no_key" : "disabled",
+        role,
+        model: modelFor(role, cfg),
+        tools: schemasForRole(role).map((t) => t.function.name),
       });
     }
 
@@ -57,21 +66,23 @@ module.exports = async function handler(request, response) {
       return response.status(405).json({ error: "Method not allowed" });
     }
 
-    if (!process.env.QWEN_API_KEY) {
-      return response.status(503).json({ error: "Assisten belum aktif. Admin perlu mengatur QWEN_API_KEY." });
+    if (!role) return response.status(401).json({ error: "Silakan masuk dulu untuk memakai Assisten" });
+
+    if (!cfg.enabled) {
+      return response.status(503).json({ error: "Assisten sedang dimatikan oleh admin." });
+    }
+    if (!cfg.hasKey) {
+      return response.status(503).json({
+        error: "Assisten belum aktif. Admin bisa mengisi API key di Admin Panel → Assisten.",
+      });
     }
 
-    const sql = db();
-    await ensureTables(sql);
-
-    let ctx;
-    if (admin) {
-      ctx = { sql, role: "admin", user: { id: "admin", name: "Admin", email: "admin@codexa", phone: "", balance: 0 } };
-    } else {
-      const user = await currentUser(sql, request);
-      if (!user) return response.status(401).json({ error: "Silakan masuk dulu untuk memakai Assisten" });
-      ctx = { sql, role: "user", user };
-    }
+    const ctx = {
+      sql,
+      cfg,
+      role,
+      user: user || { id: "admin", name: "Admin", email: "admin@codexa", phone: "", balance: 0 },
+    };
 
     const history = sanitizeHistory(bodyOf(request).messages);
     if (!history.length) return response.status(400).json({ error: "Pesan tidak boleh kosong" });
@@ -83,7 +94,7 @@ module.exports = async function handler(request, response) {
     return response.status(200).json({
       reply: result.reply,
       role: ctx.role,
-      model: modelFor(ctx.role),
+      model: modelFor(ctx.role, cfg),
       actions: result.actions,
       usage: result.usage,
     });
@@ -91,7 +102,10 @@ module.exports = async function handler(request, response) {
     const message = (error && error.message) || "";
     console.error("Assistant failure", message);
     if (/QWEN_API_KEY/.test(message)) {
-      return response.status(503).json({ error: "Assisten belum dikonfigurasi" });
+      return response.status(503).json({ error: "Assisten belum dikonfigurasi. Cek Admin Panel → Assisten." });
+    }
+    if (/DATABASE_URL/.test(message)) {
+      return response.status(503).json({ error: "Database belum terhubung. Hubungi admin." });
     }
     if (error && error.status === 429) {
       return response.status(429).json({ error: "Assisten sedang sibuk, coba lagi beberapa saat." });
