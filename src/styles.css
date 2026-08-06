@@ -468,3 +468,55 @@ html, body { max-width: 100%; overflow-x: hidden; }
   white-space: nowrap;
   min-width: 0;
 }
+
+/* ── Daftar akun tersensor & editor multi-akun ───────── */
+.cx-cred-head {
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 2px;
+}
+.cx-cred-preview-lg { margin: 0 0 16px; max-height: 220px; overflow-y: auto; }
+.cx-cred-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--b1);
+}
+.cx-cred-item:first-of-type { border-top: 0; }
+.cx-cred-no {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--faint);
+  padding-top: 2px;
+  flex: none;
+}
+.cx-cred-pair { display: grid; gap: 2px; flex: 1; min-width: 0; }
+
+.cx-account-editor { display: grid; gap: 8px; }
+.cx-account-row {
+  display: grid;
+  grid-template-columns: 22px 1fr 1fr 30px;
+  align-items: center;
+  gap: 8px;
+}
+.cx-account-no {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--faint);
+}
+@media (max-width: 560px) {
+  .cx-account-row {
+    grid-template-columns: 1fr 30px;
+    grid-template-areas: "no del" "email email" "pass pass";
+    row-gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--b1);
+  }
+  .cx-account-row > .cx-account-no { grid-area: no; }
+  .cx-account-row > .cx-input-wrap:nth-of-type(1) { grid-area: email; }
+  .cx-account-row > .cx-input-wrap:nth-of-type(2) { grid-area: pass; }
+  .cx-account-row > .cx-icon-btn { grid-area: del; justify-self: end; }
+}
