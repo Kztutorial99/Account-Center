@@ -715,6 +715,18 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .cx-proof-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .cx-proof-actions > * { justify-content: center; text-decoration: none; gap: 7px; }
 .cx-proof-actions button[disabled] { opacity: .45; cursor: not-allowed; }
+.cx-proof-drop { display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center;
+  padding: 18px 12px; border: 1px dashed var(--b1); border-radius: 10px; cursor: pointer; }
+.cx-proof-drop:hover { background: rgba(127,127,127,.06); }
+.cx-proof-drop.busy { opacity: .6; pointer-events: none; }
+.cx-proof-drop span { font: 600 12px Inter, sans-serif; }
+.cx-proof-drop small { font: 400 10.5px Inter, sans-serif; color: var(--ink2); }
+.cx-proof-preview { display: flex; gap: 10px; align-items: flex-start; }
+.cx-proof-preview img { width: 92px; height: 92px; object-fit: cover; border-radius: 9px; border: 1px solid var(--b1); }
+.cx-proof-meta { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.cx-proof-meta strong { font: 600 12px Inter, sans-serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-proof-meta small { font: 400 10.5px Inter, sans-serif; color: var(--ink2); }
+.cx-proof-meta .cx-btn { align-self: flex-start; }
 .cx-proof-wa { border-color: rgba(37,211,102,.45) !important; }
 .cx-proof-tg { border-color: rgba(34,158,217,.45) !important; }
 @media (max-width: 480px) {
