@@ -1294,6 +1294,7 @@ const QRIS_APPS = [
   { id: "DANA",      short: "DANA",  icon: "/wallets/dana.png",      color: "#118EEA", tint: "rgba(17,142,234,.14)" },
   { id: "GoPay",     short: "gopay", icon: "/wallets/gopay.png",     color: "#00AED6", tint: "rgba(0,174,214,.14)" },
   { id: "OVO",       short: "OVO",   icon: "/wallets/ovo.png",       color: "#4C3494", tint: "rgba(76,52,148,.16)" },
+  { id: "SeaBank",   short: "SeaBank", icon: "/wallets/seabank.png", color: "#E85D04", tint: "rgba(232,93,4,.14)" },
   { id: "ShopeePay", short: "SPay",  icon: "/wallets/shopeepay.png", color: "#EE4D2D", tint: "rgba(238,77,45,.14)" },
   { id: "LinkAja",   short: "Link",  icon: "/wallets/linkaja.png",   color: "#E22B2B", tint: "rgba(226,43,43,.14)" },
   { id: "BCA",       short: "BCA",   icon: "/wallets/bca.png",       color: "#0066AE", tint: "rgba(0,102,174,.14)" },
