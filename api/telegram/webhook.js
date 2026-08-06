@@ -101,10 +101,11 @@ module.exports = async function handler(request, response) {
       .filter(Boolean)
       .join(" ");
 
-    await callTelegram("editMessageText", {
+    const isPhoto = Boolean(callback.message && (callback.message.photo || callback.message.document));
+    await callTelegram(isPhoto ? "editMessageCaption" : "editMessageText", {
       chat_id: chatId,
       message_id: callback.message.message_id,
-      text: topupMessage({
+      [isPhoto ? "caption" : "text"]: topupMessage({
         topup: {
           id: topup.id,
           amount,
@@ -123,7 +124,6 @@ module.exports = async function handler(request, response) {
         reviewer: reviewer || "admin",
       }),
       parse_mode: "HTML",
-      disable_web_page_preview: true,
     });
 
     await ack(callback.id, action === "approve" ? "Top up disetujui, saldo ditambahkan." : "Top up ditolak.");
