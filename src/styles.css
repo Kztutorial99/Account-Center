@@ -566,7 +566,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .cx-account-trigger-copy strong { font: 600 11px Inter, sans-serif; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cx-account-trigger-copy small { font-size: 9.5px; color: var(--muted); font-family: ui-monospace, monospace; }
 .cx-account-overlay { position: fixed; inset: 0; z-index: 40; }
-.cx-account-dropdown { position: absolute; right: 0; top: calc(100% + 8px); width: 250px; background: #fff; border: 1px solid var(--b1); border-radius: 8px; box-shadow: 0 14px 34px rgba(15,23,42,.14); padding: 8px; z-index: 50; }
+.cx-account-dropdown { position: absolute; right: 0; top: calc(100% + 8px); width: 250px; background: var(--s1); border: 1px solid var(--b2); border-radius: 8px; box-shadow: 0 14px 34px rgba(0,0,0,.5); padding: 8px; z-index: 50; color: var(--ink2); }
 .cx-account-head { display: flex; gap: 10px; align-items: center; padding: 8px; }
 .cx-account-head strong { display: block; font: 600 12px Inter, sans-serif; }
 .cx-account-head small { display: block; font-size: 10px; color: var(--muted); word-break: break-all; }
