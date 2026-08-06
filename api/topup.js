@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { db, ensureTables, currentUser, bodyOf, text } = require("./_users");
+const { notifyNewTopup } = require("./_telegram");
 
 const MIN_TOPUP = 10000;
 const MAX_TOPUP = 20000000;
@@ -53,7 +54,17 @@ module.exports = async function handler(request, response) {
       VALUES (${crypto.randomUUID()}, ${user.id}, ${amount}, ${method}, ${reference}, ${note})
       RETURNING id, amount, method, reference, note, status, created_at AS "createdAt", reviewed_at AS "reviewedAt"
     `;
-    return response.status(201).json({ topup: { ...rows[0], amount: Number(rows[0].amount) || 0 } });
+    const topup = { ...rows[0], amount: Number(rows[0].amount) || 0 };
+
+    // Kirim notifikasi ke admin lewat bot Telegram. Kegagalan Telegram
+    // tidak boleh membatalkan permintaan top up yang sudah tersimpan.
+    try {
+      await notifyNewTopup({ topup, user });
+    } catch (notifyError) {
+      console.error("Telegram notify failure", notifyError && notifyError.message);
+    }
+
+    return response.status(201).json({ topup });
   } catch (error) {
     console.error("Topup failure", error && error.message);
     return response.status(500).json({ error: "Permintaan top up gagal diproses" });
