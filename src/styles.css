@@ -651,3 +651,71 @@ html, body { max-width: 100%; overflow-x: hidden; }
 }
 .cx-qris-wrap img { width: 100%; max-width: 300px; height: auto; display: block; }
 .cx-qris-steps { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 12.5px; line-height: 1.5; opacity: .8; }
+
+/* ─── Top up: step bar, brand tiles, ringkasan, bukti ─── */
+.cx-steps-bar { display: flex; gap: 6px; padding: 12px 14px 0; flex-wrap: wrap; }
+.cx-step {
+  display: inline-flex; align-items: center; gap: 6px; flex: 1 1 90px; min-width: 0;
+  font: 600 10.5px Inter, sans-serif; color: var(--faint); letter-spacing: .01em;
+  padding: 6px 8px; border-radius: 999px; border: 1px solid var(--b1); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; justify-content: center;
+}
+.cx-step b {
+  display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--b1); color: var(--ink2); font: 700 9px ui-monospace, monospace; flex: 0 0 auto;
+}
+.cx-step.active { color: #6366f1; border-color: rgba(99,102,241,.5); background: rgba(99,102,241,.08); }
+.cx-step.active b { background: #6366f1; color: #fff; }
+.cx-step.done { color: #4f9a63; border-color: rgba(79,154,99,.4); }
+.cx-step.done b { background: rgba(79,154,99,.2); color: #4f9a63; }
+
+.cx-field-label { font: 600 11px Inter, sans-serif; margin: 4px 0 8px; color: var(--ink2); }
+.cx-field-hint { font-size: 10.5px; color: var(--faint); margin: 8px 0 12px; line-height: 1.5; }
+.cx-app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.cx-app-tile {
+  display: grid; justify-items: center; gap: 6px; padding: 10px 6px; min-width: 0;
+  border: 1px solid var(--b1); border-radius: 12px; background: none; cursor: pointer;
+  font: 600 10px Inter, sans-serif; color: var(--ink2); transition: border-color .15s, background .15s;
+}
+.cx-app-tile span { width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-app-tile:hover { border-color: rgba(99,102,241,.45); }
+.cx-applogo {
+  display: grid; place-items: center; border-radius: 9px; border: 1px solid currentColor;
+  font: 800 9.5px Inter, sans-serif; letter-spacing: -.02em; flex: 0 0 auto;
+}
+
+.cx-confirm-hero {
+  display: grid; justify-items: center; gap: 6px; text-align: center;
+  padding: 16px 14px; border-radius: 16px; margin-bottom: 12px;
+  border: 1px solid rgba(99,102,241,.25);
+  background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(99,102,241,.03));
+}
+.cx-confirm-cap { font: 600 9.5px Inter, sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.cx-confirm-amount { font: 700 clamp(24px, 8vw, 32px) ui-monospace, monospace; letter-spacing: -.03em; line-height: 1.1; }
+.cx-confirm-app { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink2); max-width: 100%; }
+.cx-confirm-app span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cx-summary-list { list-style: none; margin: 0 0 12px; padding: 4px 0; border: 1px solid var(--b1); border-radius: 12px; }
+.cx-summary-list li {
+  display: grid; grid-template-columns: minmax(84px, 38%) minmax(0, 1fr); gap: 10px;
+  align-items: baseline; padding: 8px 12px; font-size: 11.5px;
+}
+.cx-summary-list li + li { border-top: 1px solid var(--b1); }
+.cx-summary-list li span { color: var(--faint); font-size: 10.5px; }
+.cx-summary-list li strong { min-width: 0; font: 600 11.5px ui-monospace, monospace; word-break: break-word; text-align: right; }
+
+.cx-qris-meta { text-align: center; font: 500 10.5px ui-monospace, monospace; color: var(--faint); margin: 8px 0 12px; }
+
+.cx-proof-block { border: 1px dashed var(--b1); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.cx-proof-title { font: 600 11px Inter, sans-serif; color: var(--ink2); margin-bottom: 9px; }
+.cx-proof-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cx-proof-actions > * { justify-content: center; text-decoration: none; gap: 7px; }
+.cx-proof-actions button[disabled] { opacity: .45; cursor: not-allowed; }
+.cx-proof-wa { border-color: rgba(37,211,102,.45) !important; }
+.cx-proof-tg { border-color: rgba(34,158,217,.45) !important; }
+@media (max-width: 480px) {
+  .cx-proof-actions { grid-template-columns: 1fr; }
+  .cx-summary-list li { grid-template-columns: 1fr; gap: 2px; }
+  .cx-summary-list li strong { text-align: left; }
+  .cx-app-grid { grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); }
+}

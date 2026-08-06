@@ -1290,15 +1290,47 @@ function AuthPage({ onAuthenticated }) {
    PROFIL & TOP UP (halaman terpisah)
 ════════════════════════════════════════════════════ */
 const QRIS_APPS = [
-  "DANA", "GoPay", "OVO", "ShopeePay", "LinkAja", "QRIS BCA mobile / myBCA",
-  "QRIS BRImo", "QRIS Livin' by Mandiri", "QRIS SeaBank", "Lainnya",
+  { id: "DANA",                    short: "DANA",  color: "#118EEA", tint: "rgba(17,142,234,.14)" },
+  { id: "GoPay",                   short: "gopay", color: "#00AA13", tint: "rgba(0,170,19,.14)" },
+  { id: "OVO",                     short: "OVO",   color: "#4C3494", tint: "rgba(76,52,148,.16)" },
+  { id: "ShopeePay",               short: "SPay",  color: "#EE4D2D", tint: "rgba(238,77,45,.14)" },
+  { id: "LinkAja",                 short: "Link",  color: "#E22B2B", tint: "rgba(226,43,43,.14)" },
+  { id: "QRIS BCA mobile / myBCA", short: "BCA",   color: "#0066AE", tint: "rgba(0,102,174,.14)" },
+  { id: "QRIS BRImo",              short: "BRI",   color: "#00529C", tint: "rgba(0,82,156,.14)" },
+  { id: "QRIS Livin' by Mandiri",  short: "Livin", color: "#003D79", tint: "rgba(0,61,121,.14)" },
+  { id: "QRIS SeaBank",            short: "Sea",   color: "#F26F21", tint: "rgba(242,111,33,.14)" },
+  { id: "Lainnya",                 short: "•••",   color: "#6366F1", tint: "rgba(99,102,241,.14)" },
 ];
+const appMeta = (id) => QRIS_APPS.find((a) => a.id === id) || QRIS_APPS[QRIS_APPS.length - 1];
+
+function AppLogo({ app, size = 34 }) {
+  const m = appMeta(app);
+  return (
+    <span className="cx-applogo" style={{ width: size, height: size, background: m.tint, color: m.color, borderColor: m.color }}>
+      {m.short}
+    </span>
+  );
+}
+
+const IconWhatsApp = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#25D366" aria-hidden="true">
+    <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.05-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.47s1.06 2.86 1.21 3.06c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.28.17-1.41-.07-.13-.27-.2-.57-.35z"/>
+    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.87 9.87 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm0 18.13h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.36c0-4.54 3.7-8.23 8.25-8.23a8.23 8.23 0 0 1 8.24 8.24c0 4.54-3.7 8.21-8.24 8.21z"/>
+  </svg>
+);
+const IconTelegram = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#229ED9" aria-hidden="true">
+    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.64 6.8-1.6 7.56c-.12.54-.44.67-.89.42l-2.46-1.81-1.19 1.14c-.13.13-.24.24-.5.24l.18-2.53 4.6-4.16c.2-.18-.04-.28-.31-.1l-5.69 3.58-2.45-.77c-.53-.17-.54-.53.11-.79l9.58-3.69c.44-.16.83.1.62.91z"/>
+  </svg>
+);
+
 const QRIS_IMAGE   = "/qris-kztutorial.png";
 const QRIS_NAME    = "KZ.TUTORIAL";
 const QRIS_NMID    = "ID1026476486182";
 const WA_NUMBER    = "62895325844493";
 const TG_USERNAME  = "Kztutorial";
 const TOPUP_PRESETS = [25000, 50000, 100000, 250000, 500000];
+
 
 const topupStatusBadge = (status) =>
   status === "approved" ? <span className="cx-topup-badge ok"><BadgeCheck size={11} /> Disetujui</span>
@@ -1382,7 +1414,7 @@ function ProfilePage({ user, onBack, onTopup }) {
 function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const [state, load] = useTopupData(user);
   const [amount, setAmount]     = useState("");
-  const [app, setApp]           = useState(QRIS_APPS[0]);
+  const [app, setApp]           = useState(QRIS_APPS[0].id);
   const [otherApp, setOtherApp] = useState("");
   const [trxId, setTrxId]       = useState("");
   const [note, setNote]         = useState("");
@@ -1397,6 +1429,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const appLabel = (isOther ? otherApp.trim() : app) || "Lainnya";
   const methodLabel = `QRIS · ${appLabel}`;
   const pendingTotal = state.topups.filter((t) => t.status === "pending").reduce((a, t) => a + t.amount, 0);
+  const dataReady = trxId.trim().length >= 4 && (!isOther || otherApp.trim());
 
   const goConfirm = (e) => {
     e.preventDefault(); setFormError("");
@@ -1426,7 +1459,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
       `Email: ${user.email}\n` +
       `Nominal: ${formatPrice(amountNumber)}\n` +
       `Bayar QRIS via: ${appLabel}\n` +
-      `No. ID Transaksi: ${trxId || "-"}\n` +
+      `No. ID Transaksi: ${trxId.trim() || "-"}\n` +
       `Catatan: ${note.trim() || "-"}\n\n` +
       `(bukti transfer saya lampirkan di chat ini)`
     );
@@ -1440,13 +1473,21 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
         method: "POST",
         body: JSON.stringify({ amount: amountNumber, method: methodLabel, reference: trxId.trim(), note: fullNote() }),
       });
-      setAmount(""); setTrxId(""); setNote(""); setOtherApp(""); setApp(QRIS_APPS[0]);
+      setAmount(""); setTrxId(""); setNote(""); setOtherApp(""); setApp(QRIS_APPS[0].id);
       setStep("form"); setAgreed(false);
       onNotice("Permintaan top up dikirim, menunggu verifikasi admin");
       load(); onRefresh();
     } catch (err) { setFormError(err.message); }
     finally { setBusy(false); }
   };
+
+  const summaryRows = [
+    ["Order ID", orderId],
+    ["Nominal", formatPrice(amountNumber)],
+    ["Bayar via", appLabel],
+    ["Nama", user.name],
+    ["Email", user.email],
+  ];
 
   return (
     <div className="cx-container cx-account-page">
@@ -1457,6 +1498,17 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
           <div className="cx-panel-header">
             <h3>Top Up Saldo</h3>
             <span className="cx-panel-sub">QRIS statis · verifikasi manual admin</span>
+          </div>
+
+          <div className="cx-steps-bar">
+            {["Nominal", "Konfirmasi", "Bayar & bukti"].map((s, i) => {
+              const idx = step === "form" ? 0 : step === "confirm" ? 1 : 2;
+              return (
+                <span key={s} className={`cx-step${i === idx ? " active" : ""}${i < idx ? " done" : ""}`}>
+                  <b>{i + 1}</b>{s}
+                </span>
+              );
+            })}
           </div>
 
           {step === "form" ? (
@@ -1473,13 +1525,21 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                 <input type="number" min="10000" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50000" required />
               </InputWrap>
             </Field>
-            <Field label="Bayar QRIS pakai aplikasi apa?" hint="Pilih e-wallet / m-banking yang kamu pakai untuk scan QRIS.">
-              <InputWrap icon={Wallet}>
-                <select value={app} onChange={(e) => setApp(e.target.value)}>
-                  {QRIS_APPS.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </InputWrap>
-            </Field>
+
+            <div className="cx-field-label">Bayar QRIS pakai aplikasi apa?</div>
+            <div className="cx-app-grid">
+              {QRIS_APPS.map((a) => (
+                <button type="button" key={a.id}
+                  className={`cx-app-tile${app === a.id ? " active" : ""}`}
+                  style={app === a.id ? { borderColor: a.color, background: a.tint } : undefined}
+                  onClick={() => setApp(a.id)}>
+                  <AppLogo app={a.id} size={30} />
+                  <span>{a.id.replace("QRIS ", "")}</span>
+                </button>
+              ))}
+            </div>
+            <p className="cx-field-hint">Tidak ada di daftar? Pilih <strong>•••  Lainnya</strong> lalu tulis nama aplikasinya.</p>
+
             {isOther && (
               <Field label="Tulis nama aplikasinya" hint="Akan dikirim ke admin lewat catatan.">
                 <InputWrap icon={FileText}>
@@ -1494,11 +1554,21 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
           </form>
           ) : step === "confirm" ? (
           <div className="cx-topup-form">
-            <div className="cx-confirm-box">
-              <span>Pastikan nominal sudah benar sebelum bayar</span>
-              <strong>{formatPrice(amountNumber)}</strong>
-              <small>Bayar via: {appLabel} · Order ID {orderId}</small>
+            <div className="cx-confirm-hero">
+              <span className="cx-confirm-cap">Cek &amp; konfirmasi nominal</span>
+              <strong className="cx-confirm-amount">{formatPrice(amountNumber)}</strong>
+              <div className="cx-confirm-app">
+                <AppLogo app={app} size={26} />
+                <span>{appLabel}</span>
+              </div>
             </div>
+
+            <ul className="cx-summary-list">
+              {summaryRows.map(([k, v]) => (
+                <li key={k}><span>{k}</span><strong>{v}</strong></li>
+              ))}
+            </ul>
+
             <label className="cx-confirm-check">
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
               <span>Saya sudah memeriksa, nominal <strong>{formatPrice(amountNumber)}</strong> sudah benar.</span>
@@ -1512,28 +1582,25 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
           </div>
           ) : (
           <form className="cx-topup-form" onSubmit={submitTopup}>
-            <div className="cx-confirm-box">
-              <span>Bayar tepat sejumlah</span>
-              <strong>{formatPrice(amountNumber)}</strong>
-              <small>Order ID {orderId} · {appLabel} · {QRIS_NAME} · NMID {QRIS_NMID}</small>
+            <div className="cx-confirm-hero">
+              <span className="cx-confirm-cap">Bayar tepat sejumlah</span>
+              <strong className="cx-confirm-amount">{formatPrice(amountNumber)}</strong>
+              <div className="cx-confirm-app">
+                <AppLogo app={app} size={26} />
+                <span>{appLabel} · {orderId}</span>
+              </div>
             </div>
             <div className="cx-qris-wrap">
               <img src={QRIS_IMAGE} alt={`QRIS statis ${QRIS_NAME}`} loading="lazy" />
             </div>
+            <p className="cx-qris-meta">{QRIS_NAME} · NMID {QRIS_NMID}</p>
             <ol className="cx-qris-steps">
               <li>Buka aplikasi <strong>{appLabel}</strong>, pilih menu QRIS / Scan.</li>
               <li>Scan QR di atas, masukkan nominal <strong>{formatPrice(amountNumber)}</strong>.</li>
               <li>Selesaikan pembayaran, catat <strong>nomor ID transaksi</strong> pada struk.</li>
-              <li>Isi nomor ID transaksi di bawah, lalu kirim bukti ke admin.</li>
+              <li>Lengkapi data di bawah, baru kirim bukti ke admin.</li>
             </ol>
-            <div className="cx-confirm-actions">
-              <a className="cx-btn cx-btn-ghost" href={`https://wa.me/${WA_NUMBER}?text=${proofMessage()}`} target="_blank" rel="noreferrer">
-                <Phone size={13} /> Bukti via WhatsApp
-              </a>
-              <a className="cx-btn cx-btn-ghost" href={`https://t.me/${TG_USERNAME}?text=${proofMessage()}`} target="_blank" rel="noreferrer">
-                Bukti via Telegram
-              </a>
-            </div>
+
             <Field label="Nomor ID transaksi" hint="Wajib. Nomor referensi / transaction ID dari struk pembayaran.">
               <InputWrap icon={FileText}>
                 <input value={trxId} onChange={(e) => setTrxId(e.target.value)} placeholder="Contoh: TRX-2408061234567" required />
@@ -1542,17 +1609,42 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
             <Field label="Catatan untuk admin (opsional)" hint="Tulis di sini kalau aplikasi pembayaranmu tidak ada di daftar.">
               <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Contoh: bayar QRIS dari Jenius a/n ..." />
             </Field>
-            <div className="cx-confirm-box" style={{ marginBottom: 4 }}>
-              <span>Yang dikirim ke admin</span>
-              <small>
-                {methodLabel} · ID transaksi {trxId.trim() || "-"} · Order ID {orderId}
-                {note.trim() ? ` · catatan: ${note.trim()}` : ""}
-              </small>
-            </div>
+
+            <ul className="cx-summary-list">
+              <li><span>Metode</span><strong>{methodLabel}</strong></li>
+              <li><span>ID transaksi</span><strong>{trxId.trim() || "-"}</strong></li>
+              <li><span>Order ID</span><strong>{orderId}</strong></li>
+              <li><span>Catatan</span><strong>{note.trim() || "-"}</strong></li>
+            </ul>
+
             {formError && <p className="cx-form-error">{formError}</p>}
+
+            <div className="cx-proof-block">
+              <div className="cx-proof-title">
+                {dataReady ? "Kirim bukti transfer ke admin" : "Lengkapi data di atas dulu untuk kirim bukti"}
+              </div>
+              <div className="cx-proof-actions">
+                {dataReady ? (
+                  <>
+                    <a className="cx-btn cx-btn-ghost cx-proof-wa" href={`https://wa.me/${WA_NUMBER}?text=${proofMessage()}`} target="_blank" rel="noreferrer">
+                      <IconWhatsApp size={16} /> Bukti via WhatsApp
+                    </a>
+                    <a className="cx-btn cx-btn-ghost cx-proof-tg" href={`https://t.me/${TG_USERNAME}?text=${proofMessage()}`} target="_blank" rel="noreferrer">
+                      <IconTelegram size={16} /> Bukti via Telegram
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="cx-btn cx-btn-ghost" disabled><IconWhatsApp size={16} /> Bukti via WhatsApp</button>
+                    <button type="button" className="cx-btn cx-btn-ghost" disabled><IconTelegram size={16} /> Bukti via Telegram</button>
+                  </>
+                )}
+              </div>
+            </div>
+
             <div className="cx-confirm-actions">
               <button type="button" className="cx-btn cx-btn-ghost" onClick={() => setStep("confirm")}>Kembali</button>
-              <button type="submit" className="cx-btn cx-btn-primary" disabled={busy}>
+              <button type="submit" className="cx-btn cx-btn-primary" disabled={busy || !dataReady}>
                 {busy ? <><RefreshCw size={13} /> Mengirim...</> : <><Plus size={13} /> Saya sudah bayar</>}
               </button>
             </div>
