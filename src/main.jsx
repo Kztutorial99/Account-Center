@@ -386,12 +386,11 @@ function ProductCard({ product, colorIdx, onBuy }) {
   const color = ACCENT_COLORS[colorIdx % ACCENT_COLORS.length];
   return (
     <article className="cx-product-card">
-      <div className="cx-product-visual" style={{ background: `${color}0d` }}>
-        <div className="cx-product-monogram" style={{ background: color }}>{(product.loginType || "A")[0].toUpperCase()}</div>
-        <span className="cx-product-badge">{product.stock} stok</span>
-      </div>
       <div className="cx-product-body">
-        <p className="cx-product-type">{product.loginType}</p>
+        <div className="cx-product-head">
+          <p className="cx-product-type" style={{ color }}>{product.loginType}</p>
+          <span className="cx-product-badge">{product.stock} stok</span>
+        </div>
         <h3 className="cx-product-title">{product.title}</h3>
         <p className="cx-product-desc">{product.description || "Akun digital siap digunakan. Detail dikirim setelah pembayaran."}</p>
         {Array.isArray(product.accounts) && product.accounts.length > 0 && (
