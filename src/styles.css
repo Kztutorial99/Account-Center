@@ -543,3 +543,10 @@ html, body { max-width: 100%; overflow-x: hidden; }
   flex: none;
   white-space: nowrap;
 }
+
+/* ── PROVIDER ICONS ─────────────────────────── */
+.cx-provider-icon { display: inline-block; object-fit: contain; flex-shrink: 0; vertical-align: middle; }
+.cx-buy-symbol { align-self: center; display: grid; place-items: center; opacity: .9; }
+.cx-buy-symbol .cx-provider-icon { filter: drop-shadow(0 6px 18px rgba(0,0,0,.35)); }
+.cx-cart-thumb-icon { background: var(--s2, rgba(255,255,255,.05)); border: 1px solid var(--b2); }
+.cx-activity-icon .cx-provider-icon { display: block; }
