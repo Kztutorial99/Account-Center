@@ -6,6 +6,7 @@ import {
   FileText, LayoutDashboard, LockKeyhole, LogIn, LogOut, Menu,
   MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw,
   Search, Settings, ShieldCheck, ShoppingBag, Trash2, X,
+  User, Wallet, Mail, Phone, Clock,
 } from "lucide-react";
 import "./styles.css";
 
@@ -84,6 +85,7 @@ function App() {
     window.location.pathname === "/admin" ? "admin"
     : window.location.pathname === "/orders" ? "orders"
     : window.location.pathname === "/help" ? "help"
+    : window.location.pathname === "/account" ? "account"
     : "store"
   );
   const [search, setSearch]   = useState("");
@@ -93,6 +95,21 @@ function App() {
   const [buyItem, setBuyItem]   = useState(null);
   const [buySel, setBuySel]     = useState([]);
   const [data, setData]         = useState({ products: [], loading: true, error: "" });
+  const [auth, setAuth]         = useState({ user: null, loading: true });
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const loadSession = () =>
+    fetch("/api/auth", { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((p) => setAuth({ user: p.user || null, loading: false }))
+      .catch(() => setAuth({ user: null, loading: false }));
+
+  const logout = async () => {
+    try { await jsonRequest("/api/auth", { method: "DELETE" }); } catch (_) {}
+    setAuth({ user: null, loading: false });
+    setMenuOpen(false);
+    setCart([]);
+  };
 
   const loadCatalog = () => {
     setData((x) => ({ ...x, loading: true, error: "" }));
@@ -106,9 +123,11 @@ function App() {
     const pop = () => setActivePage(
       window.location.pathname === "/admin"  ? "admin"
       : window.location.pathname === "/orders" ? "orders"
-      : window.location.pathname === "/help"   ? "help" : "store"
+      : window.location.pathname === "/help"   ? "help"
+      : window.location.pathname === "/account" ? "account" : "store"
     );
     window.addEventListener("popstate", pop);
+    loadSession();
     loadCatalog();
     return () => window.removeEventListener("popstate", pop);
   }, []);
@@ -138,10 +157,34 @@ function App() {
     return <AdminPage onBack={() => navigate("store")} onNotice={showNotice} />;
   }
 
+  /* ── auth gate: wajib login sebelum akses CodeXa ── */
+  if (auth.loading) return (
+    <div className="cx-login-wrap"><div style={{ color: "var(--muted)", fontSize: 12 }}>Memeriksa sesi...</div></div>
+  );
+  if (!auth.user) return (
+    <AuthPage onAuthenticated={(user) => { setAuth({ user, loading: false }); navigate("store"); }} />
+  );
+
+  const topbar = (
+    <StoreTopbar
+      activePage={activePage} navigate={navigate} cart={cart}
+      onCartOpen={() => setCartOpen(true)}
+      user={auth.user} menuOpen={menuOpen} setMenuOpen={setMenuOpen} onLogout={logout}
+    />
+  );
+
+  if (activePage === "account") return (
+    <div className="cx-app">
+      {topbar}
+      <AccountPage user={auth.user} onBack={() => navigate("store")} onNotice={showNotice} onRefresh={loadSession} />
+      <StoreFooter navigate={navigate} />
+    </div>
+  );
+
   /* ── simple pages ── */
   if (activePage === "orders") return (
     <div className="cx-app">
-      <StoreTopbar activePage={activePage} navigate={navigate} cart={cart} onCartOpen={() => setCartOpen(true)} />
+      {topbar}
       <div className="cx-simple-page cx-container">
         <button className="cx-back-link" onClick={() => navigate("store")}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
         <Package size={28} color="#818cf8" style={{ marginBottom: 12 }} />
@@ -155,7 +198,7 @@ function App() {
 
   if (activePage === "help") return (
     <div className="cx-app">
-      <StoreTopbar activePage={activePage} navigate={navigate} cart={cart} onCartOpen={() => setCartOpen(true)} />
+      {topbar}
       <div className="cx-simple-page cx-container">
         <button className="cx-back-link" onClick={() => navigate("store")}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
         <CircleHelp size={28} color="#818cf8" style={{ marginBottom: 12 }} />
@@ -170,7 +213,7 @@ function App() {
   /* ── store page ── */
   return (
     <div className="cx-app">
-      <StoreTopbar activePage={activePage} navigate={navigate} cart={cart} onCartOpen={() => setCartOpen(true)} />
+      {topbar}
 
       {/* Hero */}
       <section className="cx-hero">
@@ -383,7 +426,8 @@ function App() {
 /* ═══════════════════════════════════════════════════
    STORE TOPBAR
 ════════════════════════════════════════════════════ */
-function StoreTopbar({ activePage, navigate, cart, onCartOpen }) {
+function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, setMenuOpen, onLogout }) {
+  const initials = String(user && user.name || "CX").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "CX";
   return (
     <header className="cx-topbar">
       <div className="cx-container cx-topbar-inner">
@@ -403,7 +447,46 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen }) {
             {cart.length > 0 && <b>{cart.length}</b>}
             <span className="cx-cart-label">Keranjang</span>
           </button>
-          <div className="cx-avatar">CX</div>
+          <div className="cx-account-menu">
+            <button className="cx-account-trigger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Akun saya">
+              <div className="cx-avatar">{initials}</div>
+              <div className="cx-account-trigger-copy">
+                <strong>{user ? user.name : "Akun"}</strong>
+                <small>{formatPrice(user ? user.balance : 0)}</small>
+              </div>
+              <ChevronDown size={12} />
+            </button>
+            {menuOpen && (
+              <>
+                <div className="cx-account-overlay" onClick={() => setMenuOpen(false)} />
+                <div className="cx-account-dropdown">
+                  <div className="cx-account-head">
+                    <div className="cx-avatar cx-avatar-lg">{initials}</div>
+                    <div>
+                      <strong>{user && user.name}</strong>
+                      <small>{user && user.email}</small>
+                    </div>
+                  </div>
+                  <div className="cx-account-balance">
+                    <span><Wallet size={12} /> Saldo</span>
+                    <strong>{formatPrice(user ? user.balance : 0)}</strong>
+                  </div>
+                  <button className="cx-account-item" onClick={() => { setMenuOpen(false); navigate("account"); }}>
+                    <User size={13} /> Profil saya
+                  </button>
+                  <button className="cx-account-item" onClick={() => { setMenuOpen(false); navigate("account"); }}>
+                    <CreditCard size={13} /> Top up saldo
+                  </button>
+                  <button className="cx-account-item" onClick={() => { setMenuOpen(false); navigate("orders"); }}>
+                    <Package size={13} /> Pesanan saya
+                  </button>
+                  <button className="cx-account-item cx-account-item-danger" onClick={onLogout}>
+                    <LogOut size={13} /> Keluar
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>
@@ -499,10 +582,25 @@ function AdminPage({ onBack, onNotice }) {
   const [revealed, setRevealed]           = useState(false);
   const [search, setSearch]               = useState("");
   const [activeNav, setActiveNav]         = useState("Dashboard");
+  const [topups, setTopups]               = useState([]);
+  const [users, setUsers]                 = useState([]);
+
+  const loadUsersData = () =>
+    jsonRequest("/api/admin/topups", { method: "GET" })
+      .then((p) => { setTopups(p.topups || []); setUsers(p.users || []); })
+      .catch(() => {});
+
+  const reviewTopup = async (id, action) => {
+    try {
+      await jsonRequest("/api/admin/topups", { method: "PATCH", body: JSON.stringify({ id, action }) });
+      onNotice(action === "approve" ? "Top up disetujui, saldo user bertambah" : "Top up ditolak");
+      loadUsersData();
+    } catch (e) { setApiError(e.message); }
+  };
 
   const checkAuth = () =>
     jsonRequest("/api/admin/login", { method: "GET" })
-      .then((p) => { setAuthenticated(p.authenticated); if (p.authenticated) loadListings(); })
+      .then((p) => { setAuthenticated(p.authenticated); if (p.authenticated) { loadListings(); loadUsersData(); } })
       .catch(() => setAuthenticated(false));
 
   useEffect(() => { checkAuth(); }, []);
@@ -517,7 +615,7 @@ function AdminPage({ onBack, onNotice }) {
 
   const login = async (e) => {
     e.preventDefault(); setLoginError("");
-    try { await jsonRequest("/api/admin/login", { method: "POST", body: JSON.stringify({ password }) }); setAuthenticated(true); setPassword(""); loadListings(); }
+    try { await jsonRequest("/api/admin/login", { method: "POST", body: JSON.stringify({ password }) }); setAuthenticated(true); setPassword(""); loadListings(); loadUsersData(); }
     catch (e) { setLoginError(e.message); }
   };
 
@@ -725,6 +823,35 @@ function AdminPage({ onBack, onNotice }) {
             </div>
           )}
 
+          {/* Top Up requests */}
+          <div className="cx-panel" style={{ marginBottom: 18 }}>
+            <div className="cx-panel-header">
+              <h3>Permintaan Top Up</h3>
+              <span className="cx-panel-sub">{topups.filter((t) => t.status === "pending").length} menunggu · {users.length} user terdaftar</span>
+              <button className="cx-icon-btn" style={{ marginLeft: "auto" }} onClick={loadUsersData} aria-label="Muat ulang"><RefreshCw size={13} /></button>
+            </div>
+            {topups.length === 0
+              ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada permintaan top up.</div>
+              : topups.slice(0, 15).map((t) => (
+                <div key={t.id} className="cx-topup-row">
+                  <div>
+                    <strong>{formatPrice(t.amount)}</strong>
+                    <small>{t.userName} · {t.userEmail} · {t.method}{t.reference ? ` · ${t.reference}` : ""}</small>
+                  </div>
+                  <span className="cx-topup-date">{formatDate(t.createdAt)}</span>
+                  {t.status === "pending"
+                    ? <div style={{ display: "flex", gap: 6 }}>
+                        <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => reviewTopup(t.id, "approve")}><Check size={11} /> Setujui</button>
+                        <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => reviewTopup(t.id, "reject")}><X size={11} /> Tolak</button>
+                      </div>
+                    : <span className={`cx-topup-badge ${t.status === "approved" ? "ok" : "bad"}`}>
+                        {t.status === "approved" ? <BadgeCheck size={11} /> : <X size={11} />}
+                        {t.status === "approved" ? " Disetujui" : " Ditolak"}
+                      </span>}
+                </div>
+              ))}
+          </div>
+
           {/* Two-col: Activity + Inventory */}
           <div className="cx-two-col">
             {/* Activity */}
@@ -921,6 +1048,215 @@ function AdminPage({ onBack, onNotice }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   AUTH PAGE (daftar / masuk)
+════════════════════════════════════════════════════ */
+function AuthPage({ onAuthenticated }) {
+  const [mode, setMode]         = useState("login");
+  const [form, setForm]         = useState({ name: "", email: "", phone: "", password: "" });
+  const [showPass, setShowPass] = useState(false);
+  const [error, setError]       = useState("");
+  const [busy, setBusy]         = useState(false);
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const submit = async (e) => {
+    e.preventDefault(); setError(""); setBusy(true);
+    try {
+      const payload = mode === "register"
+        ? { action: "register", name: form.name, email: form.email, phone: form.phone, password: form.password }
+        : { action: "login", email: form.email, password: form.password };
+      const res = await jsonRequest("/api/auth", { method: "POST", body: JSON.stringify(payload) });
+      onAuthenticated(res.user);
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="cx-login-wrap">
+      <div className="cx-login-box cx-auth-box">
+        <div className="cx-login-mark">&lt;/&gt;</div>
+        <h1>{mode === "register" ? "Daftar CodeXa" : "Masuk ke CodeXa"}</h1>
+        <p>{mode === "register" ? "Buat akun untuk mulai belanja dan isi saldo." : "Masuk dulu untuk mengakses katalog dan saldo kamu."}</p>
+
+        <div className="cx-auth-tabs">
+          <button className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); }}>Masuk</button>
+          <button className={mode === "register" ? "active" : ""} onClick={() => { setMode("register"); setError(""); }}>Daftar</button>
+        </div>
+
+        <form onSubmit={submit}>
+          {mode === "register" && (
+            <>
+              <Field label="Nama lengkap">
+                <InputWrap icon={User}>
+                  <input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Nama kamu" required />
+                </InputWrap>
+              </Field>
+              <Field label="Nomor WhatsApp" hint="Opsional, dipakai admin untuk konfirmasi top up.">
+                <InputWrap icon={Phone}>
+                  <input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="08xxxxxxxxxx" />
+                </InputWrap>
+              </Field>
+            </>
+          )}
+          <Field label="Email">
+            <InputWrap icon={Mail}>
+              <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="nama@email.com" required />
+            </InputWrap>
+          </Field>
+          <Field label="Password" hint={mode === "register" ? "Minimal 6 karakter." : ""}>
+            <InputWrap icon={LockKeyhole}>
+              <input type={showPass ? "text" : "password"} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="••••••" required />
+              <button type="button" onClick={() => setShowPass((v) => !v)} style={{ color: "var(--muted)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
+                {showPass ? <EyeOff size={13} /> : <Eye size={13} />}
+              </button>
+            </InputWrap>
+          </Field>
+          {error && <p className="cx-form-error">{error}</p>}
+          <button type="submit" className="cx-btn cx-btn-primary cx-btn-full" style={{ marginTop: 6 }} disabled={busy}>
+            {busy ? <><RefreshCw size={13} /> Memproses...</> : <><LogIn size={13} /> {mode === "register" ? "Daftar sekarang" : "Masuk"}</>}
+          </button>
+        </form>
+        <p className="cx-auth-switch">
+          {mode === "register" ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
+          <button onClick={() => { setMode(mode === "register" ? "login" : "register"); setError(""); }}>
+            {mode === "register" ? "Masuk di sini" : "Daftar gratis"}
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   ACCOUNT PAGE (profil + saldo + top up)
+════════════════════════════════════════════════════ */
+const TOPUP_METHODS = ["Transfer Bank", "DANA", "GoPay", "OVO", "QRIS"];
+const TOPUP_PRESETS = [25000, 50000, 100000, 250000, 500000];
+
+function AccountPage({ user, onBack, onNotice, onRefresh }) {
+  const [state, setState] = useState({ balance: user.balance, topups: [], loading: true, error: "" });
+  const [amount, setAmount]   = useState("");
+  const [method, setMethod]   = useState(TOPUP_METHODS[0]);
+  const [reference, setReference] = useState("");
+  const [note, setNote]       = useState("");
+  const [busy, setBusy]       = useState(false);
+  const [formError, setFormError] = useState("");
+
+  const load = () => {
+    setState((x) => ({ ...x, loading: true, error: "" }));
+    jsonRequest("/api/topup", { method: "GET" })
+      .then((p) => setState({ balance: Number(p.balance) || 0, topups: p.topups || [], loading: false, error: "" }))
+      .catch((e) => setState((x) => ({ ...x, loading: false, error: e.message })));
+  };
+  useEffect(() => { load(); }, []);
+
+  const submitTopup = async (e) => {
+    e.preventDefault(); setFormError(""); setBusy(true);
+    try {
+      await jsonRequest("/api/topup", { method: "POST", body: JSON.stringify({ amount: Number(amount), method, reference, note }) });
+      setAmount(""); setReference(""); setNote("");
+      onNotice("Permintaan top up dikirim, menunggu verifikasi admin");
+      load(); onRefresh();
+    } catch (err) { setFormError(err.message); }
+    finally { setBusy(false); }
+  };
+
+  const statusBadge = (status) =>
+    status === "approved" ? <span className="cx-topup-badge ok"><BadgeCheck size={11} /> Disetujui</span>
+    : status === "rejected" ? <span className="cx-topup-badge bad"><X size={11} /> Ditolak</span>
+    : <span className="cx-topup-badge wait"><Clock size={11} /> Menunggu</span>;
+
+  const initials = String(user.name || "CX").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  const pendingTotal = state.topups.filter((t) => t.status === "pending").reduce((a, t) => a + t.amount, 0);
+
+  return (
+    <div className="cx-container cx-account-page">
+      <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali ke store</button>
+
+      <div className="cx-account-grid">
+        <div className="cx-panel cx-profile-card">
+          <div className="cx-profile-head">
+            <div className="cx-avatar cx-avatar-xl">{initials}</div>
+            <div>
+              <h2>{user.name}</h2>
+              <p>Member CodeXa sejak {formatDate(user.createdAt)}</p>
+            </div>
+          </div>
+          <ul className="cx-profile-list">
+            <li><Mail size={13} /><span>Email</span><strong>{user.email}</strong></li>
+            <li><Phone size={13} /><span>WhatsApp</span><strong>{user.phone || "-"}</strong></li>
+            <li><BadgeCheck size={13} /><span>ID Akun</span><strong className="cx-mono">{String(user.id).slice(0, 8)}</strong></li>
+            <li><ShieldCheck size={13} /><span>Status</span><strong>Terverifikasi</strong></li>
+          </ul>
+
+          <div className="cx-balance-card">
+            <span><Wallet size={13} /> Saldo tersedia</span>
+            <strong>{formatPrice(state.balance)}</strong>
+            {pendingTotal > 0 && <small>{formatPrice(pendingTotal)} menunggu verifikasi</small>}
+          </div>
+        </div>
+
+        <div className="cx-panel">
+          <div className="cx-panel-header"><h3>Top Up Saldo</h3><span className="cx-panel-sub">Verifikasi manual oleh admin</span></div>
+          <form className="cx-topup-form" onSubmit={submitTopup}>
+            <div className="cx-topup-presets">
+              {TOPUP_PRESETS.map((v) => (
+                <button type="button" key={v} className={`cx-chip${Number(amount) === v ? " active" : ""}`} onClick={() => setAmount(String(v))}>
+                  {formatPrice(v)}
+                </button>
+              ))}
+            </div>
+            <Field label="Nominal top up" hint="Minimal Rp10.000.">
+              <InputWrap icon={CreditCard}>
+                <input type="number" min="10000" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50000" required />
+              </InputWrap>
+            </Field>
+            <Field label="Metode pembayaran">
+              <InputWrap icon={Wallet}>
+                <select value={method} onChange={(e) => setMethod(e.target.value)}>
+                  {TOPUP_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </InputWrap>
+            </Field>
+            <Field label="Nomor referensi / bukti transfer" hint="Nomor transaksi atau link bukti transfer.">
+              <InputWrap icon={FileText}>
+                <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="TRX-123456 / link bukti" />
+              </InputWrap>
+            </Field>
+            <Field label="Catatan (opsional)">
+              <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Contoh: transfer dari BCA a/n ..." />
+            </Field>
+            {formError && <p className="cx-form-error">{formError}</p>}
+            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy}>
+              {busy ? <><RefreshCw size={13} /> Mengirim...</> : <><Plus size={13} /> Ajukan Top Up</>}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div className="cx-panel" style={{ marginTop: 18 }}>
+        <div className="cx-panel-header">
+          <h3>Riwayat Top Up</h3>
+          <button className="cx-icon-btn" style={{ marginLeft: "auto" }} onClick={load} aria-label="Muat ulang"><RefreshCw size={13} /></button>
+        </div>
+        {state.loading ? <div className="cx-topup-empty">Memuat riwayat...</div>
+          : state.error ? <div className="cx-topup-empty">{state.error}</div>
+          : state.topups.length === 0 ? <div className="cx-topup-empty">Belum ada permintaan top up.</div>
+          : state.topups.map((t) => (
+            <div key={t.id} className="cx-topup-row">
+              <div>
+                <strong>{formatPrice(t.amount)}</strong>
+                <small>{t.method}{t.reference ? ` · ${t.reference}` : ""}</small>
+              </div>
+              <span className="cx-topup-date">{formatDate(t.createdAt)}</span>
+              {statusBadge(t.status)}
+            </div>
+          ))}
+      </div>
     </div>
   );
 }
