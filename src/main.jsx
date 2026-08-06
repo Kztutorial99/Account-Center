@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  ArrowRight, BarChart3, BadgeCheck, Bell, Check, ChevronRight, CircleHelp,
+  ArrowRight, BadgeCheck, Bell, Check, ChevronRight, CircleHelp,
   Headphones, LayoutDashboard, LockKeyhole, LogIn, LogOut, Menu, Package,
-  RefreshCw, Search, ShieldCheck, ShoppingBag, UserCheck, UserRound, UserX, Users,
+  Pencil, Plus, RefreshCw, Search, ShieldCheck, ShoppingBag, Trash2,
+  UserCheck, UserRound, UserX, Users, X,
 } from "lucide-react";
 import "./styles.css";
 
@@ -73,12 +74,16 @@ function AdminPage({ data, onBack, onNotice }) {
   const [loginError, setLoginError] = useState("");
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [actionId, setActionId] = useState("");
   const [apiError, setApiError] = useState("");
+  const [form, setForm] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const loadUsers = () => {
     setLoadingUsers(true);
+    setApiError("");
     fetch("/api/admin/users", { credentials: "same-origin" }).then(async (result) => {
       const payload = await result.json();
       if (result.status === 401) { setAuthenticated(false); throw new Error("Sesi admin sudah berakhir"); }
@@ -97,21 +102,59 @@ function AdminPage({ data, onBack, onNotice }) {
     setPassword(""); setAuthenticated(true); loadUsers();
   };
   const logout = async () => { await fetch("/api/admin/login", { method: "DELETE", credentials: "same-origin" }); setAuthenticated(false); setUsers([]); };
+  const openForm = (user = null) => setForm(user ? { id: user.id, name: user.name || "", email: user.email || "", role: user.role || "user", banned: Boolean(user.banned) } : { name: "", email: "", role: "user", banned: false });
+  const closeForm = () => { if (!saving) setForm(null); };
+  const updateForm = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  const saveUser = async (event) => {
+    event.preventDefault();
+    if (!form) return;
+    setSaving(true); setApiError("");
+    const isEdit = Boolean(form.id);
+    const result = await fetch("/api/admin/users", {
+      method: isEdit ? "PATCH" : "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const payload = await result.json();
+    if (!result.ok) {
+      setApiError(payload.error || "Akun gagal disimpan");
+      setSaving(false);
+      return;
+    }
+    setUsers((current) => isEdit ? current.map((item) => item.id === payload.user.id ? payload.user : item) : [payload.user, ...current]);
+    setForm(null); setSaving(false);
+    onNotice(isEdit ? "Perubahan akun disimpan" : "Profil akun dibuat");
+  };
   const toggleUser = async (user) => {
     setActionId(user.id); setApiError("");
-    const result = await fetch("/api/admin/users", { method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: user.id, banned: !user.banned }) });
+    const result = await fetch("/api/admin/users", { method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: user.id, name: user.name, email: user.email, role: user.role || "user", banned: !user.banned }) });
     const payload = await result.json();
     if (!result.ok) setApiError(payload.error || "Status akun gagal diubah"); else { setUsers((current) => current.map((item) => item.id === user.id ? payload.user : item)); onNotice(user.banned ? "Akun diaktifkan" : "Akun dinonaktifkan"); }
     setActionId("");
   };
-  const filteredUsers = users.filter((user) => `${user.name || ""} ${user.email || ""}`.toLowerCase().includes(userSearch.toLowerCase()));
+  const deleteUser = async (user) => {
+    if (!window.confirm(`Hapus akun ${user.email}? Tindakan ini tidak bisa dibatalkan.`)) return;
+    setActionId(user.id); setApiError("");
+    const result = await fetch("/api/admin/users", { method: "DELETE", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: user.id }) });
+    const payload = await result.json();
+    if (!result.ok) setApiError(payload.error || "Akun gagal dihapus");
+    else { setUsers((current) => current.filter((item) => item.id !== user.id)); onNotice("Akun dihapus"); }
+    setActionId("");
+  };
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch = `${user.name || ""} ${user.email || ""}`.toLowerCase().includes(userSearch.toLowerCase());
+    const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? !user.banned : user.banned);
+    return matchesSearch && matchesStatus;
+  });
 
   if (authenticated === null) return <main className="page-container container"><DataState message="Memeriksa akses admin..." /></main>;
   if (!authenticated) return <main className="page-container container"><div style={{ maxWidth: 460, margin: "70px auto" }}><div className="admin-panel" style={{ padding: 32 }}><div className="page-top" style={{ marginBottom: 24 }}><ShieldCheck size={28} /><p className="section-kicker">ADMIN CODEXA</p><h1>Masuk ke panel.</h1><p className="page-lede">Panel ini dilindungi password dan menampilkan akun nyata dari Neon.</p></div><form onSubmit={login}><label className="custom-input"><span>Password admin</span><div><LockKeyhole size={16} /><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoFocus required /></div></label>{loginError && <p style={{ color: "#ff8f9a" }}>{loginError}</p>}<button className="primary-button full-button" type="submit">Masuk ke admin <LogIn size={15} /></button></form><button className="back-link" onClick={onBack} style={{ marginTop: 18 }}><ArrowRight size={14} className="back-arrow" /> Kembali ke store</button></div></div></main>;
 
-  return <main className="page-container container"><div className="page-top"><div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start" }}><div><button className="back-link" onClick={onBack}><ArrowRight size={14} className="back-arrow" /> Kembali ke store</button><p className="section-kicker">ADMIN CODEXA / AKUN</p><h1>Panel akun nyata.</h1><p className="page-lede">Kelola status akun Neon. Password dan token tidak pernah ditampilkan.</p></div><button className="secondary-button" onClick={logout}><LogOut size={15} /> Keluar</button></div></div>
-    <div className="admin-stats"><StatCard label="Pelanggan terdaftar" value={data.loading ? "..." : data.customerCount} change="Akun nyata" icon={Users} color="violet" /><StatCard label="Akun ditemukan" value={loadingUsers ? "..." : users.length} change="Neon Auth" icon={BadgeCheck} color="mint" /><StatCard label="Status aktif" value={loadingUsers ? "..." : users.filter((user) => !user.banned).length} change="Bisa login" icon={UserCheck} color="coral" /></div>
-    <section className="admin-panel"><div className="panel-heading"><div><h2>Daftar akun</h2><p>{users.length} akun nyata dari Neon Auth</p></div><div style={{ display: "flex", gap: 10, alignItems: "center" }}><label className="search-box"><Search size={16} /><input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Cari nama/email..." /></label><button className="icon-button" onClick={loadUsers} aria-label="Muat ulang"><RefreshCw size={16} /></button></div></div>{apiError && <p style={{ color: "#ff8f9a" }}>{apiError}</p>}{loadingUsers ? <DataState message="Mengambil daftar akun..." /> : filteredUsers.length ? <div className="admin-orders-table">{filteredUsers.map((user) => <div className="table-row" key={user.id}><span data-label="Akun"><strong>{user.name || "Tanpa nama"}</strong><small>{user.email}</small></span><span data-label="Role">{user.role || "user"}</span><span data-label="Dibuat">{formatDate(user.createdAt)}</span><span data-label="Status"><b className={`status ${user.banned ? "pending" : "success"}`}>{user.banned ? "Nonaktif" : "Aktif"}</b></span><span data-label="Aksi"><button className="secondary-button" disabled={actionId === user.id} onClick={() => toggleUser(user)}>{user.banned ? <><UserCheck size={14} /> Aktifkan</> : <><UserX size={14} /> Nonaktifkan</>}</button></span></div>)}</div> : <div className="empty-state"><UserRound size={24} /><h3>Belum ada akun</h3><p>Tidak ada akun nyata yang cocok dengan pencarian.</p></div>}</section>
+  return <main className="page-container container"><div className="page-top"><div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start" }}><div><button className="back-link" onClick={onBack}><ArrowRight size={14} className="back-arrow" /> Kembali ke store</button><p className="section-kicker">ADMIN CODEXA / AKUN</p><h1>Panel akun nyata.</h1><p className="page-lede">Kelola profil, role, dan status akun dari database Neon. Password dan token tidak pernah ditampilkan.</p></div><div className="admin-header-actions"><button className="secondary-button" onClick={logout}><LogOut size={15} /> Keluar</button><button className="primary-button" onClick={() => openForm()}><Plus size={15} /> Buat akun</button></div></div></div>
+    <div className="admin-stats"><StatCard label="Pelanggan terdaftar" value={data.loading ? "..." : data.customerCount} change="Akun nyata" icon={Users} color="violet" /><StatCard label="Akun ditemukan" value={loadingUsers ? "..." : users.length} change="Neon Auth" icon={BadgeCheck} color="mint" /><StatCard label="Status aktif" value={loadingUsers ? "..." : users.filter((user) => !user.banned).length} change="Bisa login" icon={UserCheck} color="coral" /><StatCard label="Nonaktif" value={loadingUsers ? "..." : users.filter((user) => user.banned).length} change="Perlu perhatian" icon={UserX} color="gold" /></div>
+    <section className="admin-panel"><div className="panel-heading"><div><h2>Daftar akun</h2><p>{filteredUsers.length} dari {users.length} akun nyata dari Neon Auth</p></div><div className="admin-toolbar"><label className="search-box"><Search size={16} /><input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Cari nama/email..." /></label><select className="admin-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter status"><option value="all">Semua status</option><option value="active">Aktif</option><option value="banned">Nonaktif</option></select><button className="icon-button" onClick={loadUsers} aria-label="Muat ulang"><RefreshCw size={16} /></button></div></div>{apiError && <p className="admin-error">{apiError}</p>}{loadingUsers ? <DataState message="Mengambil daftar akun..." /> : filteredUsers.length ? <div className="admin-orders-table"><div className="table-header"><span>Akun</span><span>Role</span><span>Dibuat</span><span>Status</span><span>Aksi</span></div>{filteredUsers.map((user) => <div className="table-row" key={user.id}><span data-label="Akun"><strong>{user.name || "Tanpa nama"}</strong><small>{user.email}</small></span><span data-label="Role"><b className="role-badge">{user.role || "user"}</b></span><span data-label="Dibuat">{formatDate(user.createdAt)}</span><span data-label="Status"><b className={`status ${user.banned ? "pending" : "success"}`}>{user.banned ? "Nonaktif" : "Aktif"}</b></span><span data-label="Aksi" className="row-actions"><button className="table-action" disabled={actionId === user.id} onClick={() => openForm(user)} aria-label={`Edit ${user.email}`}><Pencil size={14} /></button><button className="table-action" disabled={actionId === user.id} onClick={() => toggleUser(user)} title={user.banned ? "Aktifkan" : "Nonaktifkan"}>{user.banned ? <UserCheck size={14} /> : <UserX size={14} />}</button><button className="table-action danger" disabled={actionId === user.id} onClick={() => deleteUser(user)} aria-label={`Hapus ${user.email}`}><Trash2 size={14} /></button></span></div>)}</div> : <div className="empty-state"><UserRound size={24} /><h3>Belum ada akun</h3><p>Tidak ada akun nyata yang cocok dengan pencarian.</p></div>}</section>
+    {form && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeForm()}><form className="admin-form modal" onSubmit={saveUser} onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={closeForm} aria-label="Tutup"><X size={16} /></button><div className="admin-form-heading"><p className="section-kicker">{form.id ? "EDIT AKUN" : "AKUN BARU"}</p><h2>{form.id ? "Edit profil akun." : "Buat profil akun."}</h2><p>{form.id ? "Perbarui data profil dan hak akses akun nyata." : "Profil dibuat di database Neon. Kredensial login tetap dikelola oleh provider Auth."}</p></div><label className="custom-input"><span>Nama</span><div><UserRound size={16} /><input value={form.name} onChange={(event) => updateForm("name", event.target.value)} placeholder="Nama pengguna" required maxLength={120} /></div></label><label className="custom-input"><span>Email</span><div><input type="email" value={form.email} onChange={(event) => updateForm("email", event.target.value)} placeholder="nama@email.com" required maxLength={320} /></div></label><label className="custom-input"><span>Role</span><div><select value={form.role} onChange={(event) => updateForm("role", event.target.value)}><option value="user">User</option><option value="admin">Admin</option></select></div></label>{form.id && <label className="admin-checkbox"><input type="checkbox" checked={!form.banned} onChange={(event) => updateForm("banned", !event.target.checked)} /> Akun aktif dan boleh login</label>}<div className="admin-form-actions"><button type="button" className="secondary-button" onClick={closeForm}>Batal</button><button type="submit" className="primary-button" disabled={saving}>{saving ? "Menyimpan..." : <><Check size={15} /> Simpan akun</>}</button></div></form></div>}
   </main>;
 }
 
