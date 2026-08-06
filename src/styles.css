@@ -683,7 +683,8 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .cx-applogo {
   display: grid; place-items: center; border-radius: 9px; border: 1px solid currentColor;
   font: 800 9.5px Inter, sans-serif; letter-spacing: -.02em; flex: 0 0 auto;
-  overflow: hidden; padding: 3px 5px;
+  overflow: hidden; padding: 4px 6px;
+  background: #fff !important;
 }
 .cx-applogo-img { width: 100%; height: 100%; object-fit: contain; display: block; }
 

@@ -1291,16 +1291,14 @@ function AuthPage({ onAuthenticated }) {
    PROFIL & TOP UP (halaman terpisah)
 ════════════════════════════════════════════════════ */
 const QRIS_APPS = [
-  { id: "DANA",                    short: "DANA",  icon: "/wallets/dana.svg",          color: "#118EEA", tint: "rgba(17,142,234,.14)" },
-  { id: "GoPay",                   short: "gopay", icon: "/wallets/gopay.svg",         color: "#00AA13", tint: "rgba(0,170,19,.14)" },
-  { id: "OVO",                     short: "OVO",   icon: "/wallets/ovo.svg",           color: "#4C3494", tint: "rgba(76,52,148,.16)" },
-  { id: "ShopeePay",               short: "SPay",  icon: "/wallets/shopee-pay.svg",    color: "#EE4D2D", tint: "rgba(238,77,45,.14)" },
-  { id: "LinkAja",                 short: "Link",  icon: "/wallets/linkaja.svg",       color: "#E22B2B", tint: "rgba(226,43,43,.14)" },
-  { id: "QRIS BCA mobile / myBCA", short: "BCA",   icon: "/wallets/bca-mobile.svg",    color: "#0066AE", tint: "rgba(0,102,174,.14)" },
-  { id: "QRIS BRImo",              short: "BRI",   icon: "/wallets/brimo.svg",         color: "#00529C", tint: "rgba(0,82,156,.14)" },
-  { id: "QRIS Livin\' by Mandiri",  short: "Livin", icon: "/wallets/mandiri-livin.svg", color: "#003D79", tint: "rgba(0,61,121,.14)" },
-  { id: "QRIS SeaBank",            short: "Sea",   icon: "/wallets/seabank.svg",       color: "#F26F21", tint: "rgba(242,111,33,.14)" },
-  { id: "Lainnya",                 short: "\u2022\u2022\u2022",   icon: null,                         color: "#6366F1", tint: "rgba(99,102,241,.14)" },
+  { id: "DANA",      short: "DANA",  icon: "/wallets/dana.png",      color: "#118EEA", tint: "rgba(17,142,234,.14)" },
+  { id: "GoPay",     short: "gopay", icon: "/wallets/gopay.png",     color: "#00AED6", tint: "rgba(0,174,214,.14)" },
+  { id: "ShopeePay", short: "SPay",  icon: "/wallets/shopeepay.png", color: "#EE4D2D", tint: "rgba(238,77,45,.14)" },
+  { id: "LinkAja",   short: "Link",  icon: "/wallets/linkaja.png",   color: "#E22B2B", tint: "rgba(226,43,43,.14)" },
+  { id: "BCA",       short: "BCA",   icon: "/wallets/bca.png",       color: "#0066AE", tint: "rgba(0,102,174,.14)" },
+  { id: "BRI",       short: "BRI",   icon: "/wallets/bri.png",       color: "#00529C", tint: "rgba(0,82,156,.14)" },
+  { id: "BNI",       short: "BNI",   icon: "/wallets/bni.png",       color: "#00695C", tint: "rgba(0,105,92,.14)" },
+  { id: "Mandiri",   short: "Livin", icon: "/wallets/mandiri.png",   color: "#003D79", tint: "rgba(0,61,121,.14)" },
 ];
 const appMeta = (id) => QRIS_APPS.find((a) => a.id === id) || QRIS_APPS[QRIS_APPS.length - 1];
 
@@ -1439,8 +1437,8 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const [showTrxRequired, setShowTrxRequired] = useState(false);
 
   const amountNumber = Math.round(Number(amount) || 0);
-  const isOther  = app === "Lainnya";
-  const appLabel = (isOther ? otherApp.trim() : app) || "Lainnya";
+  const isOther  = false;
+  const appLabel = app;
   const methodLabel = `QRIS · ${appLabel}`;
   const pendingTotal = state.topups.filter((t) => t.status === "pending").reduce((a, t) => a + t.amount, 0);
   const dataReady = trxId.trim().length >= 4 && (!isOther || otherApp.trim());
@@ -1561,15 +1559,9 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                 </button>
               ))}
             </div>
-            <p className="cx-field-hint">Tidak ada di daftar? Pilih <strong>•••  Lainnya</strong> lalu tulis nama aplikasinya.</p>
+            <p className="cx-field-hint">Pembayaran QRIS bisa lewat aplikasi di atas.</p>
 
-            {isOther && (
-              <Field label="Tulis nama aplikasinya" hint="Akan dikirim ke admin lewat catatan.">
-                <InputWrap icon={FileText}>
-                  <input value={otherApp} onChange={(e) => setOtherApp(e.target.value)} placeholder="Contoh: Jenius, Blu, Astrapay" required />
-                </InputWrap>
-              </Field>
-            )}
+
             {formError && <p className="cx-form-error">{formError}</p>}
             <button type="submit" className="cx-btn cx-btn-primary cx-btn-full">
               Cek &amp; konfirmasi nominal <ArrowRight size={13} />
