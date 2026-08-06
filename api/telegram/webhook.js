@@ -10,6 +10,7 @@
 const crypto = require("crypto");
 const { db, ensureTables, bodyOf } = require("../_users");
 const { callTelegram, adminChatId, topupMessage } = require("../_telegram");
+const { renderMenu, commandToMenu, mainMenuKeyboard } = require("./menu");
 
 function safeEqual(a, b) {
   const left = Buffer.from(String(a || ""));
@@ -47,6 +48,52 @@ module.exports = async function handler(request, response) {
     return response.status(200).json({ ok: true, ignored: true });
   }
 
+  /* ── Pesan teks / perintah menu ── */
+  const message = update && (update.message || update.edited_message);
+  if (message && message.chat) {
+    const from = String(message.chat.id);
+    const teks = String(message.text || "").trim();
+    if (from !== String(adminChatId())) {
+      await callTelegram("sendMessage", {
+        chat_id: from,
+        text: `🤖 <b>CodeXa Store Bot</b>\n\nBot ini khusus untuk admin toko.\nChat ID kamu: <code>${from}</code>`,
+        parse_mode: "HTML",
+      });
+      return response.status(200).json({ ok: true, ignored: true });
+    }
+    if (/^\/id\b/i.test(teks)) {
+      await callTelegram("sendMessage", {
+        chat_id: from,
+        text: `🆔 Chat ID: <code>${from}</code>`,
+        parse_mode: "HTML",
+      });
+      return response.status(200).json({ ok: true });
+    }
+    const key = commandToMenu(teks);
+    if (!key) {
+      await callTelegram("sendMessage", {
+        chat_id: from,
+        text: "Perintah tidak dikenal. Pilih menu di bawah 👇",
+        reply_markup: mainMenuKeyboard(),
+      });
+      return response.status(200).json({ ok: true });
+    }
+    try {
+      const view = await renderMenu(key);
+      await callTelegram("sendMessage", {
+        chat_id: from,
+        text: view.text,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: view.keyboard,
+      });
+    } catch (error) {
+      console.error("Menu failure", error && error.message);
+      await callTelegram("sendMessage", { chat_id: from, text: "⚠️ Gagal mengambil data, coba lagi sebentar." });
+    }
+    return response.status(200).json({ ok: true });
+  }
+
   const callback = update && update.callback_query;
   if (!callback) return response.status(200).json({ ok: true, ignored: true });
 
@@ -57,7 +104,29 @@ module.exports = async function handler(request, response) {
   }
 
   const [namespace, action, topupId] = String(callback.data || "").split(":");
+
+  /* ── Navigasi menu lewat tombol ── */
+  if (namespace === "menu") {
+    try {
+      const view = await renderMenu(action || "home");
+      await callTelegram("editMessageText", {
+        chat_id: chatId,
+        message_id: callback.message.message_id,
+        text: view.text,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: view.keyboard,
+      });
+      await ack(callback.id, "");
+    } catch (error) {
+      console.error("Menu callback failure", error && error.message);
+      await ack(callback.id, "Gagal memuat menu.", true);
+    }
+    return response.status(200).json({ ok: true });
+  }
+
   if (namespace !== "tp" || !["approve", "reject"].includes(action) || !topupId) {
+
     await ack(callback.id, "Perintah tidak dikenal.");
     return response.status(200).json({ ok: true, ignored: true });
   }
