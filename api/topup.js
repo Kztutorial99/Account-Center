@@ -35,12 +35,20 @@ module.exports = async function handler(request, response) {
     const method = text(body.method, 40) || "Transfer Bank";
     const reference = text(body.reference, 120);
     const note = text(body.note, 300);
+    const proof = typeof body.proof === "string" ? body.proof : "";
 
     if (!Number.isFinite(amount) || amount < MIN_TOPUP) {
       return response.status(400).json({ error: `Minimal top up Rp${MIN_TOPUP.toLocaleString("id-ID")}` });
     }
     if (amount > MAX_TOPUP) return response.status(400).json({ error: "Nominal top up terlalu besar" });
     if (!reference) return response.status(400).json({ error: "Nomor ID transaksi wajib diisi" });
+    if (!proof) return response.status(400).json({ error: "Bukti transfer wajib diunggah" });
+    if (!/^data:image\/(png|jpe?g|webp);base64,/i.test(proof)) {
+      return response.status(400).json({ error: "Bukti transfer harus berupa gambar (JPG/PNG/WebP)" });
+    }
+    if (proof.length > 8 * 1024 * 1024) {
+      return response.status(400).json({ error: "Ukuran bukti transfer terlalu besar" });
+    }
 
     const pending = await sql`
       SELECT COUNT(*)::int AS total FROM codexa_topups WHERE user_id = ${user.id} AND status = 'pending'
@@ -59,7 +67,7 @@ module.exports = async function handler(request, response) {
     // Kirim notifikasi ke admin lewat bot Telegram. Kegagalan Telegram
     // tidak boleh membatalkan permintaan top up yang sudah tersimpan.
     try {
-      await notifyNewTopup({ topup, user });
+      await notifyNewTopup({ topup, user, proof });
     } catch (notifyError) {
       console.error("Telegram notify failure", notifyError && notifyError.message);
     }
