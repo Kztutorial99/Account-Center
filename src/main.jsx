@@ -583,11 +583,54 @@ function AdminPage({ onBack, onNotice }) {
   const [activeNav, setActiveNav]         = useState("Dashboard");
   const [topups, setTopups]               = useState([]);
   const [users, setUsers]                 = useState([]);
+  const [userQuery, setUserQuery]         = useState("");
+  const [userForm, setUserForm]           = useState(null);
+  const [savingUser, setSavingUser]       = useState(false);
 
-  const loadUsersData = () =>
+  const loadUsersData = () => {
     jsonRequest("/api/admin/topups", { method: "GET" })
-      .then((p) => { setTopups(p.topups || []); setUsers(p.users || []); })
+      .then((p) => setTopups(p.topups || []))
       .catch(() => {});
+    return jsonRequest("/api/admin/users", { method: "GET" })
+      .then((p) => setUsers(p.users || []))
+      .catch(() => {});
+  };
+
+  const openUserForm = (u) => {
+    setApiError("");
+    setUserForm({
+      id: u.id, name: u.name || "", email: u.email || "", phone: u.phone || "",
+      balance: String(u.balance ?? 0), status: u.status || "active",
+      note: u.note || "", password: "",
+      createdAt: u.createdAt, topupTotal: u.topupTotal || 0,
+    });
+  };
+  const updateUserForm = (key, val) => setUserForm((f) => ({ ...f, [key]: val }));
+
+  const saveUser = async () => {
+    setSavingUser(true); setApiError("");
+    try {
+      await jsonRequest("/api/admin/users", { method: "PATCH", body: JSON.stringify(userForm) });
+      setUserForm(null); loadUsersData(); onNotice("Data user diperbarui");
+    } catch (e) { setApiError(e.message); }
+    finally { setSavingUser(false); }
+  };
+
+  const setUserStatus = async (id, action) => {
+    try {
+      await jsonRequest("/api/admin/users", { method: "PATCH", body: JSON.stringify({ id, action }) });
+      loadUsersData();
+      onNotice(action === "activate" ? "Akun diaktifkan" : action === "suspend" ? "Akun ditangguhkan" : "Akun diblokir");
+    } catch (e) { setApiError(e.message); }
+  };
+
+  const deleteUser = async (u) => {
+    if (!window.confirm(`Hapus akun ${u.email}? Semua riwayat top up ikut terhapus.`)) return;
+    try {
+      await jsonRequest("/api/admin/users", { method: "DELETE", body: JSON.stringify({ id: u.id }) });
+      loadUsersData(); onNotice("User dihapus");
+    } catch (e) { setApiError(e.message); }
+  };
 
   const reviewTopup = async (id, action) => {
     try {
@@ -672,6 +715,11 @@ function AdminPage({ onBack, onNotice }) {
     return q ? listings.filter((l) => `${l.title} ${l.loginType}`.toLowerCase().includes(q)) : listings;
   }, [listings, search]);
 
+  const filteredUsers = useMemo(() => {
+    const q = userQuery.trim().toLowerCase();
+    return q ? users.filter((u) => `${u.name} ${u.email} ${u.phone}`.toLowerCase().includes(q)) : users;
+  }, [users, userQuery]);
+
   /* stats */
   const totalProducts = listings.length;
   const totalSold     = listings.filter((l) => l.status === "sold").length;
@@ -716,6 +764,7 @@ function AdminPage({ onBack, onNotice }) {
     { label: "Dashboard",   shortcut: "⌘D", icon: LayoutDashboard },
     { label: "Produk",      shortcut: "⌘P", icon: Package,        dot: true },
     { label: "Pesanan",     shortcut: "⌘O", icon: ShoppingBag,    dot: listings.length > 0 },
+    { label: "Pengguna",    shortcut: "⌘U", icon: User,           dot: users.some((u) => u.status !== "active") },
     { label: "Pengaturan",  shortcut: "⌘,", icon: Settings },
   ];
 
@@ -851,6 +900,50 @@ function AdminPage({ onBack, onNotice }) {
               ))}
           </div>
 
+          {/* Manajemen User */}
+          <div className="cx-panel" style={{ marginBottom: 18 }}>
+            <div className="cx-panel-header">
+              <h3>Pengguna</h3>
+              <span className="cx-panel-sub">{filteredUsers.length} dari {users.length} akun</span>
+              <div className="cx-search" style={{ marginLeft: "auto", maxWidth: 240 }}>
+                <Search size={12} />
+                <input value={userQuery} onChange={(e) => setUserQuery(e.target.value)} placeholder="Cari nama / email / no. HP" />
+              </div>
+              <button className="cx-icon-btn" onClick={loadUsersData} aria-label="Muat ulang user"><RefreshCw size={13} /></button>
+            </div>
+            <div className="cx-user-head">
+              <span>USER</span><span>SALDO</span><span>TOP UP</span><span>STATUS</span><span>BERGABUNG</span><span />
+            </div>
+            {filteredUsers.length === 0
+              ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada user terdaftar.</div>
+              : filteredUsers.map((u) => (
+                <div key={u.id} className="cx-user-row">
+                  <div className="cx-user-ident">
+                    <div className="cx-avatar">{String(u.name || "U").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <strong>{u.name}</strong>
+                      <small>{u.email}{u.phone ? ` · ${u.phone}` : ""}</small>
+                    </div>
+                  </div>
+                  <span className="cx-mono">{formatPrice(u.balance)}</span>
+                  <span className="cx-mono" style={{ color: "var(--muted)" }}>
+                    {formatPrice(u.topupTotal)}{u.pendingCount ? ` · ${u.pendingCount} pending` : ""}
+                  </span>
+                  <span className={`cx-status ${u.status === "active" ? "cx-status-ok" : u.status === "suspended" ? "cx-status-low" : "cx-status-out"}`}>
+                    {u.status === "active" ? "Aktif" : u.status === "suspended" ? "Ditangguhkan" : "Diblokir"}
+                  </span>
+                  <span className="cx-user-date">{formatDate(u.createdAt)}</span>
+                  <div className="cx-row-actions">
+                    {u.status === "active"
+                      ? <button className="cx-row-btn" onClick={() => setUserStatus(u.id, "suspend")} aria-label="Tangguhkan"><LockKeyhole size={11} /></button>
+                      : <button className="cx-row-btn" onClick={() => setUserStatus(u.id, "activate")} aria-label="Aktifkan"><BadgeCheck size={11} /></button>}
+                    <button className="cx-row-btn" onClick={() => openUserForm(u)} aria-label="Edit user"><Pencil size={11} /></button>
+                    <button className="cx-row-btn danger" onClick={() => deleteUser(u)} aria-label="Hapus user"><Trash2 size={11} /></button>
+                  </div>
+                </div>
+              ))}
+          </div>
+
           {/* Two-col: Activity + Inventory */}
           <div className="cx-two-col">
             {/* Activity */}
@@ -940,6 +1033,59 @@ function AdminPage({ onBack, onNotice }) {
           <span style={{ marginLeft: "auto" }}>Jakarta · UTC+7</span>
         </div>
       </main>
+
+      {/* User modal */}
+      {userForm && (
+        <div className="cx-modal-backdrop" onClick={() => setUserForm(null)}>
+          <div className="cx-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cx-modal-header">
+              <h2>Edit Akun User</h2>
+              <button className="cx-icon-btn" onClick={() => setUserForm(null)}><X size={14} /></button>
+            </div>
+            <div className="cx-modal-body">
+              <div className="cx-form-grid">
+                <Field label="Nama">
+                  <InputWrap><input value={userForm.name} onChange={(e) => updateUserForm("name", e.target.value)} /></InputWrap>
+                </Field>
+                <Field label="Email">
+                  <InputWrap><input value={userForm.email} onChange={(e) => updateUserForm("email", e.target.value)} /></InputWrap>
+                </Field>
+                <Field label="Nomor WhatsApp">
+                  <InputWrap><input value={userForm.phone} onChange={(e) => updateUserForm("phone", e.target.value)} placeholder="0812xxxx" /></InputWrap>
+                </Field>
+                <Field label="Saldo (IDR)" hint="Ubah manual bila perlu koreksi">
+                  <InputWrap><input type="number" value={userForm.balance} onChange={(e) => updateUserForm("balance", e.target.value)} /></InputWrap>
+                </Field>
+                <Field label="Status Akun">
+                  <InputWrap>
+                    <select value={userForm.status} onChange={(e) => updateUserForm("status", e.target.value)}>
+                      <option value="active">Aktif</option>
+                      <option value="suspended">Ditangguhkan</option>
+                      <option value="banned">Diblokir</option>
+                    </select>
+                  </InputWrap>
+                </Field>
+                <Field label="Reset Password" hint="Kosongkan bila tidak diubah">
+                  <InputWrap><input type="text" value={userForm.password} onChange={(e) => updateUserForm("password", e.target.value)} placeholder="min. 6 karakter" /></InputWrap>
+                </Field>
+                <div className="cx-full-span">
+                  <Field label="Catatan Admin">
+                    <InputWrap><textarea value={userForm.note} onChange={(e) => updateUserForm("note", e.target.value)} placeholder="Catatan internal tentang user ini..." /></InputWrap>
+                  </Field>
+                </div>
+              </div>
+              <div className="cx-form-divider">RINGKASAN <small>bergabung {formatDate(userForm.createdAt)} · total top up {formatPrice(userForm.topupTotal)}</small></div>
+              {apiError && <p className="cx-form-error">{apiError}</p>}
+            </div>
+            <div className="cx-modal-footer">
+              <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => setUserForm(null)}>Batal</button>
+              <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={saveUser} disabled={savingUser}>
+                {savingUser ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Form modal */}
       {form && (
