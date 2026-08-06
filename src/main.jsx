@@ -165,7 +165,7 @@ function App() {
 
       {/* Catalog */}
       <main className="cx-container" id="catalog" style={{ paddingTop: 32, paddingBottom: 64 }}>
-        <div className="cx-section-header">
+        <div className="cx-section-header cx-section-header-stack">
           <div>
             <h2>Akun yang tersedia.</h2>
             <p className="cx-section-sub">{data.loading ? "Memuat..." : `${products.length} produk ditemukan`}</p>
@@ -325,17 +325,17 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen }) {
           <span className="cx-brand-mark">&lt;/&gt;</span>
           <span>Code<span className="cx-brand-dot">Xa</span></span>
         </button>
-        <nav className="cx-nav" style={{ marginLeft: "auto" }}>
+        <nav className="cx-nav">
           {[["store","Store"],["orders","Pesanan"],["help","Bantuan"]].map(([page, label]) => (
             <button key={page} className={activePage === page ? "active" : ""} onClick={() => navigate(page)}>{label}</button>
           ))}
         </nav>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="cx-topbar-actions">
           <IconBtn label="Notifikasi" onClick={() => {}}><Bell size={13} /></IconBtn>
           <button className="cx-cart-btn" onClick={onCartOpen}>
             <ShoppingBag size={13} />
             {cart.length > 0 && <b>{cart.length}</b>}
-            Keranjang
+            <span className="cx-cart-label">Keranjang</span>
           </button>
           <div className="cx-avatar">CX</div>
         </div>
