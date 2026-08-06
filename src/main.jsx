@@ -244,6 +244,8 @@ function App() {
               <ul className="cx-feature-list">
                 <li><Check size={13} /><span>Login type: <strong style={{ color: "var(--ink2)" }}>{buyItem.loginType}</strong></span></li>
                 <li><Check size={13} /><span>Stok tersisa: <strong style={{ color: "var(--ink2)" }}>{buyItem.stock}</strong></span></li>
+                <li><Check size={13} /><span>Email akun: <strong style={{ color: "var(--ink2)", fontFamily: "ui-monospace,monospace" }}>{buyItem.maskedEmail || "—"}</strong></span></li>
+                <li><Check size={13} /><span>Password akun: <strong style={{ color: "var(--ink2)", fontFamily: "ui-monospace,monospace" }}>{buyItem.maskedPassword || "—"}</strong></span></li>
                 <li><Check size={13} /><span>Detail akun dikirim otomatis setelah verifikasi</span></li>
                 <li><Check size={13} /><span>Garansi penggantian jika akun bermasalah</span></li>
               </ul>
@@ -380,6 +382,16 @@ function ProductCard({ product, colorIdx, onBuy }) {
         <p className="cx-product-type">{product.loginType}</p>
         <h3 className="cx-product-title">{product.title}</h3>
         <p className="cx-product-desc">{product.description || "Akun digital siap digunakan. Detail dikirim setelah pembayaran."}</p>
+        {(product.maskedEmail || product.maskedPassword) && (
+          <div className="cx-cred-preview">
+            {product.maskedEmail && (
+              <div className="cx-cred-row"><span>Email</span><code>{product.maskedEmail}</code></div>
+            )}
+            {product.maskedPassword && (
+              <div className="cx-cred-row"><span>Password</span><code>{product.maskedPassword}</code></div>
+            )}
+          </div>
+        )}
         <div className="cx-product-bottom">
           <span className="cx-product-price">{formatPrice(product.price)}</span>
           <button className="cx-product-buy" onClick={onBuy} aria-label={`Beli ${product.title}`}><ArrowRight size={13} /></button>
