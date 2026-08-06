@@ -71,25 +71,35 @@ module.exports = async function handler(request, response) {
     const rows = await sql`
       SELECT id, title, description, login_type AS "loginType", price, stock, status, credential_blob AS "credentialBlob"
       FROM codexa_account_listings
-      WHERE status = 'available' AND stock > 0
+      WHERE status = 'available'
       ORDER BY created_at DESC
     `;
     const products = rows.map((row) => {
       const credentials = decryptCredentials(row.credentialBlob) || {};
-      const identity = credentials.email || credentials.username || "";
+      const accounts = Array.isArray(credentials.accounts) && credentials.accounts.length
+        ? credentials.accounts
+        : (credentials.email || credentials.username || credentials.password
+            ? [{ email: credentials.email || credentials.username || "", password: credentials.password || "" }]
+            : []);
+      const maskedAccounts = accounts.map((account, index) => ({
+        index: index + 1,
+        maskedEmail: maskEmail(account.email || account.username || ""),
+        maskedPassword: maskPassword(account.password),
+      }));
       return {
         id: row.id,
         title: row.title,
         description: row.description,
         loginType: row.loginType,
         price: Number(row.price),
-        stock: row.stock,
+        stock: maskedAccounts.length || row.stock,
         status: row.status,
-        maskedEmail: maskEmail(identity),
-        maskedPassword: maskPassword(credentials.password),
+        accounts: maskedAccounts,
+        maskedEmail: maskedAccounts[0] ? maskedAccounts[0].maskedEmail : "",
+        maskedPassword: maskedAccounts[0] ? maskedAccounts[0].maskedPassword : "",
       };
     });
-    return response.status(200).json({ products, source: "codexa_account_listings" });
+    return response.status(200).json({ products: products.filter((p) => p.stock > 0), source: "codexa_account_listings" });
   } catch (error) {
     console.error("Failed to read public catalog", error);
     return response.status(500).json({ error: "Unable to read product catalog" });
