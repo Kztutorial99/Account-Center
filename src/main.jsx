@@ -599,6 +599,8 @@ function AdminPage({ onBack, onNotice }) {
   const [revealed, setRevealed]           = useState(false);
   const [search, setSearch]               = useState("");
   const [activeNav, setActiveNav]         = useState("Dashboard");
+  const [navOpen, setNavOpen]             = useState(false);
+  const [asstOpen, setAsstOpen]           = useState(false);
   const [topups, setTopups]               = useState([]);
   const [users, setUsers]                 = useState([]);
   const [userQuery, setUserQuery]         = useState("");
@@ -864,18 +866,20 @@ function AdminPage({ onBack, onNotice }) {
   ];
 
   return (
-    <div className="cx-admin-shell">
+    <div className={`cx-admin-shell${navOpen ? " nav-open" : ""}`}>
+      {navOpen && <div className="cx-sidebar-backdrop" onClick={() => setNavOpen(false)} />}
       {/* ── Sidebar ── */}
-      <aside className="cx-sidebar">
+      <aside className={`cx-sidebar${navOpen ? " open" : ""}`}>
         <div className="cx-sidebar-brand">
           <span className="cx-brand-mark" style={{ width: 24, height: 24, fontSize: 12, borderRadius: 4 }}>&lt;/&gt;</span>
           <span>CodeXa Store</span>
           <ChevronDown size={12} color="var(--faint)" />
+          <button className="cx-sidebar-close" onClick={() => setNavOpen(false)} aria-label="Tutup menu"><X size={14} /></button>
         </div>
         <div className="cx-sidebar-section">Workspace</div>
         <nav>
           {NAV_ITEMS.map(({ label, shortcut, icon: NavIcon, dot }) => (
-            <button key={label} className={`cx-sidebar-item ${activeNav === label ? "active" : ""}`} onClick={() => setActiveNav(label)}>
+            <button key={label} className={`cx-sidebar-item ${activeNav === label ? "active" : ""}`} onClick={() => { setActiveNav(label); setNavOpen(false); }}>
               <NavIcon size={14} strokeWidth={1.7} />
               <span>{label}</span>
               {dot && <span className="cx-sidebar-dot" />}
@@ -903,6 +907,9 @@ function AdminPage({ onBack, onNotice }) {
       <main className="cx-admin-main">
         {/* Header */}
         <header className="cx-admin-header">
+          <button className="cx-mobile-menu-btn" onClick={() => setNavOpen(true)} aria-label="Buka menu">
+            <Menu size={15} />
+          </button>
           <div className="cx-breadcrumb">
             <PanelLeft size={13} color="var(--faint)" />
             <span>Workspace</span>
@@ -914,8 +921,17 @@ function AdminPage({ onBack, onNotice }) {
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari produk, pesanan..." />
             <span style={{ marginLeft: "auto", fontFamily: "ui-monospace,monospace", fontSize: 10, color: "var(--faint)", border: "1px solid var(--b3)", borderRadius: 3, padding: "1px 5px" }}>⌘K</span>
           </div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-            <IconBtn label="Bantuan"><CircleHelp size={13} /></IconBtn>
+          <div className="cx-admin-header-actions" style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              className={`cx-admin-asst-btn${asstOpen ? " active" : ""}`}
+              onClick={() => setAsstOpen((v) => !v)}
+              aria-label="Buka Assisten"
+              title="Assisten CodeXa"
+            >
+              <Sparkles size={13} />
+              <span>Assisten</span>
+            </button>
+            <IconBtn label="Bantuan" style={{ }}><CircleHelp size={13} /></IconBtn>
             <IconBtn label="Notifikasi" style={{ position: "relative" }}><Bell size={13} /></IconBtn>
             <div className="cx-avatar">AR</div>
           </div>
@@ -1427,6 +1443,8 @@ function AdminPage({ onBack, onNotice }) {
           </div>
         </div>
       )}
+
+      <AssistantWidget open={asstOpen} onOpenChange={setAsstOpen} hideFab />
     </div>
   );
 }
@@ -1974,8 +1992,15 @@ const ASSISTANT_HINTS = {
   ],
 };
 
-function AssistantWidget() {
-  const [open, setOpen] = useState(false);
+function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
+  const controlled = typeof openProp === "boolean";
+  const [openState, setOpenState] = useState(false);
+  const open = controlled ? openProp : openState;
+  const setOpen = (v) => {
+    const next = typeof v === "function" ? v(open) : v;
+    if (controlled) { if (onOpenChange) onOpenChange(next); }
+    else setOpenState(next);
+  };
   const [info, setInfo] = useState({ loading: true, role: "", available: false, model: "", reason: "", error: "" });
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
@@ -2034,17 +2059,22 @@ function AssistantWidget() {
 
   return (
     <>
-      <button
-        className={`cx-ai-fab${open ? " open" : ""}`}
-        onClick={() => setOpen((v) => !v)}
-        aria-label={open ? "Tutup Assisten" : "Buka Assisten"}
-      >
-        {open ? <X size={16} /> : <Sparkles size={16} />}
-        {!open && <span>Assisten</span>}
-      </button>
+      {!hideFab && (
+        <button
+          className={`cx-ai-fab${open ? " open" : ""}`}
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Tutup Assisten" : "Buka Assisten"}
+        >
+          {open ? <X size={16} /> : <Sparkles size={16} />}
+          {!open && <span className="cx-ai-fab-label">Assisten</span>}
+        </button>
+      )}
+
+      {open && <div className="cx-ai-backdrop" onClick={() => setOpen(false)} />}
 
       {open && (
         <div className="cx-ai-panel" role="dialog" aria-label="Assisten CodeXa">
+          <div className="cx-ai-grab" />
           <div className="cx-ai-head">
             <div className="cx-ai-avatar"><Sparkles size={14} /></div>
             <div className="cx-ai-head-copy">
