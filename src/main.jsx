@@ -1,47 +1,48 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  ArrowRight, BadgeCheck, Bell, Check, ChevronRight, CircleHelp,
-  Headphones, LayoutDashboard, LockKeyhole, LogIn, LogOut, Menu, Package,
-  Pencil, Plus, RefreshCw, Search, ShieldCheck, ShoppingBag, Trash2,
-  UserCheck, UserRound, UserX, Users, X,
+  ArrowRight, BadgeCheck, Bell, Check, CircleHelp, Copy, Eye, EyeOff,
+  LayoutDashboard, LockKeyhole, LogIn, LogOut, Menu, Package, Pencil,
+  Plus, RefreshCw, Search, ShieldCheck, Trash2, X,
 } from "lucide-react";
 import "./styles.css";
 
-const formatPrice = (value) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
+const formatPrice = (value) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(value) || 0);
 const formatDate = (value) => value ? new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(value)) : "-";
+const LOGIN_TYPES = ["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"];
+const emptyListing = { title: "", description: "", loginType: "Google", price: "", stock: "", status: "available", username: "", email: "", password: "", deliveryDetails: "" };
+
+async function jsonRequest(url, options = {}) {
+  const result = await fetch(url, { credentials: "same-origin", ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
+  const payload = await result.json().catch(() => ({}));
+  if (!result.ok) throw new Error(payload.error || "Permintaan gagal diproses");
+  return payload;
+}
 
 function App() {
   const [activePage, setActivePage] = useState(() => window.location.pathname === "/admin" ? "admin" : "store");
   const [search, setSearch] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [notice, setNotice] = useState("");
-  const [data, setData] = useState({ products: [], orders: [], customerCount: 0, loading: true, error: "" });
+  const [data, setData] = useState({ products: [], loading: true, error: "" });
+
+  const loadCatalog = () => {
+    setData((current) => ({ ...current, loading: true, error: "" }));
+    fetch("/api/data").then(async (result) => { const payload = await result.json(); if (!result.ok) throw new Error(payload.error || "Data tidak tersedia"); return payload; })
+      .then((payload) => setData({ products: payload.products || [], loading: false, error: "" }))
+      .catch((error) => setData((current) => ({ ...current, loading: false, error: error.message })));
+  };
 
   useEffect(() => {
     const onPopState = () => setActivePage(window.location.pathname === "/admin" ? "admin" : window.location.pathname === "/orders" ? "orders" : window.location.pathname === "/help" ? "help" : "store");
-    window.addEventListener("popstate", onPopState);
-    fetch("/api/data").then(async (result) => {
-      const payload = await result.json();
-      if (!result.ok) throw new Error(payload.error || "Data tidak tersedia");
-      return payload;
-    }).then((payload) => setData({ products: payload.products || [], orders: payload.orders || [], customerCount: Number(payload.customerCount) || 0, loading: false, error: "" }))
-      .catch((error) => setData((current) => ({ ...current, loading: false, error: error.message })));
-    return () => window.removeEventListener("popstate", onPopState);
+    window.addEventListener("popstate", onPopState); loadCatalog(); return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
   const products = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return query ? data.products.filter((product) => `${product.title || ""} ${product.description || ""}`.toLowerCase().includes(query)) : data.products;
+    return query ? data.products.filter((product) => `${product.title || ""} ${product.description || ""} ${product.loginType || ""}`.toLowerCase().includes(query)) : data.products;
   }, [data.products, search]);
-
-  const navigate = (page) => {
-    const path = page === "store" ? "/" : `/${page}`;
-    window.history.pushState({}, "", path);
-    setActivePage(page);
-    setShowMobileMenu(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const navigate = (page) => { const path = page === "store" ? "/" : `/${page}`; window.history.pushState({}, "", path); setActivePage(page); setShowMobileMenu(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const showNotice = (message) => { setNotice(message); window.setTimeout(() => setNotice(""), 2800); };
 
   return <div className="app-shell">
@@ -52,111 +53,43 @@ function App() {
     </div></header>
 
     {activePage === "store" && <main>
-      <section className="hero container"><div className="hero-copy"><p className="section-kicker">CODEXA ACCESS</p><h1>Akun digital,<br /><em>tanpa drama.</em></h1><p className="hero-lede">Katalog ini terhubung ke data akun nyata. Tidak ada akun contoh atau stok palsu yang ditampilkan.</p><button className="primary-button" onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}>Lihat katalog <ArrowRight size={15} /></button></div><div className="hero-visual" aria-hidden="true"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><span className="hero-star">✦</span><div className="hero-card"><span>LIVE DATA</span><strong>NEON DB</strong><small>NO MOCK ACCOUNTS</small></div></div></section>
-      <section className="container catalog-section" id="catalog"><div className="section-heading"><div><p className="section-kicker">CATALOG</p><h2>Akun yang tersedia.</h2></div><label className="search-box"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari akun..." /></label></div>{data.loading ? <DataState message="Mengambil data dari Neon..." /> : data.error ? <DataState message={data.error} error /> : products.length ? <div className="product-grid">{products.map((product) => <ProductCard key={product.id} product={product} onAdd={() => showNotice("Checkout tersedia setelah alur pembayaran akun diaktifkan.")} />)}</div> : <div className="empty-state"><Package size={24} /><h3>Belum ada akun tersedia</h3><p>Belum ada produk nyata di database. Panel tidak menampilkan akun contoh.</p></div>}</section>
+      <section className="hero container"><div className="hero-copy"><p className="section-kicker">CODEXA ACCESS</p><h1>Akun digital,<br /><em>tanpa drama.</em></h1><p className="hero-lede">Akun siap pakai dari katalog nyata. Detail login hanya dikirim setelah pembelian berhasil.</p><button className="primary-button" onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}>Lihat katalog <ArrowRight size={15} /></button></div><div className="hero-visual" aria-hidden="true"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><span className="hero-star">✦</span><div className="hero-card"><span>LIVE INVENTORY</span><strong>CODEXA DB</strong><small>CREDENTIALS PROTECTED</small></div></div></section>
+      <section className="container catalog-section" id="catalog"><div className="section-heading"><div><p className="section-kicker">CATALOG</p><h2>Akun yang tersedia.</h2></div><label className="search-box"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari akun atau tipe login..." /></label></div>{data.loading ? <DataState message="Mengambil stok nyata dari database..." /> : data.error ? <DataState message={data.error} error onRetry={loadCatalog} /> : products.length ? <div className="product-grid">{products.map((product) => <ProductCard key={product.id} product={product} onAdd={() => showNotice("Checkout akan mengirim detail akun setelah pembayaran dikonfirmasi.")} />)}</div> : <div className="empty-state"><Package size={24} /><h3>Belum ada akun tersedia</h3><p>Belum ada listing nyata di database. Panel tidak menampilkan akun contoh.</p></div>}</section>
     </main>}
-    {activePage === "orders" && <OrdersPage orders={data.orders} loading={data.loading} onBack={() => navigate("store")} />}
-    {activePage === "help" && <HelpPage onBack={() => navigate("store")} />}
-    {activePage === "admin" && <AdminPage data={data} onBack={() => navigate("store")} onNotice={showNotice} />}
-    <footer className="footer"><div className="container footer-inner"><div className="brand footer-brand"><span className="brand-mark">&lt;/&gt;</span><span>Code<span className="brand-dot">Xa</span></span></div><p>Data akun terhubung ke Neon Database.</p><div className="footer-links"><button onClick={() => navigate("help")}>Bantuan</button><button onClick={() => navigate("orders")}>Pesanan</button></div></div></footer>
+    {activePage === "orders" && <SimplePage title="Pesanan" text="Riwayat pesanan akan muncul setelah alur pembayaran diaktifkan." icon={Package} onBack={() => navigate("store")} />}
+    {activePage === "help" && <SimplePage title="Bantuan" text="Butuh bantuan dengan akun yang dibeli? Hubungi admin melalui kanal dukungan CodeXa." icon={CircleHelp} onBack={() => navigate("store")} />}
+    {activePage === "admin" && <AdminPage onBack={() => navigate("store")} onNotice={(message) => { showNotice(message); loadCatalog(); }} />}
+    <footer className="footer"><div className="container footer-inner"><div className="brand footer-brand"><span className="brand-mark">&lt;/&gt;</span><span>Code<span className="brand-dot">Xa</span></span></div><p>Stok dan katalog terhubung ke Neon Database.</p><div className="footer-links"><button onClick={() => navigate("help")}>Bantuan</button><button onClick={() => navigate("orders")}>Pesanan</button></div></div></footer>
     {notice && <div className="toast"><Check size={16} />{notice}</div>}<button className="admin-shortcut" onClick={() => navigate("admin")}><LayoutDashboard size={14} /> Admin</button>
   </div>;
 }
 
-function DataState({ message, error = false }) { return <div className="empty-state"><CircleHelp size={24} /><h3>{error ? "Data belum bisa dimuat" : "Memuat data nyata"}</h3><p>{message}</p></div>; }
-function ProductCard({ product, onAdd }) { return <article className={`product-card ${product.accent || "violet"}`}><div className="product-visual"><div className="visual-label">{product.type || "Akun"}</div><div className="visual-monogram">{product.initials || "CX"}</div><span className="visual-small">CODEXA<br /><b>ACCESS</b></span></div><div className="product-content"><div className="product-meta"><span className="product-type">{product.type || "Akun"}</span><span className="stock-dot"><i />{product.stock ?? 0} tersisa</span></div><h3>{product.title}</h3><p>{product.description || "Akun nyata dari katalog CodeXa."}</p><div className="product-bottom"><strong>{formatPrice(Number(product.price) || 0)}</strong><button className="round-add" onClick={onAdd} aria-label={`Pilih ${product.title}`}><ShoppingBag size={17} /></button></div></div></article>; }
-function OrdersPage({ orders, loading, onBack }) { return <main className="page-container container"><div className="page-top"><button className="back-link" onClick={onBack}><ArrowRight size={14} className="back-arrow" /> Kembali ke store</button><p className="section-kicker">AREA PEMBELI</p><h1>Pesanan saya.</h1><p className="page-lede">Riwayat pesanan dari database nyata.</p></div><div className="orders-layout"><div className="orders-list"><div className="subheading"><h2>Riwayat pesanan</h2><span>{loading ? "..." : `${orders.length} pesanan`}</span></div>{orders.length ? orders.map((order) => <div className="order-row" key={order.id}><div className="order-icon"><Package size={17} /></div><div className="order-info"><div><strong>{order.product}</strong><span className="status pending">{order.status}</span></div><p>{order.id} · {order.date}</p><b>{formatPrice(Number(order.total) || 0)}</b></div><ChevronRight size={16} /></div>) : <div className="empty-state"><Package size={24} /><h3>Belum ada pesanan</h3><p>Riwayat akan muncul setelah ada transaksi nyata.</p></div>}</div></div></main>; }
-function HelpPage({ onBack }) { return <main className="page-container container"><div className="page-top"><button className="back-link" onClick={onBack}><ArrowRight size={14} className="back-arrow" /> Kembali ke store</button><p className="section-kicker">SUPPORT</p><h1>Kami siap bantu.</h1><p className="page-lede">Hubungi support jika ada pertanyaan soal akun atau pesanan.</p></div><div className="help-grid"><div className="help-card dark"><Headphones size={24} /><h3>Butuh bantuan?</h3><p>Tim support akan membantu setelah ada kanal kontak yang dikonfigurasi.</p></div></div></main>; }
+function DataState({ message, error = false, onRetry }) { return <div className="empty-state"><CircleHelp size={24} /><h3>{error ? "Data belum bisa dimuat" : "Memuat data nyata"}</h3><p>{message}</p>{onRetry && <button className="secondary-button" onClick={onRetry}><RefreshCw size={14} /> Coba lagi</button>}</div>; }
+function SimplePage({ title, text, icon: Icon, onBack }) { return <main className="page-container container"><button className="back-link" onClick={onBack}><ArrowRight size={14} className="back-arrow" /> Kembali ke store</button><div className="simple-page"><Icon size={30} /><p className="section-kicker">CODEXA</p><h1>{title}</h1><p className="page-lede">{text}</p></div></main>; }
+function ProductCard({ product, onAdd }) { return <article className="product-card violet"><div className="product-visual"><span className="visual-label">DIGITAL ACCOUNT</span><span className="visual-monogram">{(product.loginType || "A").slice(0, 1).toUpperCase()}</span><span className="visual-star">✦</span><span className="visual-small">LOGIN TYPE<br /><b>{product.loginType}</b></span><span className="product-badge">{product.stock} stok</span></div><div className="product-content"><div className="product-meta"><span className="product-type">{product.loginType}</span><span className="stock-dot"><i /> Tersedia</span></div><h3>{product.title}</h3><p>{product.description || "Akun digital siap digunakan. Detail dikirim setelah pembayaran."}</p><div className="product-bottom"><strong>{formatPrice(product.price)}</strong><button className="round-add" onClick={onAdd} aria-label={`Beli ${product.title}`}><ArrowRight size={15} /></button></div></div></article>; }
 
-function AdminPage({ data, onBack, onNotice }) {
-  const [authenticated, setAuthenticated] = useState(null);
-  const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
-  const [users, setUsers] = useState([]);
-  const [userSearch, setUserSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [actionId, setActionId] = useState("");
-  const [apiError, setApiError] = useState("");
-  const [form, setForm] = useState(null);
-  const [saving, setSaving] = useState(false);
-
-  const loadUsers = () => {
-    setLoadingUsers(true);
-    setApiError("");
-    fetch("/api/admin/users", { credentials: "same-origin" }).then(async (result) => {
-      const payload = await result.json();
-      if (result.status === 401) { setAuthenticated(false); throw new Error("Sesi admin sudah berakhir"); }
-      if (!result.ok) throw new Error(payload.error || "Akun tidak bisa dimuat");
-      return payload.users || [];
-    }).then(setUsers).catch((error) => setApiError(error.message)).finally(() => setLoadingUsers(false));
-  };
-  useEffect(() => {
-    fetch("/api/admin/login", { credentials: "same-origin" }).then((result) => result.json()).then((payload) => { setAuthenticated(payload.authenticated); if (payload.authenticated) loadUsers(); }).catch(() => setAuthenticated(false));
-  }, []);
-  const login = async (event) => {
-    event.preventDefault(); setLoginError("");
-    const result = await fetch("/api/admin/login", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
-    const payload = await result.json();
-    if (!result.ok) return setLoginError(payload.error || "Login gagal");
-    setPassword(""); setAuthenticated(true); loadUsers();
-  };
-  const logout = async () => { await fetch("/api/admin/login", { method: "DELETE", credentials: "same-origin" }); setAuthenticated(false); setUsers([]); };
-  const openForm = (user = null) => setForm(user ? { id: user.id, name: user.name || "", email: user.email || "", role: user.role || "user", banned: Boolean(user.banned) } : { name: "", email: "", role: "user", banned: false });
-  const closeForm = () => { if (!saving) setForm(null); };
+function AdminPage({ onBack, onNotice }) {
+  const [authenticated, setAuthenticated] = useState(null); const [password, setPassword] = useState(""); const [loginError, setLoginError] = useState("");
+  const [listings, setListings] = useState([]); const [loading, setLoading] = useState(false); const [apiError, setApiError] = useState(""); const [form, setForm] = useState(null); const [saving, setSaving] = useState(false); const [revealed, setRevealed] = useState(false); const [search, setSearch] = useState("");
+  const checkAuth = () => jsonRequest("/api/admin/login", { method: "GET" }).then((payload) => { setAuthenticated(payload.authenticated); if (payload.authenticated) loadListings(); }).catch(() => setAuthenticated(false));
+  useEffect(() => { checkAuth(); }, []);
+  const loadListings = () => { setLoading(true); setApiError(""); jsonRequest("/api/admin/products", { method: "GET" }).then((payload) => setListings(payload.products || [])).catch((error) => setApiError(error.message)).finally(() => setLoading(false)); };
+  const login = async (event) => { event.preventDefault(); setLoginError(""); try { await jsonRequest("/api/admin/login", { method: "POST", body: JSON.stringify({ password }) }); setAuthenticated(true); setPassword(""); loadListings(); } catch (error) { setLoginError(error.message); } };
+  const logout = async () => { await jsonRequest("/api/admin/login", { method: "DELETE" }); setAuthenticated(false); setListings([]); };
+  const openForm = (listing = null) => { setApiError(""); setRevealed(false); setForm(listing ? { ...emptyListing, ...listing, price: String(listing.price ?? ""), stock: String(listing.stock ?? ""), password: listing.password || "" } : { ...emptyListing }); };
   const updateForm = (key, value) => setForm((current) => ({ ...current, [key]: value }));
-  const saveUser = async (event) => {
-    event.preventDefault();
-    if (!form) return;
-    setSaving(true); setApiError("");
-    const isEdit = Boolean(form.id);
-    const result = await fetch("/api/admin/users", {
-      method: isEdit ? "PATCH" : "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const payload = await result.json();
-    if (!result.ok) {
-      setApiError(payload.error || "Akun gagal disimpan");
-      setSaving(false);
-      return;
-    }
-    setUsers((current) => isEdit ? current.map((item) => item.id === payload.user.id ? payload.user : item) : [payload.user, ...current]);
-    setForm(null); setSaving(false);
-    onNotice(isEdit ? "Perubahan akun disimpan" : "Profil akun dibuat");
-  };
-  const toggleUser = async (user) => {
-    setActionId(user.id); setApiError("");
-    const result = await fetch("/api/admin/users", { method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: user.id, name: user.name, email: user.email, role: user.role || "user", banned: !user.banned }) });
-    const payload = await result.json();
-    if (!result.ok) setApiError(payload.error || "Status akun gagal diubah"); else { setUsers((current) => current.map((item) => item.id === user.id ? payload.user : item)); onNotice(user.banned ? "Akun diaktifkan" : "Akun dinonaktifkan"); }
-    setActionId("");
-  };
-  const deleteUser = async (user) => {
-    if (!window.confirm(`Hapus akun ${user.email}? Tindakan ini tidak bisa dibatalkan.`)) return;
-    setActionId(user.id); setApiError("");
-    const result = await fetch("/api/admin/users", { method: "DELETE", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: user.id }) });
-    const payload = await result.json();
-    if (!result.ok) setApiError(payload.error || "Akun gagal dihapus");
-    else { setUsers((current) => current.filter((item) => item.id !== user.id)); onNotice("Akun dihapus"); }
-    setActionId("");
-  };
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch = `${user.name || ""} ${user.email || ""}`.toLowerCase().includes(userSearch.toLowerCase());
-    const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? !user.banned : user.banned);
-    return matchesSearch && matchesStatus;
-  });
-
-  if (authenticated === null) return <main className="page-container container"><DataState message="Memeriksa akses admin..." /></main>;
-  if (!authenticated) return <main className="page-container container"><div style={{ maxWidth: 460, margin: "70px auto" }}><div className="admin-panel" style={{ padding: 32 }}><div className="page-top" style={{ marginBottom: 24 }}><ShieldCheck size={28} /><p className="section-kicker">ADMIN CODEXA</p><h1>Masuk ke panel.</h1><p className="page-lede">Panel ini dilindungi password dan menampilkan akun nyata dari Neon.</p></div><form onSubmit={login}><label className="custom-input"><span>Password admin</span><div><LockKeyhole size={16} /><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoFocus required /></div></label>{loginError && <p style={{ color: "#ff8f9a" }}>{loginError}</p>}<button className="primary-button full-button" type="submit">Masuk ke admin <LogIn size={15} /></button></form><button className="back-link" onClick={onBack} style={{ marginTop: 18 }}><ArrowRight size={14} className="back-arrow" /> Kembali ke store</button></div></div></main>;
-
-  return <main className="page-container container"><div className="page-top"><div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start" }}><div><button className="back-link" onClick={onBack}><ArrowRight size={14} className="back-arrow" /> Kembali ke store</button><p className="section-kicker">ADMIN CODEXA / AKUN</p><h1>Panel akun nyata.</h1><p className="page-lede">Kelola profil, role, dan status akun dari database Neon. Password dan token tidak pernah ditampilkan.</p></div><div className="admin-header-actions"><button className="secondary-button" onClick={logout}><LogOut size={15} /> Keluar</button><button className="primary-button" onClick={() => openForm()}><Plus size={15} /> Buat akun</button></div></div></div>
-    <div className="admin-stats"><StatCard label="Pelanggan terdaftar" value={data.loading ? "..." : data.customerCount} change="Akun nyata" icon={Users} color="violet" /><StatCard label="Akun ditemukan" value={loadingUsers ? "..." : users.length} change="Neon Auth" icon={BadgeCheck} color="mint" /><StatCard label="Status aktif" value={loadingUsers ? "..." : users.filter((user) => !user.banned).length} change="Bisa login" icon={UserCheck} color="coral" /><StatCard label="Nonaktif" value={loadingUsers ? "..." : users.filter((user) => user.banned).length} change="Perlu perhatian" icon={UserX} color="gold" /></div>
-    <section className="admin-panel"><div className="panel-heading"><div><h2>Daftar akun</h2><p>{filteredUsers.length} dari {users.length} akun nyata dari Neon Auth</p></div><div className="admin-toolbar"><label className="search-box"><Search size={16} /><input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Cari nama/email..." /></label><select className="admin-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter status"><option value="all">Semua status</option><option value="active">Aktif</option><option value="banned">Nonaktif</option></select><button className="icon-button" onClick={loadUsers} aria-label="Muat ulang"><RefreshCw size={16} /></button></div></div>{apiError && <p className="admin-error">{apiError}</p>}{loadingUsers ? <DataState message="Mengambil daftar akun..." /> : filteredUsers.length ? <div className="admin-orders-table"><div className="table-header"><span>Akun</span><span>Role</span><span>Dibuat</span><span>Status</span><span>Aksi</span></div>{filteredUsers.map((user) => <div className="table-row" key={user.id}><span data-label="Akun"><strong>{user.name || "Tanpa nama"}</strong><small>{user.email}</small></span><span data-label="Role"><b className="role-badge">{user.role || "user"}</b></span><span data-label="Dibuat">{formatDate(user.createdAt)}</span><span data-label="Status"><b className={`status ${user.banned ? "pending" : "success"}`}>{user.banned ? "Nonaktif" : "Aktif"}</b></span><span data-label="Aksi" className="row-actions"><button className="table-action" disabled={actionId === user.id} onClick={() => openForm(user)} aria-label={`Edit ${user.email}`}><Pencil size={14} /></button><button className="table-action" disabled={actionId === user.id} onClick={() => toggleUser(user)} title={user.banned ? "Aktifkan" : "Nonaktifkan"}>{user.banned ? <UserCheck size={14} /> : <UserX size={14} />}</button><button className="table-action danger" disabled={actionId === user.id} onClick={() => deleteUser(user)} aria-label={`Hapus ${user.email}`}><Trash2 size={14} /></button></span></div>)}</div> : <div className="empty-state"><UserRound size={24} /><h3>Belum ada akun</h3><p>Tidak ada akun nyata yang cocok dengan pencarian.</p></div>}</section>
-    {form && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeForm()}><form className="admin-form modal" onSubmit={saveUser} onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={closeForm} aria-label="Tutup"><X size={16} /></button><div className="admin-form-heading"><p className="section-kicker">{form.id ? "EDIT AKUN" : "AKUN BARU"}</p><h2>{form.id ? "Edit profil akun." : "Buat profil akun."}</h2><p>{form.id ? "Perbarui data profil dan hak akses akun nyata." : "Profil dibuat di database Neon. Kredensial login tetap dikelola oleh provider Auth."}</p></div><label className="custom-input"><span>Nama</span><div><UserRound size={16} /><input value={form.name} onChange={(event) => updateForm("name", event.target.value)} placeholder="Nama pengguna" required maxLength={120} /></div></label><label className="custom-input"><span>Email</span><div><input type="email" value={form.email} onChange={(event) => updateForm("email", event.target.value)} placeholder="nama@email.com" required maxLength={320} /></div></label><label className="custom-input"><span>Role</span><div><select value={form.role} onChange={(event) => updateForm("role", event.target.value)}><option value="user">User</option><option value="admin">Admin</option></select></div></label>{form.id && <label className="admin-checkbox"><input type="checkbox" checked={!form.banned} onChange={(event) => updateForm("banned", !event.target.checked)} /> Akun aktif dan boleh login</label>}<div className="admin-form-actions"><button type="button" className="secondary-button" onClick={closeForm}>Batal</button><button type="submit" className="primary-button" disabled={saving}>{saving ? "Menyimpan..." : <><Check size={15} /> Simpan akun</>}</button></div></form></div>}
+  const saveListing = async (event) => { event.preventDefault(); setSaving(true); setApiError(""); try { const payload = await jsonRequest("/api/admin/products", { method: form.id ? "PATCH" : "POST", body: JSON.stringify(form) }); setListings((current) => form.id ? current.map((item) => item.id === payload.product.id ? payload.product : item) : [payload.product, ...current]); setForm(null); onNotice(form.id ? "Listing diperbarui" : "Listing akun dibuat"); } catch (error) { setApiError(error.message); } finally { setSaving(false); } };
+  const toggleStatus = async (listing) => { try { const payload = await jsonRequest("/api/admin/products", { method: "PATCH", body: JSON.stringify({ ...listing, status: listing.status === "available" ? "sold" : "available" }) }); setListings((current) => current.map((item) => item.id === listing.id ? payload.product : item)); onNotice(payload.product.status === "available" ? "Listing ditandai tersedia" : "Listing ditandai terjual"); } catch (error) { setApiError(error.message); } };
+  const deleteListing = async (listing) => { if (!window.confirm(`Hapus listing “${listing.title}”? Tindakan ini tidak bisa dibatalkan.`)) return; try { await jsonRequest("/api/admin/products", { method: "DELETE", body: JSON.stringify({ id: listing.id }) }); setListings((current) => current.filter((item) => item.id !== listing.id)); onNotice("Listing dihapus"); } catch (error) { setApiError(error.message); } };
+  const filtered = listings.filter((item) => `${item.title} ${item.loginType} ${item.status}`.toLowerCase().includes(search.toLowerCase()));
+  if (authenticated === null) return <main className="page-container container"><DataState message="Memeriksa akses admin..." />;</main>;
+  if (!authenticated) return <main className="page-container container"><div className="login-shell admin-panel"><div className="page-top"><ShieldCheck size={28} /><p className="section-kicker">ADMIN CODEXA</p><h1>Masuk ke panel.</h1><p className="page-lede">Kelola listing akun jualan dan stok kredensial dengan aman.</p></div><form onSubmit={login}><label className="custom-input"><span>Password admin</span><div><LockKeyhole size={16} /><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoFocus required /></div></label>{loginError && <p className="form-error">{loginError}</p>}<button className="primary-button full-button" type="submit">Masuk ke admin <LogIn size={15} /></button></form><button className="back-link" onClick={onBack} style={{ marginTop: 18 }}><ArrowRight size={14} className="back-arrow" /> Kembali ke store</button></div></main>;
+  const available = listings.filter((item) => item.status === "available").length; const sold = listings.filter((item) => item.status === "sold").length; const totalStock = listings.reduce((sum, item) => sum + Number(item.stock || 0), 0);
+  return <main className="page-container container"><div className="admin-heading"><div><button className="back-link" onClick={onBack}><ArrowRight size={14} className="back-arrow" /> Kembali ke store</button><p className="section-kicker">ADMIN CODEXA / INVENTORY</p><h1>Inventaris akun jualan.</h1><p className="page-lede">Kelola listing, kredensial, harga, stok, dan detail yang dikirim setelah pembelian.</p></div><div className="admin-header-actions"><button className="secondary-button" onClick={logout}><LogOut size={15} /> Keluar</button><button className="primary-button" onClick={() => openForm()}><Plus size={15} /> Tambah listing</button></div></div>
+    <div className="admin-stats"><StatCard label="Total listing" value={listings.length} change="di database" icon={Package} color="purple" /><StatCard label="Stok aktif" value={totalStock} change={`${available} listing tersedia`} icon={BadgeCheck} color="green" /><StatCard label="Terjual" value={sold} change="ditandai admin" icon={Check} color="blue" /></div>
+    <div className="admin-panel inventory-panel"><div className="inventory-toolbar"><div><p className="section-kicker">ACCOUNT LISTINGS</p><h2>Stok akun</h2></div><label className="search-box"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari listing..." /></label></div>{apiError && <p className="form-error">{apiError}</p>}{loading ? <DataState message="Mengambil inventory dari Neon..." /> : filtered.length ? <div className="inventory-table"><div className="inventory-row inventory-head"><span>Listing</span><span>Login</span><span>Harga</span><span>Stok</span><span>Status</span><span>Aksi</span></div>{filtered.map((item) => <div className="inventory-row" key={item.id}><span><strong>{item.title}</strong><small>{item.description || "Tanpa deskripsi"}</small></span><span className="mono-text">{item.loginType}</span><span>{formatPrice(item.price)}</span><span>{item.stock}</span><span><button className={`status-pill ${item.status}`} onClick={() => toggleStatus(item)}>{item.status === "available" ? "Tersedia" : "Terjual"}</button></span><span className="row-actions"><button onClick={() => openForm(item)} aria-label="Edit listing"><Pencil size={15} /></button><button onClick={() => deleteListing(item)} aria-label="Hapus listing"><Trash2 size={15} /></button></span></div>)}</div> : <div className="empty-state compact"><Package size={24} /><h3>Belum ada listing</h3><p>Tambahkan akun jualan pertama. Tidak ada data contoh yang dibuat otomatis.</p><button className="primary-button" onClick={() => openForm()}><Plus size={14} /> Tambah listing</button></div>}</div>
+    {form && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setForm(null)}><form className="admin-form modal listing-form" onSubmit={saveListing} onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setForm(null)} aria-label="Tutup"><X size={16} /></button><div className="admin-form-heading"><p className="section-kicker">{form.id ? "EDIT LISTING" : "LISTING BARU"}</p><h2>{form.id ? "Edit akun jualan." : "Tambah akun jualan."}</h2><p>Kredensial terenkripsi di database. Field sensitif hanya tampil di panel admin.</p></div><div className="form-grid"><label className="custom-input full-span"><span>Nama listing</span><div><Package size={16} /><input value={form.title} onChange={(event) => updateForm("title", event.target.value)} placeholder="Google Workspace Premium" required maxLength={160} /></div></label><label className="custom-input"><span>Tipe login</span><div><select value={form.loginType} onChange={(event) => updateForm("loginType", event.target.value)}>{LOGIN_TYPES.map((type) => <option key={type}>{type}</option>)}</select></div></label><label className="custom-input"><span>Status</span><div><select value={form.status} onChange={(event) => updateForm("status", event.target.value)}><option value="available">Tersedia</option><option value="sold">Terjual</option></select></div></label><label className="custom-input"><span>Harga (IDR)</span><div><input type="number" min="0" step="1" value={form.price} onChange={(event) => updateForm("price", event.target.value)} placeholder="50000" required /></div></label><label className="custom-input"><span>Stok</span><div><input type="number" min="0" step="1" value={form.stock} onChange={(event) => updateForm("stock", event.target.value)} placeholder="1" required /></div></label><label className="custom-input full-span"><span>Deskripsi katalog</span><div><textarea value={form.description} onChange={(event) => updateForm("description", event.target.value)} placeholder="Jelaskan benefit akun tanpa memasukkan kredensial." maxLength={500} /></div></label><div className="form-divider full-span"><span>DETAIL AKUN UNTUK PENGIRIMAN</span><small>Jangan masukkan data sensitif ke deskripsi katalog.</small></div><label className="custom-input"><span>Username</span><div><input value={form.username} onChange={(event) => updateForm("username", event.target.value)} maxLength={320} /></div></label><label className="custom-input"><span>Email akun</span><div><input type="email" value={form.email} onChange={(event) => updateForm("email", event.target.value)} maxLength={320} /></div></label><label className="custom-input"><span>Password</span><div><input type={revealed ? "text" : "password"} value={form.password} onChange={(event) => updateForm("password", event.target.value)} maxLength={500} /><button type="button" className="field-icon" onClick={() => setRevealed((value) => !value)} aria-label={revealed ? "Sembunyikan password" : "Tampilkan password"}>{revealed ? <EyeOff size={15} /> : <Eye size={15} />}</button></div></label><label className="custom-input full-span"><span>Detail pengiriman</span><div><textarea value={form.deliveryDetails} onChange={(event) => updateForm("deliveryDetails", event.target.value)} placeholder="Instruksi login, recovery, catatan penggunaan, dan detail yang dikirim setelah pembelian." maxLength={3000} /></div></label></div><div className="admin-form-actions"><button type="button" className="secondary-button" onClick={() => setForm(null)}>Batal</button><button type="submit" className="primary-button" disabled={saving}>{saving ? "Menyimpan..." : <><Check size={15} /> Simpan listing</>}</button></div></form></div>}
   </main>;
 }
-
 function StatCard({ label, value, change, icon: Icon, color }) { return <div className="stat-card"><div className={`stat-icon ${color}`}><Icon size={16} /></div><span>{label}</span><strong>{value}</strong><small>{change}</small></div>; }
 createRoot(document.getElementById("root")).render(<React.StrictMode><App /></React.StrictMode>);
