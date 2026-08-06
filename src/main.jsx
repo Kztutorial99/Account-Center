@@ -1306,10 +1306,19 @@ const appMeta = (id) => QRIS_APPS.find((a) => a.id === id) || QRIS_APPS[QRIS_APP
 
 function AppLogo({ app, size = 34 }) {
   const m = appMeta(app);
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { setBroken(false); }, [m.icon]);
+  const showImg = m.icon && !broken;
   return (
     <span className="cx-applogo" style={{ width: size * 1.55, height: size, background: m.tint, color: m.color, borderColor: m.color }}>
-      {m.icon
-        ? <img src={m.icon} alt={m.id} className="cx-applogo-img" loading="lazy" />
+      {showImg
+        ? <img
+            src={m.icon}
+            alt={m.id}
+            className="cx-applogo-img"
+            decoding="async"
+            onError={() => setBroken(true)}
+          />
         : m.short}
     </span>
   );
