@@ -604,6 +604,7 @@ function AdminPage({ onBack, onNotice }) {
   const [topups, setTopups]               = useState([]);
   const [users, setUsers]                 = useState([]);
   const [userQuery, setUserQuery]         = useState("");
+  const [userPage, setUserPage]           = useState(1);
   const [userForm, setUserForm]           = useState(null);
   const [savingUser, setSavingUser]       = useState(false);
   const [aiCfg, setAiCfg]                 = useState(null);
@@ -817,6 +818,12 @@ function AdminPage({ onBack, onNotice }) {
     const q = userQuery.trim().toLowerCase();
     return q ? users.filter((u) => `${u.name} ${u.email} ${u.phone}`.toLowerCase().includes(q)) : users;
   }, [users, userQuery]);
+
+  const USERS_PER_PAGE = 8;
+  const userPageCount = Math.max(1, Math.ceil(filteredUsers.length / USERS_PER_PAGE));
+  const safeUserPage = Math.min(userPage, userPageCount);
+  const pagedUsers = filteredUsers.slice((safeUserPage - 1) * USERS_PER_PAGE, safeUserPage * USERS_PER_PAGE);
+  useEffect(() => { setUserPage(1); }, [userQuery, users.length]);
 
   /* stats */
   const totalProducts = listings.length;
@@ -1148,7 +1155,7 @@ function AdminPage({ onBack, onNotice }) {
             </div>
             {filteredUsers.length === 0
               ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada user terdaftar.</div>
-              : filteredUsers.map((u) => (
+              : pagedUsers.map((u) => (
                 <div key={u.id} className="cx-user-row">
                   <div className="cx-user-ident">
                     <div className="cx-avatar">{String(u.name || "U").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</div>
@@ -1162,8 +1169,8 @@ function AdminPage({ onBack, onNotice }) {
                       <small>{u.email}{u.phone ? ` · ${u.phone}` : ""}</small>
                     </div>
                   </div>
-                  <span className="cx-mono">{formatPrice(u.balance)}</span>
-                  <span className="cx-mono" style={{ color: "var(--muted)" }}>
+                  <span className="cx-mono cx-user-cell" data-label="Saldo">{formatPrice(u.balance)}</span>
+                  <span className="cx-mono cx-user-cell" data-label="Top up" style={{ color: "var(--muted)" }}>
                     {formatPrice(u.topupTotal)}{u.pendingCount ? ` · ${u.pendingCount} pending` : ""}
                   </span>
                   <span className={`cx-status ${u.status === "active" ? "cx-status-ok" : u.status === "suspended" ? "cx-status-low" : "cx-status-out"}`}>
@@ -1187,6 +1194,15 @@ function AdminPage({ onBack, onNotice }) {
                   </div>
                 </div>
               ))}
+            {filteredUsers.length > USERS_PER_PAGE && (
+              <div className="cx-pager">
+                <span>Halaman {safeUserPage} dari {userPageCount} · {filteredUsers.length} akun</span>
+                <div className="cx-pager-btns">
+                  <button className="cx-row-btn" disabled={safeUserPage <= 1} onClick={() => setUserPage(safeUserPage - 1)}>Sebelumnya</button>
+                  <button className="cx-row-btn" disabled={safeUserPage >= userPageCount} onClick={() => setUserPage(safeUserPage + 1)}>Berikutnya</button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Two-col: Activity + Inventory */}
