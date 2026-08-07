@@ -62,10 +62,19 @@ const SQL_SYSTEM_OBJECTS =
   /\b(pg_sleep|pg_read_file|pg_read_binary_file|pg_ls_dir|pg_stat_file|pg_logdir_ls|dblink[a-z_]*|lo_import|lo_export|set_config|current_setting|pg_authid|pg_shadow|pg_roles|pg_user|pg_catalog|pg_settings|pg_terminate_backend|pg_cancel_backend|generate_series)\b/i;
 
 const SQL_ALLOWED_REF = /^(codexa_[a-z0-9_]+|information_schema\.(tables|columns))$/;
+// codexa_settings menyimpan API key Assisten → tidak boleh disentuh query manual.
+const SQL_BLOCKED_TABLES = ["codexa_settings", "codexa_rate_limits"];
 
 function sqlReferencedTables(raw) {
   return [...raw.matchAll(/\b(?:from|join|into|update)\s+("?[a-z_][a-z0-9_."]*"?)/gi)]
     .map((m) => m[1].replace(/"/g, "").toLowerCase());
+}
+
+
+/** Aksi destruktif butuh sesi admin panel (cookie admin), bukan hanya role admin. */
+function stepUp(ctx) {
+  if (ctx && ctx.adminCookie) return "";
+  return "Aksi destruktif hanya bisa dijalankan dari sesi Admin Panel. Masuk ke /admin dulu, lalu ulangi permintaan ini.";
 }
 
 /** @returns {string} pesan error, atau "" kalau query aman. */
@@ -85,6 +94,8 @@ function sqlGuard(raw) {
   if (!refs.length) return "Query harus menyebut tabel codexa_*";
   const bad = refs.find((t) => !SQL_ALLOWED_REF.test(t));
   if (bad) return `Tabel "${bad}" di luar jangkauan. Hanya tabel codexa_* yang boleh diakses.`;
+  const blocked = refs.find((t) => SQL_BLOCKED_TABLES.includes(t));
+  if (blocked) return `Tabel "${blocked}" berisi rahasia sistem dan tidak bisa dibuka lewat query manual.`;
   return "";
 }
 const ok = (data) => ({ ok: true, ...data });
@@ -570,6 +581,8 @@ const adminTools = {
       },
     },
     handler: async (args, ctx) => {
+      const guardStepUp = stepUp(ctx);
+      if (guardStepUp) return fail(guardStepUp);
       const id = text(args.id, 60);
       if (!id) return fail("ID user wajib diisi");
       if (args.confirm !== true) {
@@ -961,6 +974,8 @@ const adminTools = {
       },
     },
     handler: async (args, ctx) => {
+      const guardStepUp = stepUp(ctx);
+      if (guardStepUp) return fail(guardStepUp);
       if (args.confirm !== true) return fail("Butuh konfirmasi eksplisit dari admin (confirm=true). Tanyakan dulu.");
       const ticket = text(args.ticket, 40).toUpperCase();
       const status = REPORT_STATUSES.includes(args.status) ? args.status : "";
@@ -999,6 +1014,8 @@ const adminTools = {
       },
     },
     handler: async (args, ctx) => {
+      const guardStepUp = stepUp(ctx);
+      if (guardStepUp) return fail(guardStepUp);
       if (args.confirm !== true) return fail("Butuh konfirmasi eksplisit dari admin (confirm=true). Tanyakan dulu.");
       const id = text(args.id, 60);
       const status = ["pending", "approved", "rejected"].includes(args.status) ? args.status : "";
@@ -1033,6 +1050,8 @@ const adminTools = {
       },
     },
     handler: async (args, ctx) => {
+      const guardStepUp = stepUp(ctx);
+      if (guardStepUp) return fail(guardStepUp);
       if (args.confirm !== true) return fail("Butuh konfirmasi eksplisit dari admin (confirm=true). Tanyakan dulu.");
       const table = tableName(args.table);
       if (!table) return fail("Nama tabel tidak valid. Hanya tabel codexa_* yang bisa diproses.");
@@ -1064,6 +1083,8 @@ const adminTools = {
       },
     },
     handler: async (args, ctx) => {
+      const guardStepUp = stepUp(ctx);
+      if (guardStepUp) return fail(guardStepUp);
       if (args.confirm !== true) return fail("Butuh konfirmasi eksplisit dari admin (confirm=true). Tanyakan dulu.");
       const raw = String(args.sql || "").trim().replace(/;+\s*$/, "");
       if (!raw) return fail("Query kosong");

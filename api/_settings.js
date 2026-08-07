@@ -6,6 +6,43 @@
  * Env var tetap dipakai sebagai fallback bila belum diisi dari panel.
  */
 
+const crypto = require("crypto");
+
+/* ── Enkripsi API key Assisten saat disimpan di database ─────────────
+   Sebelumnya key tersimpan apa adanya, jadi siapa pun yang bisa membaca
+   tabel bisa memakai kuota AI. Sekarang dienkripsi AES-256-GCM memakai
+   ACCOUNT_CREDENTIALS_KEY (kunci yang sama dengan kredensial akun).
+   Nilai lama yang masih plaintext tetap terbaca (kompatibel ke belakang). */
+function cryptoKey() {
+  const raw = process.env.ACCOUNT_CREDENTIALS_KEY || "";
+  return raw ? crypto.createHash("sha256").update(raw).digest() : null;
+}
+
+function encryptSecret(value) {
+  const key = cryptoKey();
+  if (!key || !value) return { plain: value || "", enc: "" };
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const data = Buffer.concat([cipher.update(String(value), "utf8"), cipher.final()]);
+  return {
+    plain: "",
+    enc: [iv.toString("base64url"), cipher.getAuthTag().toString("base64url"), data.toString("base64url")].join("."),
+  };
+}
+
+function decryptSecret(enc) {
+  const key = cryptoKey();
+  if (!key || !enc) return "";
+  try {
+    const [ivText, tagText, dataText] = String(enc).split(".");
+    const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(ivText, "base64url"));
+    decipher.setAuthTag(Buffer.from(tagText, "base64url"));
+    return Buffer.concat([decipher.update(Buffer.from(dataText, "base64url")), decipher.final()]).toString("utf8");
+  } catch (_) {
+    return "";
+  }
+}
+
 const DEFAULT_BASE = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
 const DEFAULT_MODEL_ADMIN = "qwen3.8-max";
 const DEFAULT_MODEL_USER = "qwen3.7-flash";
@@ -15,6 +52,7 @@ const ASSISTANT_KEY = "assistant";
 const DEFAULTS = {
   enabled: true,
   apiKey: "",
+  apiKeyEnc: "",
   baseUrl: "",
   modelAdmin: "",
   modelUser: "",
@@ -39,9 +77,12 @@ async function readAssistantSettings(sql) {
   const rows = await sql`SELECT value, updated_at AS "updatedAt" FROM codexa_settings WHERE key = ${ASSISTANT_KEY} LIMIT 1`;
   const stored = (rows.length && rows[0].value) || {};
   const parsed = typeof stored === "string" ? safeParse(stored) : stored;
+  const merged = { ...DEFAULTS, ...parsed };
+  // apiKeyEnc (terenkripsi) diutamakan; apiKey plaintext hanya sisa data lama.
+  const apiKey = merged.apiKeyEnc ? decryptSecret(merged.apiKeyEnc) : merged.apiKey || "";
   return {
-    ...DEFAULTS,
-    ...parsed,
+    ...merged,
+    apiKey,
     updatedAt: rows.length ? rows[0].updatedAt : null,
   };
 }
@@ -50,10 +91,13 @@ async function writeAssistantSettings(sql, patch) {
   const current = await readAssistantSettings(sql);
   const { updatedAt, ...base } = current;
   const next = { ...base, ...patch };
+  // Simpan API key dalam bentuk terenkripsi; jangan pernah tulis plaintext.
+  const { plain, enc } = encryptSecret(trim(next.apiKey));
+  const stored = { ...next, apiKey: plain, apiKeyEnc: enc };
   await sql`
     INSERT INTO codexa_settings (key, value, updated_at)
-    VALUES (${ASSISTANT_KEY}, ${JSON.stringify(next)}::jsonb, NOW())
-    ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(next)}::jsonb, updated_at = NOW()
+    VALUES (${ASSISTANT_KEY}, ${JSON.stringify(stored)}::jsonb, NOW())
+    ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(stored)}::jsonb, updated_at = NOW()
   `;
   return next;
 }

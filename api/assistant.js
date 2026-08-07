@@ -95,6 +95,10 @@ module.exports = async function handler(request, response) {
       sql,
       cfg,
       role,
+      // Aksi destruktif hanya boleh dari sesi admin panel (cookie admin),
+      // bukan sekadar user berperan admin — mencegah satu balasan LLM
+      // menghapus data lewat sesi biasa.
+      adminCookie,
       user: user || { id: "admin", name: "Admin", email: "admin@codexa", phone: "", balance: 0 },
     };
 
