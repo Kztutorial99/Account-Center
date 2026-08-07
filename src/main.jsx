@@ -100,6 +100,7 @@ function App() {
   const [auth, setAuth]         = useState({ user: null, loading: true });
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkout, setCheckout] = useState({ loading: false, error: "", order: null });
+  const noticeTimer = useRef(null);
 
 
   const loadSession = () =>
@@ -147,11 +148,26 @@ function App() {
     setActivePage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  const showNotice = (msg) => { setNotice(msg); window.setTimeout(() => setNotice(""), 2800); };
+  // Timer lama dibersihkan dulu supaya notice baru tidak ikut terhapus.
+  const showNotice = (msg) => {
+    if (noticeTimer.current) window.clearTimeout(noticeTimer.current);
+    setNotice(msg);
+    noticeTimer.current = window.setTimeout(() => { setNotice(""); noticeTimer.current = null; }, 2800);
+  };
+  useEffect(() => () => { if (noticeTimer.current) window.clearTimeout(noticeTimer.current); }, []);
   const addToCart  = (product, selected) => {
     const picks = (product.accounts || []).filter((a) => selected.includes(a.index));
     const total = sumSelected(product, selected);
-    setCart((c) => [...c, { ...product, selectedAccounts: picks, qty: picks.length || 1, price: total || Number(product.price) || 0 }]);
+    setCart((c) => {
+      // Gabungkan ke entri lama supaya satu listing tidak dobel di keranjang.
+      const existing = c.find((item) => item.id === product.id);
+      const entry = (list) => ({ ...product, selectedAccounts: list, qty: list.length || 1, price: sumSelected(product, list.map((a) => a.index)) || Number(product.price) || 0 });
+      if (!existing) return [...c, entry(picks)];
+      const seen = new Set((existing.selectedAccounts || []).map((a) => a.index));
+      const mergedPicks = [...(existing.selectedAccounts || []), ...picks.filter((a) => !seen.has(a.index))]
+        .sort((a, b) => a.index - b.index);
+      return c.map((item) => (item.id === product.id ? entry(mergedPicks) : item));
+    });
     showNotice(`${product.title} (${picks.length || 1} akun) ditambahkan`);
     setBuyItem(null);
   };
@@ -590,7 +606,6 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
           ))}
         </nav>
         <div className="cx-topbar-actions">
-          <IconBtn label="Notifikasi" onClick={() => {}}><Bell size={13} /></IconBtn>
           <button className="cx-cart-btn" onClick={onCartOpen}>
             <ShoppingBag size={13} />
             {cart.length > 0 && <b>{cart.length}</b>}
@@ -714,7 +729,7 @@ function ProductCard({ product, colorIdx, onBuy }) {
             {formatPrice(total)}
             <small className="cx-product-price-note">{selected.length ? `${selected.length} akun dipilih` : "pilih akun dulu"}</small>
           </span>
-          <button className="cx-product-buy" disabled={selected.length === 0} onClick={() => onBuy(selected)} aria-label={`Beli ${product.title}`}><ArrowRight size={13} /></button>
+          <button className="cx-product-buy" disabled={selected.length === 0} onClick={() => onBuy(selected)} aria-label={`Pilih akun ${product.title}`}><ArrowRight size={13} /></button>
         </div>
       </div>
     </article>
@@ -958,7 +973,9 @@ function AdminPage({ onBack, onNotice }) {
   const userPageCount = Math.max(1, Math.ceil(filteredUsers.length / USERS_PER_PAGE));
   const safeUserPage = Math.min(userPage, userPageCount);
   const pagedUsers = filteredUsers.slice((safeUserPage - 1) * USERS_PER_PAGE, safeUserPage * USERS_PER_PAGE);
-  useEffect(() => { setUserPage(1); }, [userQuery, users.length]);
+  // Reset halaman hanya saat pencarian berubah; refresh data setelah aksi admin
+  // tidak boleh menendang admin kembali ke halaman 1.
+  useEffect(() => { setUserPage(1); }, [userQuery]);
 
   /* stats */
   const totalProducts = listings.length;
@@ -1744,11 +1761,17 @@ const topupStatusBadge = (status) =>
   : <span className="cx-topup-badge wait"><Clock size={11} /> Menunggu</span>;
 
 function useTopupData(user) {
-  const [state, setState] = useState({ balance: user.balance, topups: [], loading: true, error: "" });
+  const [state, setState] = useState({ balance: user.balance, topups: [], pendingTotal: 0, loading: true, error: "" });
   const load = () => {
     setState((x) => ({ ...x, loading: true, error: "" }));
     jsonRequest("/api/topup", { method: "GET" })
-      .then((p) => setState({ balance: Number(p.balance) || 0, topups: p.topups || [], loading: false, error: "" }))
+      .then((p) => setState({
+        balance: Number(p.balance) || 0,
+        topups: p.topups || [],
+        pendingTotal: Number(p.pendingTotal) || 0,
+        loading: false,
+        error: "",
+      }))
       .catch((e) => setState((x) => ({ ...x, loading: false, error: e.message })));
   };
   useEffect(() => { load(); }, []);
@@ -1759,7 +1782,7 @@ function useTopupData(user) {
 function ProfilePage({ user, onBack, onTopup }) {
   const [state] = useTopupData(user);
   const initials = String(user.name || "CX").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-  const pendingTotal = state.topups.filter((t) => t.status === "pending").reduce((a, t) => a + t.amount, 0);
+  const pendingTotal = Number(state.pendingTotal) || 0;
 
   return (
     <div className="cx-container cx-account-page">
@@ -1855,7 +1878,6 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const [state, load] = useTopupData(user);
   const [amount, setAmount]     = useState("");
   const [app, setApp]           = useState(QRIS_APPS[0].id);
-  const [otherApp, setOtherApp] = useState("");
   const [trxId, setTrxId]       = useState("");
   const [note, setNote]         = useState("");
   const [busy, setBusy]         = useState(false);
@@ -1871,19 +1893,15 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const [proofBusy, setProofBusy] = useState(false);
 
   const amountNumber = Math.round(Number(amount) || 0);
-  const isOther  = false;
   const appLabel = app;
   const methodLabel = `QRIS · ${appLabel}`;
-  const pendingTotal = state.topups.filter((t) => t.status === "pending").reduce((a, t) => a + t.amount, 0);
-  const dataReady = trxId.trim().length >= 4 && Boolean(proof) && (!isOther || otherApp.trim());
+  const pendingTotal = Number(state.pendingTotal) || 0;
+  const dataReady = trxId.trim().length >= 4 && Boolean(proof);
 
   const goConfirm = (e) => {
     e.preventDefault(); setFormError("");
     if (!Number.isFinite(amountNumber) || amountNumber < 10000) {
       setFormError("Minimal top up Rp10.000."); return;
-    }
-    if (isOther && !otherApp.trim()) {
-      setFormError("Tulis nama aplikasi pembayaran yang kamu pakai."); return;
     }
     setOrderId("CX" + Date.now().toString().slice(-6));
     setAgreed(false); setStep("confirm");
@@ -1891,7 +1909,6 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
 
   const fullNote = () => {
     const parts = [];
-    if (isOther) parts.push(`Aplikasi: ${otherApp.trim()}`);
     if (note.trim()) parts.push(note.trim());
     parts.push(`Order ID: ${orderId}`);
     return parts.join(" | ").slice(0, 300);
@@ -2047,7 +2064,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
               <li>Lengkapi data + unggah bukti di bawah, bot langsung kirim ke admin.</li>
             </ol>
 
-            <Field label="Nomor ID transaksi" hint="Wajib. Nomor referensi / transaction ID dari struk pembayaran." error={showTrxRequired ? "* wajib masukan id transaksi" : ""}>
+            <Field label="Nomor ID transaksi" hint="Wajib. Nomor referensi / transaction ID dari struk pembayaran." error={showTrxRequired ? "* wajib memasukkan ID transaksi" : ""}>
               <InputWrap icon={FileText}>
                 <input ref={trxIdRef} value={trxId} onChange={(e) => { setTrxId(e.target.value); if (showTrxRequired) setShowTrxRequired(false); }} placeholder="Contoh: TRX-2408061234567" required />
               </InputWrap>

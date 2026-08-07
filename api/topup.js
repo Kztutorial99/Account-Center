@@ -19,8 +19,16 @@ module.exports = async function handler(request, response) {
         FROM codexa_topups WHERE user_id = ${user.id}
         ORDER BY created_at DESC LIMIT 30
       `;
+      // Total pending dihitung agregat di server, bukan dari 30 baris terakhir,
+      // supaya user dengan riwayat panjang tetap melihat angka yang benar.
+      const [agg] = await sql`
+        SELECT COALESCE(SUM(amount), 0)::bigint AS "pendingTotal", COUNT(*)::int AS "pendingCount"
+        FROM codexa_topups WHERE user_id = ${user.id} AND status = 'pending'
+      `;
       return response.status(200).json({
         balance: user.balance,
+        pendingTotal: Number(agg && agg.pendingTotal) || 0,
+        pendingCount: Number(agg && agg.pendingCount) || 0,
         topups: rows.map((r) => ({ ...r, amount: Number(r.amount) || 0 })),
       });
     }
@@ -58,8 +66,8 @@ module.exports = async function handler(request, response) {
     }
 
     const rows = await sql`
-      INSERT INTO codexa_topups (id, user_id, amount, method, reference, note)
-      VALUES (${crypto.randomUUID()}, ${user.id}, ${amount}, ${method}, ${reference}, ${note})
+      INSERT INTO codexa_topups (id, user_id, amount, method, reference, note, proof_blob)
+      VALUES (${crypto.randomUUID()}, ${user.id}, ${amount}, ${method}, ${reference}, ${note}, ${proof})
       RETURNING id, amount, method, reference, note, status, created_at AS "createdAt", reviewed_at AS "reviewedAt"
     `;
     const topup = { ...rows[0], amount: Number(rows[0].amount) || 0 };

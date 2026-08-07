@@ -45,8 +45,13 @@ async function ensureOrderTables(sql) {
   await sql`CREATE INDEX IF NOT EXISTS codexa_orders_user_idx ON codexa_orders (user_id, created_at DESC)`;
 }
 
+const MAX_ITEMS = 50;
+const MAX_PICKS_PER_ITEM = 100;
+
 function normalizeItems(body) {
-  const raw = Array.isArray(body.items) ? body.items : [];
+  // Batasi jumlah listing & akun per request supaya tidak bisa dipakai
+  // membanjiri server dengan ribuan query berurutan.
+  const raw = (Array.isArray(body.items) ? body.items : []).slice(0, MAX_ITEMS);
   const merged = new Map();
   for (const item of raw) {
     const id = typeof item?.id === "string" ? item.id.trim().slice(0, 160) : "";
@@ -57,7 +62,7 @@ function normalizeItems(body) {
       .filter((n) => Number.isInteger(n) && n >= 1 && n <= 500);
     if (!indexes.length) continue;
     const set = merged.get(id) || new Set();
-    indexes.forEach((n) => set.add(n));
+    indexes.slice(0, MAX_PICKS_PER_ITEM).forEach((n) => set.add(n));
     merged.set(id, set);
   }
   return [...merged.entries()].map(([id, set]) => ({ id, indexes: [...set].sort((a, b) => a - b) }));
@@ -107,8 +112,10 @@ module.exports = async function handler(request, response) {
         SELECT id, title, login_type AS "loginType", price, status, credential_blob AS "credentialBlob"
         FROM codexa_account_listings WHERE id = ${item.id} LIMIT 1
       `;
-      if (!row) return response.status(404).json({ error: "Salah satu listing sudah tidak tersedia" });
-      if (row.status !== "available") return response.status(409).json({ error: `${row.title} sudah tidak tersedia` });
+      if (!row) return response.status(404).json({ error: "Salah satu listing sudah tidak tersedia", failedItemId: item.id });
+      if (row.status !== "available") {
+        return response.status(409).json({ error: `${row.title} sudah tidak tersedia`, failedItemId: row.id });
+      }
       let credentials;
       try { credentials = decryptCredentials(row.credentialBlob); }
       catch (_) { return response.status(500).json({ error: "Kredensial listing tidak bisa dibaca" }); }
@@ -116,7 +123,9 @@ module.exports = async function handler(request, response) {
       const taken = [];
       for (const index of item.indexes) {
         const account = accounts[index - 1];
-        if (!account) return response.status(409).json({ error: `Stok ${row.title} sudah berubah, muat ulang katalog` });
+        if (!account) {
+          return response.status(409).json({ error: `Stok ${row.title} sudah berubah, muat ulang katalog`, failedItemId: row.id });
+        }
         taken.push({ index, ...account });
         total += account.price;
       }

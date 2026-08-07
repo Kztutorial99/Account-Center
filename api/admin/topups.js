@@ -9,9 +9,17 @@ module.exports = async function handler(request, response) {
     await ensureTables(sql);
 
     if (request.method === "GET") {
+      // Ambil satu bukti transfer (base64) untuk ditampilkan di panel admin.
+      const proofId = text((request.query && request.query.proof) || "", 60);
+      if (proofId) {
+        const [row] = await sql`SELECT proof_blob AS "proof" FROM codexa_topups WHERE id = ${proofId} LIMIT 1`;
+        if (!row || !row.proof) return response.status(404).json({ error: "Bukti transfer tidak tersimpan" });
+        return response.status(200).json({ proof: row.proof });
+      }
       const topups = await sql`
         SELECT t.id, t.amount, t.method, t.reference, t.note, t.status,
                t.created_at AS "createdAt", t.reviewed_at AS "reviewedAt",
+               (t.proof_blob IS NOT NULL AND t.proof_blob <> '') AS "hasProof",
                u.id AS "userId", u.name AS "userName", u.email AS "userEmail", u.balance AS "userBalance"
         FROM codexa_topups t JOIN codexa_users u ON u.id = t.user_id
         ORDER BY (t.status = 'pending') DESC, t.created_at DESC

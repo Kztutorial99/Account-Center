@@ -80,6 +80,19 @@ async function readAssistantSettings(sql) {
   const merged = { ...DEFAULTS, ...parsed };
   // apiKeyEnc (terenkripsi) diutamakan; apiKey plaintext hanya sisa data lama.
   const apiKey = merged.apiKeyEnc ? decryptSecret(merged.apiKeyEnc) : merged.apiKey || "";
+  // Migrasi otomatis: kalau masih ada key plaintext dari versi lama,
+  // langsung tulis ulang dalam bentuk terenkripsi lalu kosongkan plaintext.
+  if (!merged.apiKeyEnc && apiKey) {
+    try {
+      const { plain, enc } = encryptSecret(apiKey);
+      const stored = { ...merged, apiKey: plain, apiKeyEnc: enc };
+      await sql`
+        UPDATE codexa_settings SET value = ${JSON.stringify(stored)}::jsonb WHERE key = ${ASSISTANT_KEY}
+      `;
+    } catch (error) {
+      console.error("Assistant key migration failed", error && error.message);
+    }
+  }
   return {
     ...merged,
     apiKey,

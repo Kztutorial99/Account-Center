@@ -10,7 +10,15 @@ function db() {
 }
 
 function secret() {
-  return process.env.USER_SESSION_SECRET || process.env.ADMIN_PASSWORD || "";
+  const explicit = process.env.USER_SESSION_SECRET || "";
+  if (explicit) return explicit;
+  const admin = process.env.ADMIN_PASSWORD || "";
+  if (!admin) return "";
+  /* Fallback lama memakai ADMIN_PASSWORD apa adanya, sehingga kunci cookie
+     user sama dengan kunci sesi admin. Sekarang kunci user diturunkan lewat
+     HMAC dengan label khusus supaya password admin tidak bisa langsung
+     dipakai memalsukan cookie user. */
+  return crypto.createHmac("sha256", admin).update("codexa/user-session/v1").digest("hex");
 }
 
 async function ensureTables(sql) {
@@ -38,6 +46,8 @@ async function ensureTables(sql) {
       reviewed_at TIMESTAMPTZ
     )
   `;
+  // Bukti transfer disimpan di DB sebagai cadangan kalau kiriman Telegram gagal.
+  await sql`ALTER TABLE codexa_topups ADD COLUMN IF NOT EXISTS proof_blob TEXT`;
   await sql`
     CREATE TABLE IF NOT EXISTS codexa_reports (
       id TEXT PRIMARY KEY,
