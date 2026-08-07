@@ -642,11 +642,35 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .cx-user-ident strong { display: block; font: 600 12px Inter, sans-serif; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cx-user-ident small { display: block; font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cx-user-date { font-size: 10.5px; color: var(--muted); }
+.cx-pager {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; border-top: 1px solid var(--b1); font-size: 10.5px; color: var(--muted);
+}
+.cx-pager-btns { display: flex; gap: 6px; }
+.cx-pager .cx-row-btn { width: auto; padding: 0 10px; height: 26px; font-size: 10.5px; }
+.cx-pager .cx-row-btn:disabled { opacity: .4; pointer-events: none; }
+
 @media (max-width: 860px) {
   .cx-user-head { display: none; }
-  .cx-user-row { grid-template-columns: 1fr auto; row-gap: 6px; }
-  .cx-user-row .cx-user-ident { grid-column: 1 / -1; }
+  .cx-user-row {
+    grid-template-columns: 1fr; row-gap: 6px; padding: 12px 14px;
+    border-bottom: 1px solid var(--b1);
+  }
+  .cx-user-row > * { min-width: 0; }
+  .cx-user-ident { grid-column: 1 / -1; }
+  .cx-user-cell {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-size: 11px; word-break: break-word;
+  }
+  .cx-user-cell::before {
+    content: attr(data-label);
+    font: 600 9px ui-monospace, monospace; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  .cx-user-row .cx-status { justify-self: start; }
   .cx-user-date { display: none; }
+  .cx-user-row .cx-row-actions { justify-content: flex-start; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .cx-pager { justify-content: center; }
 }
 
 /* ─── QRIS top up (konfirmasi nominal → bayar) ─── */
@@ -959,3 +983,13 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .cx-md ul, .cx-md ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 .cx-md li { margin: 0; }
 .cx-md li::marker { opacity: 0.6; }
+
+/* ── ADMIN: panel header rapi di mobile ── */
+@media (max-width: 720px) {
+  .cx-panel-header { flex-wrap: wrap; padding: 10px 14px; row-gap: 8px; }
+  .cx-panel-header .cx-search { order: 3; margin-left: 0 !important; max-width: none !important; width: 100%; }
+  .cx-panel-header .cx-icon-btn { margin-left: auto; }
+  .cx-panel-sub { font-size: 9.5px; }
+  .cx-topup-row { flex-wrap: wrap; row-gap: 6px; }
+  .cx-topup-date { margin-left: 0; }
+}
