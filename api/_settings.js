@@ -9,7 +9,6 @@
 const DEFAULT_BASE = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
 const DEFAULT_MODEL_ADMIN = "qwen3.8-max";
 const DEFAULT_MODEL_USER = "qwen3.7-flash";
-const DEFAULT_MODEL_VISION = "qwen-vl-max-latest";
 
 const ASSISTANT_KEY = "assistant";
 
@@ -19,7 +18,6 @@ const DEFAULTS = {
   baseUrl: "",
   modelAdmin: "",
   modelUser: "",
-  modelVision: "",
   maxSteps: 6,
   temperature: 0.3,
   extraPrompt: "",
@@ -82,7 +80,6 @@ async function assistantConfig(sql) {
     modelAdmin: trim(saved.modelAdmin) || trim(process.env.QWEN_MODEL) || DEFAULT_MODEL_ADMIN,
     modelUser:
       trim(saved.modelUser) || trim(process.env.QWEN_MODEL_USER) || trim(process.env.QWEN_MODEL) || DEFAULT_MODEL_USER,
-    modelVision: trim(saved.modelVision) || trim(process.env.QWEN_MODEL_VISION) || DEFAULT_MODEL_VISION,
     maxSteps,
     temperature: clampNum(saved.temperature, 0, 2, 0.3),
     extraPrompt: trim(saved.extraPrompt).slice(0, 2000),
@@ -100,7 +97,6 @@ function publicAssistantConfig(cfg) {
     baseUrl: cfg.baseUrl,
     modelAdmin: cfg.modelAdmin,
     modelUser: cfg.modelUser,
-    modelVision: cfg.modelVision,
     maxSteps: cfg.maxSteps,
     temperature: cfg.temperature,
     extraPrompt: cfg.extraPrompt,
@@ -138,7 +134,6 @@ module.exports = {
   DEFAULT_BASE,
   DEFAULT_MODEL_ADMIN,
   DEFAULT_MODEL_USER,
-  DEFAULT_MODEL_VISION,
   ensureSettingsTable,
   readAssistantSettings,
   writeAssistantSettings,

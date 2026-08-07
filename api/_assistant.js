@@ -35,7 +35,6 @@ const envConfig = () => ({
   baseUrl: (process.env.QWEN_BASE_URL || DEFAULT_BASE).replace(/\/+$/, ""),
   modelAdmin: (process.env.QWEN_MODEL || "qwen3.8-max").trim(),
   modelUser: (process.env.QWEN_MODEL_USER || process.env.QWEN_MODEL || "qwen3.7-flash").trim(),
-  modelVision: (process.env.QWEN_MODEL_VISION || "qwen-vl-max-latest").trim(),
   maxSteps: MAX_STEPS,
   temperature: 0.3,
   extraPrompt: "",
@@ -46,13 +45,6 @@ const modelFor = (role, cfg) => {
   const c = configOf(cfg);
   return role === "admin" ? c.modelAdmin : c.modelUser;
 };
-// Kalau percakapan mengandung gambar, pakai model vision (bisa "melihat" gambar).
-const visionModelFor = (cfg) => configOf(cfg).modelVision || "qwen-vl-max-latest";
-const hasImage = (history) =>
-  Array.isArray(history) &&
-  history.some(
-    (m) => Array.isArray(m && m.content) && m.content.some((part) => part && part.type === "image_url"),
-  );
 
 const num = (v, fallback = 0) => (Number.isFinite(Number(v)) ? Number(v) : fallback);
 const money = (v) => rupiah(num(v));
@@ -1131,12 +1123,11 @@ function systemPrompt(ctx) {
       "",
       "ALUR KERJA (wajib untuk permintaan yang butuh aksi/data):",
       "1. INFO — satu baris: apa yang kamu pahami dan apa yang akan kamu lakukan.",
+      "Sebelum memanggil tool, SELALU tulis satu baris singkat berisi apa yang sedang kamu lakukan (contoh: \"Oke, aku cek dulu tabel laporannya...\"). Baris ini langsung tampil ke user sebagai progres.",
       "2. TUGAS — jalankan tool-nya (boleh beberapa berurutan sampai tuntas). Jangan berhenti setengah jalan atau menyuruh admin melakukannya manual.",
       "3. HASIL — laporkan hasil nyata dari tool: angka, nama, id, status. Kalau gagal, sebutkan sebabnya.",
       "Tulis balasan dalam tiga bagian pendek dengan label **Info**, **Tugas**, **Hasil**.",
       "Untuk obrolan biasa (sapaan, tanya jawab ringan, penjelasan) JANGAN pakai format ini — jawab santai satu-dua baris saja.",
-      "",
-      "GAMBAR: kalau admin mengirim gambar (bukti transfer, screenshot error, foto chat), baca isinya dengan teliti, sebutkan nominal/tanggal/nama/pesan error yang terlihat, lalu cocokkan dengan data di database lewat tool sebelum menyimpulkan.",
       "",
       "GAYA: Bahasa Indonesia, ringkas, langsung ke inti. Format angka rupiah apa adanya dari tool.",
       "",
@@ -1172,12 +1163,11 @@ function systemPrompt(ctx) {
     "",
     "ALUR KERJA (wajib untuk permintaan yang butuh aksi/data):",
     "1. INFO — satu baris: apa yang akan kamu cek/lakukan.",
+    "Sebelum memanggil tool, SELALU tulis satu baris singkat berisi apa yang sedang kamu lakukan (contoh: \"Oke, aku cek dulu riwayat top up kamu...\"). Baris ini langsung tampil ke user sebagai progres.",
     "2. TUGAS — panggil tool-nya sampai tuntas, jangan menyuruh user cek sendiri.",
     "3. HASIL — sampaikan hasil nyata dari tool (saldo, status, nomor tiket, dsb).",
     "Tulis balasan dalam tiga bagian pendek dengan label **Info**, **Tugas**, **Hasil**.",
     "Untuk obrolan biasa (sapaan, terima kasih, tanya ringan) JANGAN pakai format ini — jawab santai satu-dua baris saja.",
-    "",
-    "GAMBAR: kalau user mengirim gambar (bukti transfer, screenshot error), baca isinya dengan teliti. Sebutkan nominal, tanggal, bank/metode, atau pesan error yang terlihat. Lalu cocokkan dengan riwayat top up lewat get_my_topups. Kalau gambar jadi bukti masalah, ikut lampirkan ringkasannya di detail saat memanggil contact_admin.",
     "",
     "GAYA: Bahasa Indonesia santai tapi sopan, ringkas, solutif. Sapa user dengan namanya sesekali.",
     "",
@@ -1217,10 +1207,13 @@ async function callQwen(payload, cfg) {
  * Jalankan satu giliran percakapan.
  * @returns {{reply:string, actions:string[], usage:object}}
  */
-async function runAssistant({ ctx, history }) {
+async function runAssistant({ ctx, history, onEvent }) {
+  const emit = (event) => {
+    if (typeof onEvent !== "function") return;
+    try { onEvent(event); } catch (_) { /* stream mati, abaikan */ }
+  };
   const cfg = configOf(ctx.cfg);
-  const withImage = hasImage(history);
-  const model = withImage ? visionModelFor(cfg) : modelFor(ctx.role, cfg);
+  const model = modelFor(ctx.role, cfg);
   const tools = schemasForRole(ctx.role);
   const basePrompt = systemPrompt(ctx);
   const prompt = cfg.extraPrompt
@@ -1249,6 +1242,7 @@ async function runAssistant({ ctx, history }) {
     const calls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
 
     if (!calls.length) {
+      emit({ type: "reply" });
       return {
         reply: String(message.content || "").trim() || "Maaf, aku belum bisa menjawab itu.",
         actions,
@@ -1257,11 +1251,18 @@ async function runAssistant({ ctx, history }) {
       };
     }
 
+    // Catatan singkat model sebelum eksekusi tool → tampilkan ke user sebagai progres,
+    // supaya assisten terasa "bekerja" dan bukan diam sampai semuanya selesai.
+    const note = String(message.content || "").trim();
+    if (note) emit({ type: "note", text: note.slice(0, 400) });
+
     messages.push({
       role: "assistant",
       content: message.content || "",
       tool_calls: calls,
     });
+
+    emit({ type: "plan", tools: calls.map((c) => (c.function && c.function.name) || "tool") });
 
     for (const call of calls) {
       const name = (call.function && call.function.name) || "";
@@ -1271,7 +1272,9 @@ async function runAssistant({ ctx, history }) {
       } catch (_) {
         args = {};
       }
+      emit({ type: "tool_start", name });
       const result = await runTool(name, args, ctx);
+      emit({ type: "tool_end", name, ok: result.ok !== false, error: result.ok === false ? String(result.error || "gagal") : "" });
       actions.push(`${name}${result.ok ? "" : " (ditolak)"}`);
       messages.push({
         role: "tool",
@@ -1291,8 +1294,6 @@ async function runAssistant({ ctx, history }) {
 
 module.exports = {
   runAssistant,
-  visionModelFor,
-  hasImage,
   toolsForRole,
   schemasForRole,
   modelFor,
