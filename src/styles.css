@@ -994,3 +994,23 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-topup-row { flex-wrap: wrap; row-gap: 6px; }
   .cx-topup-date { margin-left: 0; }
 }
+
+/* ── Pesanan & detail akun setelah checkout ── */
+.cx-order-items { display: grid; gap: 10px; margin-top: 12px; }
+.cx-order-item { border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 12px; padding: 12px; }
+.cx-order-item-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+.cx-order-cred { display: grid; gap: 6px; padding: 8px 0; border-top: 1px dashed var(--line, rgba(0,0,0,.1)); }
+.cx-order-cred-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cx-order-cred-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); width: 62px; flex: none; }
+.cx-order-cred-row code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font-size: 12px; font-family: ui-monospace, monospace; }
+.cx-order-note { margin: 8px 0 0; font-size: 11px; color: var(--muted); }
+.cx-order-card { border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.cx-order-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cx-order-card-head strong { display: block; font-size: 15px; }
+.cx-order-card-head small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.cx-badge { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--line, rgba(0,0,0,.1)); color: var(--muted); }
+
+@media (max-width: 640px) {
+  .cx-order-cred-row { flex-wrap: wrap; }
+  .cx-order-cred-label { width: 100%; }
+}

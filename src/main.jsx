@@ -99,6 +99,8 @@ function App() {
   const [data, setData]         = useState({ products: [], loading: true, error: "" });
   const [auth, setAuth]         = useState({ user: null, loading: true });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [checkout, setCheckout] = useState({ loading: false, error: "", order: null });
+
 
   const loadSession = () =>
     fetch("/api/auth", { credentials: "same-origin" })
@@ -155,6 +157,30 @@ function App() {
   };
   const removeFromCart = (i) => setCart((c) => c.filter((_, idx) => idx !== i));
 
+  /* ── checkout: bayar pakai saldo, akun langsung dikirim ── */
+  const cartTotal = cart.reduce((a, c) => a + (Number(c.price) || 0), 0);
+  const doCheckout = async () => {
+    if (!cart.length || checkout.loading) return;
+    const items = cart.map((item) => ({
+      id: item.id,
+      accounts: (item.selectedAccounts || []).map((a) => a.index),
+    })).filter((item) => item.accounts.length);
+    if (!items.length) { setCheckout({ loading: false, error: "Belum ada akun yang dipilih", order: null }); return; }
+    setCheckout({ loading: true, error: "", order: null });
+    try {
+      const result = await jsonRequest("/api/orders", { method: "POST", body: JSON.stringify({ items }) });
+      setCart([]);
+      setCartOpen(false);
+      setCheckout({ loading: false, error: "", order: result.order });
+      loadSession();
+      loadCatalog();
+      showNotice("Pembayaran berhasil, detail akun sudah terbuka");
+    } catch (error) {
+      setCheckout({ loading: false, error: error.message, order: null });
+    }
+  };
+
+
   /* ── admin page ── */
   if (activePage === "admin") {
     return <AdminPage onBack={() => navigate("store")} onNotice={showNotice} />;
@@ -196,14 +222,9 @@ function App() {
   if (activePage === "orders") return (
     <div className="cx-app">
       {topbar}
-      <div className="cx-simple-page cx-container">
-        <button className="cx-back-link" onClick={() => navigate("store")}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
-        <Package size={28} color="#818cf8" style={{ marginBottom: 12 }} />
-        <p style={{ color: "var(--faint)", fontSize: 10, fontFamily: "ui-monospace,monospace", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 8 }}>CODEXA</p>
-        <h1>Pesanan Saya</h1>
-        <p>Setelah pembayaran berhasil, detail akun dikirim ke kontak yang kamu daftarkan. Hubungi admin jika ada kendala.</p>
-      </div>
+      <OrdersPage onBack={() => navigate("store")} onNotice={showNotice} navigate={navigate} />
       <StoreFooter navigate={navigate} />
+
     </div>
   );
 
@@ -417,20 +438,135 @@ function App() {
             }
             {cart.length > 0 && (
               <div className="cx-cart-summary">
-                <div><span>Subtotal ({cart.reduce((a, c) => a + (Number(c.qty) || 1), 0)} akun)</span><strong>{formatPrice(cart.reduce((a, c) => a + (Number(c.price) || 0), 0))}</strong></div>
-                <p className="cx-checkout-note"><ShieldCheck size={11} /> Detail akun dikirim setelah pembayaran terverifikasi</p>
-                <button className="cx-btn cx-btn-primary cx-btn-full" onClick={() => showNotice("Fitur checkout segera hadir!")}>
-                  Lanjut ke pembayaran <ArrowRight size={13} />
+                <div><span>Subtotal ({cart.reduce((a, c) => a + (Number(c.qty) || 1), 0)} akun)</span><strong>{formatPrice(cartTotal)}</strong></div>
+                <div><span>Saldo kamu</span><strong>{formatPrice(auth.user ? auth.user.balance : 0)}</strong></div>
+                <p className="cx-checkout-note"><ShieldCheck size={11} /> Saldo dipotong otomatis, detail akun langsung terbuka</p>
+                {checkout.error && <p className="cx-field-error" style={{ margin: "0 0 8px" }}>{checkout.error}</p>}
+                <button className="cx-btn cx-btn-primary cx-btn-full" disabled={checkout.loading} onClick={doCheckout}>
+                  {checkout.loading ? "Memproses..." : <>Bayar {formatPrice(cartTotal)} <ArrowRight size={13} /></>}
                 </button>
+                {auth.user && cartTotal > auth.user.balance && (
+                  <button className="cx-btn cx-btn-ghost cx-btn-full" style={{ marginTop: 8 }} onClick={() => { setCartOpen(false); navigate("topup"); }}>
+                    <CreditCard size={13} /> Top up saldo dulu
+                  </button>
+                )}
               </div>
             )}
+
           </div>
         </div>
       )}
 
       <AssistantWidget />
 
+      {checkout.order && (
+        <div className="cx-modal-backdrop" onClick={() => setCheckout({ loading: false, error: "", order: null })}>
+          <div className="cx-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <div className="cx-buy-body">
+              <div className="cx-drawer-header" style={{ padding: 0, border: "none" }}>
+                <div>
+                  <h2 style={{ margin: 0 }}>Pembayaran berhasil</h2>
+                  <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 11 }}>
+                    {formatPrice(checkout.order.total)} · {checkout.order.itemCount} akun
+                  </p>
+                </div>
+                <button className="cx-icon-btn" onClick={() => setCheckout({ loading: false, error: "", order: null })}><X size={14} /></button>
+              </div>
+              <OrderItems items={checkout.order.items} onNotice={showNotice} />
+              <button className="cx-btn cx-btn-ghost cx-btn-full" style={{ marginTop: 12 }} onClick={() => { setCheckout({ loading: false, error: "", order: null }); navigate("orders"); }}>
+                <Package size={13} /> Lihat pesanan saya
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {notice && <div className="cx-toast"><Check size={14} />{notice}</div>}
+
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+
+   ORDER RESULT / PESANAN SAYA
+════════════════════════════════════════════════════ */
+function OrderItems({ items, onNotice }) {
+  const [shown, setShown] = useState({});
+  const copy = (value, label) => {
+    if (navigator.clipboard) navigator.clipboard.writeText(value).then(() => onNotice(`${label} disalin`)).catch(() => {});
+  };
+  if (!Array.isArray(items) || !items.length) {
+    return <p style={{ color: "var(--muted)", fontSize: 12 }}>Detail akun tidak tersedia.</p>;
+  }
+  return (
+    <div className="cx-order-items">
+      {items.map((item, i) => (
+        <div key={`${item.listingId}-${i}`} className="cx-order-item">
+          <div className="cx-order-item-head">
+            <ProviderIcon type={item.loginType} size={16} />
+            <strong>{item.title}</strong>
+          </div>
+          {(item.accounts || []).map((account, k) => {
+            const id = `${i}-${k}`;
+            const open = !!shown[id];
+            return (
+              <div key={id} className="cx-order-cred">
+                <div className="cx-order-cred-row">
+                  <span className="cx-order-cred-label">Email</span>
+                  <code>{account.email}</code>
+                  <button className="cx-icon-btn" aria-label="Salin email" onClick={() => copy(account.email, "Email")}><Copy size={12} /></button>
+                </div>
+                <div className="cx-order-cred-row">
+                  <span className="cx-order-cred-label">Password</span>
+                  <code>{open ? account.password : "•".repeat(Math.min(12, String(account.password || "").length) || 8)}</code>
+                  <button className="cx-icon-btn" aria-label="Tampilkan password" onClick={() => setShown((s) => ({ ...s, [id]: !open }))}>
+                    {open ? <EyeOff size={12} /> : <Eye size={12} />}
+                  </button>
+                  <button className="cx-icon-btn" aria-label="Salin password" onClick={() => copy(account.password, "Password")}><Copy size={12} /></button>
+                </div>
+              </div>
+            );
+          })}
+          {item.deliveryDetails && <p className="cx-order-note">{item.deliveryDetails}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OrdersPage({ onBack, onNotice, navigate }) {
+  const [state, setState] = useState({ orders: [], loading: true, error: "" });
+  useEffect(() => {
+    jsonRequest("/api/orders")
+      .then((p) => setState({ orders: p.orders || [], loading: false, error: "" }))
+      .catch((e) => setState({ orders: [], loading: false, error: e.message }));
+  }, []);
+
+  return (
+    <div className="cx-simple-page cx-container" style={{ textAlign: "left" }}>
+      <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
+      <h1 style={{ marginBottom: 4 }}>Pesanan Saya</h1>
+      <p style={{ marginBottom: 20 }}>Semua akun yang sudah kamu bayar tersimpan di sini.</p>
+      {state.loading && <p style={{ color: "var(--muted)", fontSize: 12 }}>Memuat pesanan...</p>}
+      {state.error && <p className="cx-field-error">{state.error}</p>}
+      {!state.loading && !state.error && state.orders.length === 0 && (
+        <div className="cx-empty"><Package size={24} /><h3>Belum ada pesanan</h3><p>Beli akun dari katalog untuk mulai.</p>
+          <button className="cx-btn cx-btn-primary" onClick={() => navigate("store")}>Lihat katalog</button>
+        </div>
+      )}
+      {state.orders.map((order) => (
+        <div key={order.id} className="cx-order-card">
+          <div className="cx-order-card-head">
+            <div>
+              <strong>{formatPrice(order.total)}</strong>
+              <small>{order.itemCount} akun · {formatDate(order.createdAt)}</small>
+            </div>
+            <span className="cx-badge">{order.status === "paid" ? "Lunas" : order.status}</span>
+          </div>
+          <OrderItems items={order.items} onNotice={onNotice} />
+        </div>
+      ))}
     </div>
   );
 }
@@ -438,6 +574,7 @@ function App() {
 /* ═══════════════════════════════════════════════════
    STORE TOPBAR
 ════════════════════════════════════════════════════ */
+
 function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, setMenuOpen, onLogout }) {
   const initials = String(user && user.name || "CX").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "CX";
   return (
