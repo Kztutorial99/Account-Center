@@ -6,7 +6,7 @@ import {
   FileText, LayoutDashboard, LockKeyhole, LogIn, LogOut, Menu,
   MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw,
   Search, Settings, ShieldCheck, ShoppingBag, Trash2, X,
-  User, Wallet, Mail, Phone, Clock, Sparkles, Send,
+  User, Wallet, Mail, Phone, Clock, Sparkles, Send, ImagePlus,
 } from "lucide-react";
 import "./styles.css";
 
@@ -623,6 +623,7 @@ function AdminPage({ onBack, onNotice }) {
           baseUrl: p.assistant.baseUrl || "",
           modelAdmin: p.assistant.modelAdmin || "",
           modelUser: p.assistant.modelUser || "",
+          modelVision: p.assistant.modelVision || "",
           maxSteps: String(p.assistant.maxSteps ?? 6),
           temperature: String(p.assistant.temperature ?? 0.3),
           extraPrompt: p.assistant.extraPrompt || "",
@@ -640,6 +641,7 @@ function AdminPage({ onBack, onNotice }) {
         baseUrl: aiForm.baseUrl,
         modelAdmin: aiForm.modelAdmin,
         modelUser: aiForm.modelUser,
+        modelVision: aiForm.modelVision,
         maxSteps: Number(aiForm.maxSteps) || 6,
         temperature: Number(aiForm.temperature),
       };
@@ -1007,6 +1009,9 @@ function AdminPage({ onBack, onNotice }) {
                         </Field>
                         <Field label="Model untuk User">
                           <InputWrap><input value={aiForm.modelUser} onChange={(e) => updateAiForm("modelUser", e.target.value)} placeholder="qwen3.7-flash" /></InputWrap>
+                        </Field>
+                        <Field label="Model Analisa Gambar" hint="Dipakai otomatis saat ada gambar dikirim ke Assisten">
+                          <InputWrap><input value={aiForm.modelVision} onChange={(e) => updateAiForm("modelVision", e.target.value)} placeholder="qwen-vl-max-latest" /></InputWrap>
                         </Field>
                         <div className="cx-full-span">
                           <Field label="Base URL Penyedia AI" hint="Kosongkan untuk memakai endpoint DashScope International">
@@ -1988,9 +1993,47 @@ const ASSISTANT_HINTS = {
     "Ringkasan toko hari ini",
     "Ada top up pending? tampilkan",
     "Cari user dengan email ...",
-    "User mana yang saldonya paling besar?",
+    "Ada laporan user apa aja?",
+    "Tampilkan isi database (tabel + jumlah baris)",
+    "Hapus laporan yang sudah closed",
   ],
 };
+
+/* ── Lampiran gambar untuk Assisten ──
+   Gambar dikecilkan di browser dulu (maks 1280px, JPEG 0.8) supaya payload ke
+   API tetap ringan tapi tulisan di bukti transfer masih terbaca model. ── */
+function downscaleImage(file, max = 1280) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("gagal baca"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("bukan gambar"));
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        try { resolve(canvas.toDataURL("image/jpeg", 0.8)); }
+        catch (_) { resolve(String(reader.result)); }
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/** Bentuk pesan untuk API: multimodal kalau ada gambar. */
+function toWireMessage(m) {
+  if (m.role === "user" && m.images && m.images.length) {
+    const parts = m.images.map((url) => ({ type: "image_url", image_url: { url } }));
+    if (m.content) parts.push({ type: "text", text: m.content });
+    return { role: "user", content: parts };
+  }
+  return { role: m.role, content: m.content };
+}
 
 /* ── Markdown ringan untuk balasan Assisten ──
    Model sering menulis **tebal**, daftar, dan `kode`. Tanpa renderer, simbolnya
@@ -2077,10 +2120,25 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
   const [info, setInfo] = useState({ loading: true, role: "", available: false, model: "", reason: "", error: "" });
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
+  const [shots, setShots] = useState([]); // gambar yang menunggu dikirim (data URL)
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const scroller = useRef(null);
   const inputRef = useRef(null);
+  const fileRef = useRef(null);
+
+  const pickImages = async (fileList) => {
+    const files = Array.from(fileList || []).filter((f) => /^image\//.test(f.type));
+    if (!files.length) return;
+    const room = Math.max(0, 3 - shots.length);
+    if (!room) { setError("Maksimal 3 gambar per pesan"); return; }
+    const picked = [];
+    for (const file of files.slice(0, room)) {
+      if (file.size > 6 * 1024 * 1024) { setError(`${file.name} lebih dari 6 MB`); continue; }
+      try { picked.push(await downscaleImage(file)); } catch (_) { setError("Gambar gagal dibaca"); }
+    }
+    if (picked.length) { setShots((s) => [...s, ...picked]); setError(""); }
+  };
 
   const loadInfo = () => {
     setInfo((s) => ({ ...s, loading: true, error: "" }));
@@ -2103,10 +2161,12 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
 
   const send = async (raw) => {
     const content = String(raw == null ? draft : raw).trim();
-    if (!content || busy) return;
-    const next = [...messages, { role: "user", content }];
+    const images = raw == null ? shots : [];
+    if ((!content && !images.length) || busy) return;
+    const next = [...messages, { role: "user", content, images }];
     setMessages(next);
     setDraft("");
+    setShots([]);
     setBusy(true);
     setError("");
     try {
@@ -2114,7 +2174,7 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })) }),
+        body: JSON.stringify({ messages: next.map(toWireMessage) }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload.error || "Assisten gagal menjawab");
@@ -2211,6 +2271,11 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
             {messages.map((m, i) => (
               <div key={i} className={`cx-ai-msg ${m.role}`}>
                 <div className="cx-ai-bubble">
+                  {m.images && m.images.length > 0 && (
+                    <div className="cx-ai-shots">
+                      {m.images.map((src, j) => <img key={j} src={src} alt="Lampiran" />)}
+                    </div>
+                  )}
                   {m.role === "assistant" ? <RichText text={m.content} /> : m.content}
                 </div>
                 {m.role === "assistant" && m.actions && m.actions.length > 0 && (
@@ -2231,22 +2296,54 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
           </div>
 
           {!info.loading && !info.error && info.available && (
-            <form
-              className="cx-ai-composer"
-              onSubmit={(e) => { e.preventDefault(); send(); }}
-            >
-              <input
-                ref={inputRef}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder={isAdminMode ? "Perintah untuk Assisten admin..." : "Tanya apa saja soal akunmu..."}
-                maxLength={2000}
-                disabled={busy}
-              />
-              <button type="submit" className="cx-ai-send" disabled={busy || !draft.trim()} aria-label="Kirim">
-                {busy ? <RefreshCw size={13} /> : <Send size={13} />}
-              </button>
-            </form>
+            <div className="cx-ai-composer-wrap">
+              {shots.length > 0 && (
+                <div className="cx-ai-tray">
+                  {shots.map((src, i) => (
+                    <div className="cx-ai-tray-item" key={i}>
+                      <img src={src} alt={`Gambar ${i + 1}`} />
+                      <button type="button" onClick={() => setShots((s) => s.filter((_, j) => j !== i))} aria-label="Hapus gambar">
+                        <X size={9} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <form
+                className="cx-ai-composer"
+                onSubmit={(e) => { e.preventDefault(); send(); }}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  hidden
+                  onChange={(e) => { pickImages(e.target.files); e.target.value = ""; }}
+                />
+                <button
+                  type="button"
+                  className="cx-ai-attach"
+                  onClick={() => fileRef.current && fileRef.current.click()}
+                  disabled={busy || shots.length >= 3}
+                  aria-label="Kirim gambar"
+                >
+                  <ImagePlus size={13} />
+                </button>
+                <input
+                  ref={inputRef}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onPaste={(e) => { const f = e.clipboardData && e.clipboardData.files; if (f && f.length) pickImages(f); }}
+                  placeholder={shots.length ? "Tanya soal gambar ini..." : isAdminMode ? "Perintah untuk Assisten admin..." : "Tanya apa saja soal akunmu..."}
+                  maxLength={2000}
+                  disabled={busy}
+                />
+                <button type="submit" className="cx-ai-send" disabled={busy || (!draft.trim() && !shots.length)} aria-label="Kirim">
+                  {busy ? <RefreshCw size={13} /> : <Send size={13} />}
+                </button>
+              </form>
+            </div>
           )}
 
           {!info.loading && !info.error && info.available && !isAdminMode && (

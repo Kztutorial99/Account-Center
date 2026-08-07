@@ -35,6 +35,7 @@ const envConfig = () => ({
   baseUrl: (process.env.QWEN_BASE_URL || DEFAULT_BASE).replace(/\/+$/, ""),
   modelAdmin: (process.env.QWEN_MODEL || "qwen3.8-max").trim(),
   modelUser: (process.env.QWEN_MODEL_USER || process.env.QWEN_MODEL || "qwen3.7-flash").trim(),
+  modelVision: (process.env.QWEN_MODEL_VISION || "qwen-vl-max-latest").trim(),
   maxSteps: MAX_STEPS,
   temperature: 0.3,
   extraPrompt: "",
@@ -45,9 +46,21 @@ const modelFor = (role, cfg) => {
   const c = configOf(cfg);
   return role === "admin" ? c.modelAdmin : c.modelUser;
 };
+// Kalau percakapan mengandung gambar, pakai model vision (bisa "melihat" gambar).
+const visionModelFor = (cfg) => configOf(cfg).modelVision || "qwen-vl-max-latest";
+const hasImage = (history) =>
+  Array.isArray(history) &&
+  history.some(
+    (m) => Array.isArray(m && m.content) && m.content.some((part) => part && part.type === "image_url"),
+  );
 
 const num = (v, fallback = 0) => (Number.isFinite(Number(v)) ? Number(v) : fallback);
 const money = (v) => rupiah(num(v));
+const SECRET_COLUMNS = /(credential_blob|password_hash)/i;
+const tableName = (v) => {
+  const t = String(v || "").trim().toLowerCase();
+  return /^codexa_[a-z0-9_]{1,50}$/.test(t) ? t : "";
+};
 const ok = (data) => ({ ok: true, ...data });
 const fail = (message) => ({ ok: false, error: message });
 
@@ -842,6 +855,220 @@ const adminTools = {
       }
     },
   },
+  /* ── AKSES DATABASE PENUH (khusus admin) ── */
+
+  admin_db_overview: {
+    schema: {
+      name: "admin_db_overview",
+      description:
+        "Peta database CodeXa: daftar semua tabel milik aplikasi beserta jumlah barisnya. " +
+        "Pakai ini dulu sebelum menghapus/mengubah data supaya tahu tabel apa saja yang ada.",
+      parameters: { type: "object", properties: {}, required: [] },
+    },
+    handler: async (_args, ctx) => {
+      const rows = await ctx.sql`
+        SELECT table_name AS name FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name LIKE 'codexa_%'
+        ORDER BY table_name
+      `;
+      const tables = [];
+      for (const t of rows) {
+        let total = null;
+        try {
+          const r = await ctx.sql.query(`SELECT COUNT(*)::int AS total FROM "${t.name}"`);
+          total = r[0] ? r[0].total : null;
+        } catch (_) { /* abaikan */ }
+        tables.push({ tabel: t.name, baris: total });
+      }
+      return ok({ total: tables.length, tables });
+    },
+  },
+
+  admin_table_schema: {
+    schema: {
+      name: "admin_table_schema",
+      description: "Struktur kolom satu tabel CodeXa (nama kolom, tipe, boleh null). Berguna sebelum menulis query manual.",
+      parameters: {
+        type: "object",
+        properties: { table: { type: "string", description: "Nama tabel, harus diawali codexa_." } },
+        required: ["table"],
+      },
+    },
+    handler: async (args, ctx) => {
+      const table = tableName(args.table);
+      if (!table) return fail("Nama tabel tidak valid. Hanya tabel codexa_* yang bisa dibuka.");
+      const rows = await ctx.sql`
+        SELECT column_name AS name, data_type AS type, is_nullable AS nullable, column_default AS "default"
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = ${table}
+        ORDER BY ordinal_position
+      `;
+      if (!rows.length) return fail("Tabel tidak ditemukan");
+      return ok({
+        tabel: table,
+        kolom: rows.map((c) => ({
+          nama: c.name,
+          tipe: c.type,
+          bolehKosong: c.nullable === "YES",
+          rahasia: SECRET_COLUMNS.test(c.name),
+        })),
+      });
+    },
+  },
+
+  admin_delete_reports: {
+    schema: {
+      name: "admin_delete_reports",
+      description:
+        "HAPUS riwayat laporan user dari database. Bisa per tiket, per status, hanya yang lebih lama dari N hari, " +
+        "atau semuanya (all=true). Wajib confirm=true dan hanya setelah admin setuju secara eksplisit.",
+      parameters: {
+        type: "object",
+        properties: {
+          ticket: { type: "string", description: "Hapus satu laporan berdasarkan nomor tiket." },
+          status: { type: "string", enum: ["open", "in_progress", "resolved", "closed"], description: "Hapus semua laporan dengan status ini." },
+          olderThanDays: { type: "integer", description: "Hapus laporan yang dibuat lebih dari N hari lalu." },
+          all: { type: "boolean", description: "Hapus SELURUH riwayat laporan." },
+          confirm: { type: "boolean", description: "Harus true." },
+        },
+        required: ["confirm"],
+      },
+    },
+    handler: async (args, ctx) => {
+      if (args.confirm !== true) return fail("Butuh konfirmasi eksplisit dari admin (confirm=true). Tanyakan dulu.");
+      const ticket = text(args.ticket, 40).toUpperCase();
+      const status = REPORT_STATUSES.includes(args.status) ? args.status : "";
+      const days = Math.max(0, Math.round(num(args.olderThanDays, 0)));
+      const all = args.all === true;
+      if (!ticket && !status && !days && !all) return fail("Sebutkan tiket, status, olderThanDays, atau all=true.");
+
+      const rows = await ctx.sql`
+        DELETE FROM codexa_reports
+        WHERE (${all} = TRUE)
+           OR (${ticket} <> '' AND ticket = ${ticket})
+           OR (${status} <> '' AND status = ${status})
+           OR (${days} > 0 AND created_at < NOW() - (${days} || ' days')::interval)
+        RETURNING ticket
+      `;
+      return ok({ dihapus: rows.length, tiket: rows.map((r) => r.ticket).slice(0, 30) });
+    },
+  },
+
+  admin_delete_topups: {
+    schema: {
+      name: "admin_delete_topups",
+      description:
+        "HAPUS riwayat permintaan top up dari database (tidak mengubah saldo user). Bisa per id, per status, " +
+        "lebih lama dari N hari, atau semuanya. Wajib confirm=true.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Hapus satu permintaan top up berdasarkan id." },
+          status: { type: "string", enum: ["pending", "approved", "rejected"] },
+          olderThanDays: { type: "integer", description: "Hapus yang dibuat lebih dari N hari lalu." },
+          all: { type: "boolean", description: "Hapus SELURUH riwayat top up." },
+          confirm: { type: "boolean", description: "Harus true." },
+        },
+        required: ["confirm"],
+      },
+    },
+    handler: async (args, ctx) => {
+      if (args.confirm !== true) return fail("Butuh konfirmasi eksplisit dari admin (confirm=true). Tanyakan dulu.");
+      const id = text(args.id, 60);
+      const status = ["pending", "approved", "rejected"].includes(args.status) ? args.status : "";
+      const days = Math.max(0, Math.round(num(args.olderThanDays, 0)));
+      const all = args.all === true;
+      if (!id && !status && !days && !all) return fail("Sebutkan id, status, olderThanDays, atau all=true.");
+      const rows = await ctx.sql`
+        DELETE FROM codexa_topups
+        WHERE (${all} = TRUE)
+           OR (${id} <> '' AND id = ${id})
+           OR (${status} <> '' AND status = ${status})
+           OR (${days} > 0 AND created_at < NOW() - (${days} || ' days')::interval)
+        RETURNING id
+      `;
+      return ok({ dihapus: rows.length });
+    },
+  },
+
+  admin_purge_table: {
+    schema: {
+      name: "admin_purge_table",
+      description:
+        "KOSONGKAN seluruh isi satu tabel CodeXa (semua barisnya dihapus). Sangat destruktif dan tidak bisa dibatalkan. " +
+        "Wajib confirm=true. Tabel codexa_users tidak bisa dikosongkan lewat tool ini.",
+      parameters: {
+        type: "object",
+        properties: {
+          table: { type: "string", description: "Nama tabel codexa_*." },
+          confirm: { type: "boolean", description: "Harus true." },
+        },
+        required: ["table", "confirm"],
+      },
+    },
+    handler: async (args, ctx) => {
+      if (args.confirm !== true) return fail("Butuh konfirmasi eksplisit dari admin (confirm=true). Tanyakan dulu.");
+      const table = tableName(args.table);
+      if (!table) return fail("Nama tabel tidak valid. Hanya tabel codexa_* yang bisa diproses.");
+      if (table === "codexa_users") return fail("Tabel user tidak boleh dikosongkan borongan. Hapus per user pakai admin_delete_user.");
+      if (table === "codexa_settings") return fail("Tabel pengaturan tidak boleh dikosongkan, nanti Assisten & panel ikut mati.");
+      const exists = await ctx.sql`
+        SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ${table} LIMIT 1
+      `;
+      if (!exists.length) return fail("Tabel tidak ditemukan");
+      const rows = await ctx.sql.query(`DELETE FROM "${table}" RETURNING 1`);
+      return ok({ tabel: table, dihapus: rows.length });
+    },
+  },
+
+  admin_execute_sql: {
+    schema: {
+      name: "admin_execute_sql",
+      description:
+        "Jalankan satu statement SQL yang MENGUBAH data (INSERT / UPDATE / DELETE) di tabel codexa_*. " +
+        "Dipakai kalau tool lain tidak cukup. Wajib confirm=true dan hanya setelah admin setuju. " +
+        "DROP, TRUNCATE, ALTER, CREATE, dan perubahan kolom kredensial ditolak.",
+      parameters: {
+        type: "object",
+        properties: {
+          sql: { type: "string", description: "Satu statement INSERT/UPDATE/DELETE. Contoh: DELETE FROM codexa_reports WHERE status = 'closed'" },
+          confirm: { type: "boolean", description: "Harus true." },
+        },
+        required: ["sql", "confirm"],
+      },
+    },
+    handler: async (args, ctx) => {
+      if (args.confirm !== true) return fail("Butuh konfirmasi eksplisit dari admin (confirm=true). Tanyakan dulu.");
+      const raw = String(args.sql || "").trim().replace(/;+\s*$/, "");
+      if (!raw) return fail("Query kosong");
+      if (/;/.test(raw)) return fail("Hanya satu statement yang diizinkan");
+      if (!/^(insert|update|delete)\s/i.test(raw)) {
+        return fail("Hanya INSERT, UPDATE, atau DELETE. Untuk membaca data pakai admin_run_query.");
+      }
+      if (/\b(drop|truncate|alter|create|grant|revoke|copy|vacuum)\b/i.test(raw)) {
+        return fail("Perintah struktural (DROP/TRUNCATE/ALTER/CREATE) tidak diizinkan");
+      }
+      if (SECRET_COLUMNS.test(raw)) return fail("Kolom kredensial tidak boleh diubah lewat tool ini");
+      const tables = raw.match(/codexa_[a-z0-9_]+/gi) || [];
+      if (!tables.length) return fail("Query harus menyebut tabel codexa_*");
+      if (/^(update|delete)\s/i.test(raw) && !/\bwhere\b/i.test(raw)) {
+        return fail("UPDATE/DELETE tanpa WHERE ditolak. Kalau memang mau mengosongkan tabel, pakai admin_purge_table.");
+      }
+      try {
+        const rows = await ctx.sql.query(`${raw} RETURNING 1`);
+        return ok({ terpengaruh: rows.length, query: raw });
+      } catch (error) {
+        // Beberapa statement tidak mendukung RETURNING → jalankan apa adanya.
+        try {
+          await ctx.sql.query(raw);
+          return ok({ terpengaruh: null, query: raw, message: "Statement dijalankan." });
+        } catch (err2) {
+          return fail(`Query gagal: ${err2 && err2.message}`);
+        }
+      }
+    },
+  },
+
 };
 
 /* ═══════════════════════════════════════════════════
@@ -895,6 +1122,22 @@ function systemPrompt(ctx) {
       "",
       "- Laporan/keluhan user dari Assisten tersimpan di database. Pakai admin_list_reports untuk melihat daftarnya, admin_report_stats untuk ringkasan, dan admin_update_report untuk mengubah status atau menulis balasan yang bisa dibaca user.",
       "",
+      "",
+      "AKSES DATABASE PENUH:",
+      "- admin_db_overview untuk melihat semua tabel + jumlah baris, admin_table_schema untuk struktur kolom.",
+      "- admin_run_query untuk membaca (SELECT) apa pun, admin_execute_sql untuk INSERT/UPDATE/DELETE.",
+      "- Hapus riwayat: admin_delete_reports (laporan), admin_delete_topups (top up), admin_purge_table (kosongkan satu tabel).",
+      "- Semua aksi penghapusan/perubahan massal WAJIB dikonfirmasi admin dulu. Sebutkan tabel + perkiraan jumlah baris yang kena, baru jalankan dengan confirm=true setelah admin mengiyakan.",
+      "",
+      "ALUR KERJA (wajib untuk permintaan yang butuh aksi/data):",
+      "1. INFO — satu baris: apa yang kamu pahami dan apa yang akan kamu lakukan.",
+      "2. TUGAS — jalankan tool-nya (boleh beberapa berurutan sampai tuntas). Jangan berhenti setengah jalan atau menyuruh admin melakukannya manual.",
+      "3. HASIL — laporkan hasil nyata dari tool: angka, nama, id, status. Kalau gagal, sebutkan sebabnya.",
+      "Tulis balasan dalam tiga bagian pendek dengan label **Info**, **Tugas**, **Hasil**.",
+      "Untuk obrolan biasa (sapaan, tanya jawab ringan, penjelasan) JANGAN pakai format ini — jawab santai satu-dua baris saja.",
+      "",
+      "GAMBAR: kalau admin mengirim gambar (bukti transfer, screenshot error, foto chat), baca isinya dengan teliti, sebutkan nominal/tanggal/nama/pesan error yang terlihat, lalu cocokkan dengan data di database lewat tool sebelum menyimpulkan.",
+      "",
       "GAYA: Bahasa Indonesia, ringkas, langsung ke inti. Format angka rupiah apa adanya dari tool.",
       "",
       "FORMAT JAWABAN (wajib):",
@@ -926,6 +1169,15 @@ function systemPrompt(ctx) {
     "",
     "- Laporan tersimpan permanen di database, jadi admin pasti melihatnya walau notifikasi Telegram gagal.",
     "- Kalau user menanyakan kabar/status laporannya, panggil get_my_reports dan sampaikan status + catatan admin bila ada. Cek juga tool ini sebelum membuat laporan baru supaya tidak dobel.",
+    "",
+    "ALUR KERJA (wajib untuk permintaan yang butuh aksi/data):",
+    "1. INFO — satu baris: apa yang akan kamu cek/lakukan.",
+    "2. TUGAS — panggil tool-nya sampai tuntas, jangan menyuruh user cek sendiri.",
+    "3. HASIL — sampaikan hasil nyata dari tool (saldo, status, nomor tiket, dsb).",
+    "Tulis balasan dalam tiga bagian pendek dengan label **Info**, **Tugas**, **Hasil**.",
+    "Untuk obrolan biasa (sapaan, terima kasih, tanya ringan) JANGAN pakai format ini — jawab santai satu-dua baris saja.",
+    "",
+    "GAMBAR: kalau user mengirim gambar (bukti transfer, screenshot error), baca isinya dengan teliti. Sebutkan nominal, tanggal, bank/metode, atau pesan error yang terlihat. Lalu cocokkan dengan riwayat top up lewat get_my_topups. Kalau gambar jadi bukti masalah, ikut lampirkan ringkasannya di detail saat memanggil contact_admin.",
     "",
     "GAYA: Bahasa Indonesia santai tapi sopan, ringkas, solutif. Sapa user dengan namanya sesekali.",
     "",
@@ -967,7 +1219,8 @@ async function callQwen(payload, cfg) {
  */
 async function runAssistant({ ctx, history }) {
   const cfg = configOf(ctx.cfg);
-  const model = modelFor(ctx.role, cfg);
+  const withImage = hasImage(history);
+  const model = withImage ? visionModelFor(cfg) : modelFor(ctx.role, cfg);
   const tools = schemasForRole(ctx.role);
   const basePrompt = systemPrompt(ctx);
   const prompt = cfg.extraPrompt
@@ -996,7 +1249,12 @@ async function runAssistant({ ctx, history }) {
     const calls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
 
     if (!calls.length) {
-      return { reply: String(message.content || "").trim() || "Maaf, aku belum bisa menjawab itu.", actions, usage };
+      return {
+        reply: String(message.content || "").trim() || "Maaf, aku belum bisa menjawab itu.",
+        actions,
+        usage,
+        model,
+      };
     }
 
     messages.push({
@@ -1027,11 +1285,14 @@ async function runAssistant({ ctx, history }) {
     reply: "Permintaan ini butuh terlalu banyak langkah. Coba pecah jadi permintaan yang lebih spesifik.",
     actions,
     usage,
+    model,
   };
 }
 
 module.exports = {
   runAssistant,
+  visionModelFor,
+  hasImage,
   toolsForRole,
   schemasForRole,
   modelFor,
