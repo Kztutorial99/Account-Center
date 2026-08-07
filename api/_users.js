@@ -129,7 +129,56 @@ function bodyOf(request) {
 }
 const text = (value, max) => (typeof value === "string" ? value.trim().slice(0, max) : "");
 
+
+/* ── Rate limit sederhana berbasis database ──────────────────────────
+   Endpoint login/register tanpa throttle bisa dibrute-force. Counter
+   disimpan di tabel codexa_rate_limits per (kunci, jendela waktu).
+   Kalau database bermasalah, fungsi ini fail-open supaya login tetap
+   bisa dipakai — tujuannya menahan brute force, bukan jadi gerbang. */
+function clientIp(request) {
+  const forwarded = String((request.headers && request.headers["x-forwarded-for"]) || "");
+  const first = forwarded.split(",")[0].trim();
+  return first || String((request.headers && request.headers["x-real-ip"]) || "") || "unknown";
+}
+
+async function rateLimit(sql, { key, limit, windowSec }) {
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS codexa_rate_limits (
+        key TEXT PRIMARY KEY,
+        hits INTEGER NOT NULL DEFAULT 0,
+        window_start TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    const rows = await sql`
+      INSERT INTO codexa_rate_limits (key, hits, window_start)
+      VALUES (${key}, 1, NOW())
+      ON CONFLICT (key) DO UPDATE SET
+        hits = CASE
+          WHEN codexa_rate_limits.window_start < NOW() - (${windowSec} * INTERVAL '1 second') THEN 1
+          ELSE codexa_rate_limits.hits + 1 END,
+        window_start = CASE
+          WHEN codexa_rate_limits.window_start < NOW() - (${windowSec} * INTERVAL '1 second') THEN NOW()
+          ELSE codexa_rate_limits.window_start END
+      RETURNING hits, window_start AS "windowStart"
+    `;
+    const hits = Number(rows[0] && rows[0].hits) || 1;
+    if (hits <= limit) return { allowed: true, retryAfter: 0 };
+    const started = new Date(rows[0].windowStart).getTime();
+    const retryAfter = Math.max(1, Math.ceil((started + windowSec * 1000 - Date.now()) / 1000));
+    return { allowed: false, retryAfter };
+  } catch (error) {
+    console.error("Rate limit unavailable", error && error.message);
+    return { allowed: true, retryAfter: 0 };
+  }
+}
+
+async function resetRateLimit(sql, key) {
+  try { await sql`DELETE FROM codexa_rate_limits WHERE key = ${key}`; } catch (_) { /* abaikan */ }
+}
+
 module.exports = {
   db, ensureTables, hashPassword, verifyPassword,
   setSession, clearSession, sessionUserId, currentUser, bodyOf, text,
+  clientIp, rateLimit, resetRateLimit,
 };

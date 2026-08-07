@@ -53,6 +53,40 @@ const tableName = (v) => {
   const t = String(v || "").trim().toLowerCase();
   return /^codexa_[a-z0-9_]{1,50}$/.test(t) ? t : "";
 };
+
+/* ── Gerbang keamanan SQL manual (anti bypass blocklist) ───────────
+   Blocklist kata kunci saja mudah dilewati (komentar, dollar-quote,
+   SELECT * yang membocorkan kolom rahasia, fungsi sistem). Guard ini
+   menolak semua pola itu sebelum query dikirim ke Postgres. */
+const SQL_SYSTEM_OBJECTS =
+  /\b(pg_sleep|pg_read_file|pg_read_binary_file|pg_ls_dir|pg_stat_file|pg_logdir_ls|dblink[a-z_]*|lo_import|lo_export|set_config|current_setting|pg_authid|pg_shadow|pg_roles|pg_user|pg_catalog|pg_settings|pg_terminate_backend|pg_cancel_backend|generate_series)\b/i;
+
+const SQL_ALLOWED_REF = /^(codexa_[a-z0-9_]+|information_schema\.(tables|columns))$/;
+
+function sqlReferencedTables(raw) {
+  return [...raw.matchAll(/\b(?:from|join|into|update)\s+("?[a-z_][a-z0-9_."]*"?)/gi)]
+    .map((m) => m[1].replace(/"/g, "").toLowerCase());
+}
+
+/** @returns {string} pesan error, atau "" kalau query aman. */
+function sqlGuard(raw) {
+  if (!raw) return "Query kosong";
+  if (raw.length > 2000) return "Query terlalu panjang";
+  if (/--|\/\*|\*\//.test(raw)) return "Komentar SQL tidak diizinkan";
+  if (/\$[a-z0-9_]*\$/i.test(raw)) return "Dollar-quoting tidak diizinkan";
+  if (/;/.test(raw)) return "Hanya satu statement yang diizinkan";
+  if (SQL_SYSTEM_OBJECTS.test(raw)) return "Query memakai fungsi/objek sistem yang tidak diizinkan";
+  if (SECRET_COLUMNS.test(raw)) return "Kolom kredensial tidak boleh disentuh lewat query manual";
+  // COUNT(*) tetap boleh; yang dilarang hanya SELECT * / alias.* yang memuntahkan semua kolom.
+  if (/\bselect\s+(all\s+|distinct\s+)?\*/i.test(raw) || /[a-z0-9_"]\s*\.\s*\*/i.test(raw)) {
+    return "SELECT * tidak diizinkan — sebutkan kolom yang dibutuhkan supaya kolom rahasia tidak ikut terbaca";
+  }
+  const refs = sqlReferencedTables(raw);
+  if (!refs.length) return "Query harus menyebut tabel codexa_*";
+  const bad = refs.find((t) => !SQL_ALLOWED_REF.test(t));
+  if (bad) return `Tabel "${bad}" di luar jangkauan. Hanya tabel codexa_* yang boleh diakses.`;
+  return "";
+}
 const ok = (data) => ({ ok: true, ...data });
 const fail = (message) => ({ ok: false, error: message });
 
@@ -834,11 +868,11 @@ const adminTools = {
     handler: async (args, ctx) => {
       const raw = String(args.sql || "").trim().replace(/;+\s*$/, "");
       if (!/^select\s/i.test(raw)) return fail("Hanya query SELECT yang diizinkan");
-      if (/;/.test(raw)) return fail("Hanya satu statement yang diizinkan");
-      if (/\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|copy)\b/i.test(raw)) {
+      if (/\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|copy|vacuum|call|do)\b/i.test(raw)) {
         return fail("Query mengandung perintah yang tidak diizinkan");
       }
-      if (/(credential_blob|password_hash)/i.test(raw)) return fail("Kolom kredensial tidak boleh diambil");
+      const runGuard = sqlGuard(raw);
+      if (runGuard) return fail(runGuard);
       try {
         const rows = await ctx.sql.query(`${raw} LIMIT 200`);
         return ok({ total: rows.length, rows });
@@ -1033,16 +1067,14 @@ const adminTools = {
       if (args.confirm !== true) return fail("Butuh konfirmasi eksplisit dari admin (confirm=true). Tanyakan dulu.");
       const raw = String(args.sql || "").trim().replace(/;+\s*$/, "");
       if (!raw) return fail("Query kosong");
-      if (/;/.test(raw)) return fail("Hanya satu statement yang diizinkan");
       if (!/^(insert|update|delete)\s/i.test(raw)) {
         return fail("Hanya INSERT, UPDATE, atau DELETE. Untuk membaca data pakai admin_run_query.");
       }
-      if (/\b(drop|truncate|alter|create|grant|revoke|copy|vacuum)\b/i.test(raw)) {
+      if (/\b(drop|truncate|alter|create|grant|revoke|copy|vacuum|call|do)\b/i.test(raw)) {
         return fail("Perintah struktural (DROP/TRUNCATE/ALTER/CREATE) tidak diizinkan");
       }
-      if (SECRET_COLUMNS.test(raw)) return fail("Kolom kredensial tidak boleh diubah lewat tool ini");
-      const tables = raw.match(/codexa_[a-z0-9_]+/gi) || [];
-      if (!tables.length) return fail("Query harus menyebut tabel codexa_*");
+      const execGuard = sqlGuard(raw);
+      if (execGuard) return fail(execGuard);
       if (/^(update|delete)\s/i.test(raw) && !/\bwhere\b/i.test(raw)) {
         return fail("UPDATE/DELETE tanpa WHERE ditolak. Kalau memang mau mengosongkan tabel, pakai admin_purge_table.");
       }

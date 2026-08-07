@@ -1,0 +1,14 @@
+{
+  "name": "CodeXa Store",
+  "short_name": "CodeXa",
+  "description": "Akun digital siap pakai atau dibuat sesuai namamu.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101827",
+  "theme_color": "#101827",
+  "lang": "id",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

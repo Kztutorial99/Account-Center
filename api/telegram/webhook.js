@@ -155,14 +155,30 @@ module.exports = async function handler(request, response) {
     const amount = Number(topup.amount) || 0;
     let newBalance = Number(topup.userBalance) || 0;
 
+    /* Klaim status dulu (atomic). Kalau webhook dikirim dua kali,
+       hanya klaim pertama yang lolos sehingga saldo tidak dobel. */
+    const nextStatus = action === "approve" ? "approved" : "rejected";
+    const [claimed] = await sql`
+      UPDATE codexa_topups SET status = ${nextStatus}, reviewed_at = NOW()
+      WHERE id = ${topupId} AND status = 'pending'
+      RETURNING id
+    `;
+    if (!claimed) {
+      await ack(callback.id, "Permintaan ini sudah diproses admin lain.", true);
+      return response.status(200).json({ ok: true });
+    }
+
     if (action === "approve") {
-      const updated = await sql`
-        UPDATE codexa_users SET balance = balance + ${amount} WHERE id = ${topup.userId} RETURNING balance
-      `;
-      newBalance = Number(updated[0] && updated[0].balance) || newBalance;
-      await sql`UPDATE codexa_topups SET status = 'approved', reviewed_at = NOW() WHERE id = ${topupId} AND status = 'pending'`;
-    } else {
-      await sql`UPDATE codexa_topups SET status = 'rejected', reviewed_at = NOW() WHERE id = ${topupId} AND status = 'pending'`;
+      try {
+        const updated = await sql`
+          UPDATE codexa_users SET balance = balance + ${amount} WHERE id = ${topup.userId} RETURNING balance
+        `;
+        newBalance = Number(updated[0] && updated[0].balance) || newBalance;
+      } catch (error) {
+        // Saldo gagal ditambah → balikkan status ke pending supaya bisa diulang.
+        await sql`UPDATE codexa_topups SET status = 'pending', reviewed_at = NULL WHERE id = ${topupId}`;
+        throw error;
+      }
     }
 
     const status = action === "approve" ? "approved" : "rejected";

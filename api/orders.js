@@ -131,28 +131,49 @@ module.exports = async function handler(request, response) {
       });
     }
 
-    // Potong saldo dulu (atomic) agar tidak bisa dobel-belanja
-    const [debited] = await sql`
-      UPDATE codexa_users SET balance = balance - ${total}
-      WHERE id = ${user.id} AND balance >= ${total}
-      RETURNING balance
-    `;
-    if (!debited) return response.status(402).json({ error: "Saldo tidak cukup", needTopup: true });
-
-    // Keluarkan akun yang terjual dari listing
+    /* Klaim akun dulu pakai compare-and-swap: UPDATE hanya jalan kalau
+       credential_blob masih sama dengan yang kita baca. Dua checkout
+       bersamaan untuk akun yang sama membuat yang kedua gagal, jadi satu
+       akun tidak bisa terjual dua kali. */
     const orderItems = [];
+    const claimed = [];
+    const rollbackClaims = async () => {
+      for (const c of claimed) {
+        await sql`
+          UPDATE codexa_account_listings
+          SET credential_blob = ${c.blob}, stock = ${c.stock}, price = ${c.price},
+              status = ${c.status}, updated_at = NOW()
+          WHERE id = ${c.id}
+        `;
+      }
+    };
+
     for (const purchase of purchases) {
-      const { row, credentials, taken, remaining } = purchase;
+      const { row, credentials, accounts, taken, remaining } = purchase;
       const nextCredentials = { ...credentials, accounts: remaining };
       const nextStock = remaining.length;
       const nextPrice = remaining.length ? Math.min(...remaining.map((a) => a.price)) : Number(row.price) || 0;
       const nextStatus = remaining.length ? "available" : "sold";
-      await sql`
+      const [claimedRow] = await sql`
         UPDATE codexa_account_listings
         SET credential_blob = ${encryptCredentials(nextCredentials)},
             stock = ${nextStock}, price = ${nextPrice}, status = ${nextStatus}, updated_at = NOW()
-        WHERE id = ${row.id}
+        WHERE id = ${row.id} AND status = 'available' AND credential_blob = ${row.credentialBlob}
+        RETURNING id
       `;
+      if (!claimedRow) {
+        await rollbackClaims();
+        return response.status(409).json({
+          error: `${row.title} baru saja dibeli orang lain, muat ulang katalog`,
+        });
+      }
+      claimed.push({
+        id: row.id,
+        blob: row.credentialBlob,
+        stock: accounts.length,
+        price: Number(row.price) || 0,
+        status: row.status,
+      });
       orderItems.push({
         listingId: row.id,
         title: row.title,
@@ -162,13 +183,32 @@ module.exports = async function handler(request, response) {
       });
     }
 
+    // Akun sudah dikunci untuk pembeli ini, baru potong saldo.
+    const [debited] = await sql`
+      UPDATE codexa_users SET balance = balance - ${total}
+      WHERE id = ${user.id} AND balance >= ${total}
+      RETURNING balance
+    `;
+    if (!debited) {
+      await rollbackClaims();
+      return response.status(402).json({ error: "Saldo tidak cukup", needTopup: true });
+    }
+
     const orderId = crypto.randomUUID();
     const itemCount = orderItems.reduce((sum, i) => sum + i.accounts.length, 0);
-    const [order] = await sql`
-      INSERT INTO codexa_orders (id, user_id, total, item_count, payload_blob)
-      VALUES (${orderId}, ${user.id}, ${total}, ${itemCount}, ${encryptCredentials({ items: orderItems })})
-      RETURNING id, total, item_count AS "itemCount", status, created_at AS "createdAt"
-    `;
+    let order;
+    try {
+      [order] = await sql`
+        INSERT INTO codexa_orders (id, user_id, total, item_count, payload_blob)
+        VALUES (${orderId}, ${user.id}, ${total}, ${itemCount}, ${encryptCredentials({ items: orderItems })})
+        RETURNING id, total, item_count AS "itemCount", status, created_at AS "createdAt"
+      `;
+    } catch (error) {
+      // Pesanan gagal dicatat → kembalikan saldo dan akun supaya user tidak dirugikan.
+      await sql`UPDATE codexa_users SET balance = balance + ${total} WHERE id = ${user.id}`;
+      await rollbackClaims();
+      throw error;
+    }
 
     return response.status(201).json({
       order: { ...order, total: Number(order.total) || 0, items: orderItems },

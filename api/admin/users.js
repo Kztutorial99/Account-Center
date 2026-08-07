@@ -89,8 +89,13 @@ module.exports = async function handler(request, response) {
     if (!ROLES.includes(role)) return response.status(400).json({ error: "Role tidak valid" });
     if (password && password.length < 6) return response.status(400).json({ error: "Password minimal 6 karakter" });
 
-    const balance = Math.max(0, Math.round(Number(balanceRaw) || 0));
-    if (!Number.isFinite(balance)) return response.status(400).json({ error: "Saldo tidak valid" });
+    const MAX_BALANCE = 1_000_000_000; // Rp1 miliar, cukup untuk toko dan mencegah angka absurd
+    const balanceNumber = Number(balanceRaw) || 0;
+    if (!Number.isFinite(balanceNumber)) return response.status(400).json({ error: "Saldo tidak valid" });
+    const balance = Math.max(0, Math.round(balanceNumber));
+    if (balance > MAX_BALANCE) {
+      return response.status(400).json({ error: "Saldo maksimal Rp1.000.000.000" });
+    }
 
     const dupe = await sql`SELECT id FROM codexa_users WHERE email = ${email} AND id <> ${id} LIMIT 1`;
     if (dupe.length) return response.status(409).json({ error: "Email sudah dipakai user lain" });

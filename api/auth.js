@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const {
   db, ensureTables, hashPassword, verifyPassword,
   setSession, clearSession, currentUser, bodyOf, text,
+  clientIp, rateLimit, resetRateLimit,
 } = require("./_users");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -34,6 +35,16 @@ module.exports = async function handler(request, response) {
     if (!EMAIL_RE.test(email)) return response.status(400).json({ error: "Format email tidak valid" });
     if (password.length < 6) return response.status(400).json({ error: "Password minimal 6 karakter" });
 
+    // Tahan brute force: maksimal 10 percobaan per 5 menit per IP+email.
+    const throttleKey = `auth:${action}:${clientIp(request)}:${email}`;
+    const gate = await rateLimit(sql, { key: throttleKey, limit: 10, windowSec: 300 });
+    if (!gate.allowed) {
+      response.setHeader("Retry-After", String(gate.retryAfter));
+      return response.status(429).json({
+        error: `Terlalu banyak percobaan. Coba lagi dalam ${gate.retryAfter} detik.`,
+      });
+    }
+
     if (action === "register") {
       const name = text(body.name, 80);
       const phone = text(body.phone, 30);
@@ -48,6 +59,7 @@ module.exports = async function handler(request, response) {
         VALUES (${id}, ${name}, ${email}, ${phone}, ${hashPassword(password)}, 0)
         RETURNING id, name, email, phone, balance, role, created_at AS "createdAt"
       `;
+      await resetRateLimit(sql, throttleKey);
       setSession(response, id);
       return response.status(201).json({
         user: { ...rows[0], balance: Number(rows[0].balance) || 0, role: rows[0].role === "admin" ? "admin" : "user" },
@@ -65,6 +77,7 @@ module.exports = async function handler(request, response) {
     if (row.status && row.status !== "active") {
       return response.status(403).json({ error: "Akun kamu dinonaktifkan. Hubungi admin." });
     }
+    await resetRateLimit(sql, throttleKey);
     setSession(response, row.id);
     return response.status(200).json({
       user: {
