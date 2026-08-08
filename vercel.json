@@ -4,6 +4,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/notifications",
+      "destination": "/api/topup?resource=notifications"
+    },
+    {
       "source": "/admin",
       "destination": "/"
     },

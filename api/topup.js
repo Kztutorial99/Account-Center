@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const { db, ensureTables, currentUser, bodyOf, text } = require("./_users");
 const { notifyNewTopup } = require("./_telegram");
 const { createNotification } = require("./_notifications");
+const { handleNotifications } = require("./_notifications_handler");
 
 const MIN_TOPUP = 10000;
 const MAX_TOPUP = 20000000;
@@ -12,6 +13,10 @@ module.exports = async function handler(request, response) {
     await ensureTables(sql);
     const user = await currentUser(sql, request);
     if (!user) return response.status(401).json({ error: "Silakan masuk terlebih dahulu" });
+
+    // /api/notifications di-rewrite ke sini (batas function Vercel Hobby).
+    const resource = (request.query && request.query.resource) || "";
+    if (resource === "notifications") return handleNotifications(sql, user, request, response);
 
     if (request.method === "GET") {
       const rows = await sql`

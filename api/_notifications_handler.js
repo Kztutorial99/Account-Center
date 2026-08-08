@@ -1,14 +1,14 @@
-const { db, ensureTables, currentUser, bodyOf, text } = require("./_users");
 const { ensureNotificationTables } = require("./_notifications");
+const { bodyOf, text } = require("./_users");
 
-module.exports = async function handler(request, response) {
+/**
+ * Handler notifikasi. Tidak dibuat file API sendiri karena Vercel Hobby
+ * dibatasi 12 serverless function; endpoint /api/notifications di-rewrite
+ * ke /api/topup?resource=notifications (lihat vercel.json).
+ */
+async function handleNotifications(sql, user, request, response) {
   try {
-    const sql = db();
-    await ensureTables(sql);
     await ensureNotificationTables(sql);
-    const user = await currentUser(sql, request);
-    if (!user) return response.status(401).json({ error: "Silakan masuk terlebih dahulu" });
-
     if (request.method === "GET") {
       const rows = await sql`
         SELECT id, type, title, body, link, read_at AS "readAt", created_at AS "createdAt"
@@ -56,4 +56,6 @@ module.exports = async function handler(request, response) {
     console.error("Notification failure", error && error.message);
     return response.status(500).json({ error: "Notifikasi gagal dimuat" });
   }
-};
+}
+
+module.exports = { handleNotifications };
