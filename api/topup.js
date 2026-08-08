@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { db, ensureTables, currentUser, bodyOf, text } = require("./_users");
 const { notifyNewTopup } = require("./_telegram");
+const { createNotification } = require("./_notifications");
 
 const MIN_TOPUP = 10000;
 const MAX_TOPUP = 20000000;
@@ -79,6 +80,14 @@ module.exports = async function handler(request, response) {
     } catch (notifyError) {
       console.error("Telegram notify failure", notifyError && notifyError.message);
     }
+
+    await createNotification(sql, {
+      userId: user.id,
+      type: "topup_pending",
+      title: "Permintaan top up terkirim",
+      body: `Top up Rp${amount.toLocaleString("id-ID")} lewat ${method} sedang menunggu verifikasi admin.`,
+      link: "topup",
+    });
 
     return response.status(201).json({ topup });
   } catch (error) {

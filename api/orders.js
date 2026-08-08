@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { db, ensureTables, currentUser, bodyOf } = require("./_users");
+const { createNotification } = require("./_notifications");
 
 /* ── enkripsi kredensial (format sama dengan api/admin/products.js) ── */
 function key() { return process.env.ACCOUNT_CREDENTIALS_KEY || ""; }
@@ -218,6 +219,14 @@ module.exports = async function handler(request, response) {
       await rollbackClaims();
       throw error;
     }
+
+    await createNotification(sql, {
+      userId: user.id,
+      type: "order_paid",
+      title: "Pembelian berhasil",
+      body: `${itemCount} akun senilai Rp${total.toLocaleString("id-ID")} sudah dibayar. Detail login bisa dilihat di halaman Pesanan.`,
+      link: "orders",
+    });
 
     return response.status(201).json({
       order: { ...order, total: Number(order.total) || 0, items: orderItems },

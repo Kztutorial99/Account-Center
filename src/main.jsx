@@ -190,6 +190,7 @@ function App() {
       setCheckout({ loading: false, error: "", order: result.order });
       loadSession();
       loadCatalog();
+      window.dispatchEvent(new Event("codexa:notify"));
       showNotice("Pembayaran berhasil, detail akun sudah terbuka");
     } catch (error) {
       setCheckout({ loading: false, error: error.message, order: null });
@@ -591,6 +592,125 @@ function OrdersPage({ onBack, onNotice, navigate }) {
    STORE TOPBAR
 ════════════════════════════════════════════════════ */
 
+function timeAgo(value) {
+  const then = new Date(value).getTime();
+  if (!Number.isFinite(then)) return "";
+  const diff = Math.max(0, Date.now() - then);
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "baru saja";
+  if (min < 60) return `${min} menit lalu`;
+  const hour = Math.floor(min / 60);
+  if (hour < 24) return `${hour} jam lalu`;
+  const day = Math.floor(hour / 24);
+  if (day < 7) return `${day} hari lalu`;
+  return new Date(then).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+}
+
+const NOTIF_TONE = {
+  topup_pending: { icon: Clock, color: "var(--amber)" },
+  topup_approved: { icon: BadgeCheck, color: "var(--green)" },
+  topup_rejected: { icon: X, color: "var(--red)" },
+  order_paid: { icon: ShoppingBag, color: "#818cf8" },
+};
+
+/* Lonceng notifikasi: polling ringan tiap 30 detik + refresh saat dibuka. */
+function NotificationBell({ navigate }) {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const p = await jsonRequest("/api/notifications");
+      setItems(p.notifications || []);
+      setUnread(Number(p.unread) || 0);
+    } catch (_) { /* diam saja, lonceng tidak boleh merusak halaman */ }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+    const timer = window.setInterval(load, 30000);
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("codexa:notify", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("codexa:notify", onFocus);
+    };
+  }, []);
+
+  const toggle = () => { const next = !open; setOpen(next); if (next) load(); };
+
+  const markAll = async () => {
+    try { await jsonRequest("/api/notifications", { method: "PATCH", body: JSON.stringify({}) }); } catch (_) {}
+    setItems((list) => list.map((n) => ({ ...n, read: true })));
+    setUnread(0);
+  };
+
+  const openItem = async (n) => {
+    if (!n.read) {
+      try { await jsonRequest("/api/notifications", { method: "PATCH", body: JSON.stringify({ id: n.id }) }); } catch (_) {}
+      setItems((list) => list.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+      setUnread((u) => Math.max(0, u - 1));
+    }
+    setOpen(false);
+    if (n.link) navigate(n.link);
+  };
+
+  const clearAll = async () => {
+    try { await jsonRequest("/api/notifications", { method: "DELETE", body: JSON.stringify({}) }); } catch (_) {}
+    setItems([]); setUnread(0);
+  };
+
+  return (
+    <div className="cx-notif">
+      <button className="cx-notif-trigger" onClick={toggle} aria-label="Notifikasi">
+        <Bell size={14} />
+        {unread > 0 && <b>{unread > 9 ? "9+" : unread}</b>}
+      </button>
+      {open && (
+        <>
+          <div className="cx-account-overlay" onClick={() => setOpen(false)} />
+          <div className="cx-notif-dropdown">
+            <div className="cx-notif-head">
+              <strong>Notifikasi</strong>
+              <div className="cx-notif-head-actions">
+                {unread > 0 && <button onClick={markAll}>Tandai dibaca</button>}
+                {items.length > 0 && <button onClick={clearAll}>Hapus</button>}
+              </div>
+            </div>
+            <div className="cx-notif-list">
+              {loading && !items.length && <div className="cx-notif-empty">Memuat...</div>}
+              {!loading && !items.length && (
+                <div className="cx-notif-empty">Belum ada notifikasi. Aktivitas top up & pembelian akan muncul di sini.</div>
+              )}
+              {items.map((n) => {
+                const tone = NOTIF_TONE[n.type] || { icon: Bell, color: "var(--muted)" };
+                const ToneIcon = tone.icon;
+                return (
+                  <button key={n.id} className={`cx-notif-item${n.read ? "" : " is-unread"}`} onClick={() => openItem(n)}>
+                    <span className="cx-notif-icon" style={{ color: tone.color }}><ToneIcon size={14} /></span>
+                    <span className="cx-notif-copy">
+                      <strong>{n.title}</strong>
+                      <small>{n.body}</small>
+                      <em>{timeAgo(n.createdAt)}</em>
+                    </span>
+                    {!n.read && <span className="cx-notif-dot" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, setMenuOpen, onLogout }) {
   const initials = String(user && user.name || "CX").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "CX";
   return (
@@ -606,6 +726,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
           ))}
         </nav>
         <div className="cx-topbar-actions">
+          <NotificationBell navigate={navigate} />
           <button className="cx-cart-btn" onClick={onCartOpen}>
             <ShoppingBag size={13} />
             {cart.length > 0 && <b>{cart.length}</b>}
@@ -1946,6 +2067,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
       setStep("form"); setAgreed(false);
       onNotice("Bukti transfer terkirim otomatis ke admin, menunggu verifikasi");
       load(); onRefresh();
+      window.dispatchEvent(new Event("codexa:notify"));
     } catch (err) { setFormError(err.message); }
     finally { setBusy(false); }
   };

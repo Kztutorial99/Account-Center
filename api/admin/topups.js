@@ -1,6 +1,7 @@
 const { db, ensureTables, bodyOf, text } = require("../_users");
 const { isAdmin } = require("./_auth");
 const { callTelegram, adminChatId, topupMessage } = require("../_telegram");
+const { createNotification } = require("../_notifications");
 
 module.exports = async function handler(request, response) {
   if (!isAdmin(request)) return response.status(401).json({ error: "Sesi admin tidak valid" });
@@ -58,6 +59,17 @@ module.exports = async function handler(request, response) {
     } else {
       await sql`UPDATE codexa_topups SET status = 'rejected', reviewed_at = NOW() WHERE id = ${id}`;
     }
+    const topupAmount = Number(topup.amount) || 0;
+    await createNotification(sql, {
+      userId: topup.userId,
+      type: action === "approve" ? "topup_approved" : "topup_rejected",
+      title: action === "approve" ? "Top up disetujui" : "Top up ditolak",
+      body: action === "approve"
+        ? `Saldo kamu bertambah Rp${topupAmount.toLocaleString("id-ID")}. Selamat belanja!`
+        : `Permintaan top up Rp${topupAmount.toLocaleString("id-ID")} ditolak. Cek kembali bukti transfermu atau hubungi admin.`,
+      link: "topup",
+    });
+
     // Beri tahu chat admin bahwa permintaan sudah diproses lewat panel web,
     // supaya status di Telegram tidak tertinggal.
     try {
