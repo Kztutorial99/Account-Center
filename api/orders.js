@@ -228,9 +228,8 @@ const COMMON_WORDS = [
   "store", "toko", "online", "indonesia", "jakarta", "bandung", "surabaya",
 ];
 
-/* Skor "kemungkinan sudah dipakai" untuk alamat Gmail. Google tidak membuka
-   API ketersediaan publik, jadi alamat pendek/umum tanpa angka kita anggap
-   hampir pasti sudah dimiliki orang lain, bukan "tersedia". */
+/* Blokir cepat nama yang sudah pasti dipakai/dicadangkan (hemat run Apify
+   berbayar). Kasus lain diteruskan ke actor Apify untuk jawaban definitif. */
 function gmailLikelyTaken(base) {
   if (RESERVED_LOCALS.has(base)) {
     return "Nama ini dicadangkan / sudah pasti dipakai Google. Pilih nama lain.";
@@ -239,9 +238,6 @@ function gmailLikelyTaken(base) {
   const stripped = base.replace(/[0-9]/g, "");
   if (COMMON_WORDS.includes(stripped) && (!hasDigit || /^[0-9]{1,2}$/.test(base.replace(/[^0-9]/g, "")))) {
     return "Kata ini terlalu umum, hampir pasti sudah dipakai. Tambahkan angka/nama unik.";
-  }
-  if (!hasDigit && base.length <= 12) {
-    return "Nama pendek tanpa angka hampir pasti sudah dipakai. Tambahkan angka atau kata unik.";
   }
   return "";
 }
