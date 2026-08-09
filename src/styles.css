@@ -1084,3 +1084,138 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-footer-links { gap: 4px 12px; }
   .cx-footer-links button { min-height: 36px; padding: 0 4px; font-size: 11.5px; }
 }
+
+/* ═══════════════════════════════════════════════════
+   MOBILE-FIRST MODERN LAYER (v2 redesign)
+   Bottom tab bar, header ramping, kartu tebal, tipografi bersih
+════════════════════════════════════════════════════ */
+:root {
+  --r-lg: 22px;
+  --r-md: 16px;
+  --r-sm: 12px;
+  --tab-h: 62px;
+  --shadow-soft: 0 10px 30px rgba(0,0,0,.35);
+  --grad-primary: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+}
+
+/* tab bar disembunyikan di desktop */
+.cx-tabbar { display: none; }
+
+@media (max-width: 720px) {
+  /* ── HEADER: satu baris, solid, ramping ── */
+  .cx-topbar {
+    --cx-topbar-h: 58px;
+    height: 58px;
+    background: color-mix(in oklab, var(--bg) 92%, #000);
+    backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid var(--b1);
+  }
+  .cx-topbar-inner { flex-wrap: nowrap; height: 58px; padding-top: 0; padding-bottom: 0; gap: 8px; }
+  .cx-nav { display: none; }
+  .cx-account-trigger-copy { display: none; }
+  .cx-account-trigger { padding: 0; border: 0; background: none; }
+  .cx-account-trigger svg { display: none; }
+  .cx-avatar { width: 34px; height: 34px; border-radius: 12px; font-size: 12px; }
+  .cx-icon-btn-notif, .cx-notif { display: inline-flex; }
+  .cx-cart-btn { display: none; } /* keranjang pindah ke tab bar */
+  .cx-brand { font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
+
+  /* ── BOTTOM TAB BAR ── */
+  .cx-tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    background: color-mix(in oklab, var(--s1) 88%, #000);
+    backdrop-filter: saturate(180%) blur(18px);
+    border-top: 1px solid var(--b1);
+    box-shadow: 0 -8px 28px rgba(0,0,0,.4);
+  }
+  .cx-tabbar-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; min-height: 50px; border-radius: 14px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0;
+    color: var(--faint); transition: color .18s, background .18s;
+  }
+  .cx-tabbar-item.is-active { color: var(--ink); background: rgba(168,85,247,.14); }
+  .cx-tabbar-item.is-active .cx-tabbar-icon { color: var(--indigo2); }
+  .cx-tabbar-item:active { transform: scale(.96); }
+  .cx-tabbar-icon { position: relative; display: grid; place-items: center; }
+  .cx-tabbar-icon b {
+    position: absolute; top: -6px; right: -9px; min-width: 16px; height: 16px; padding: 0 4px;
+    display: grid; place-items: center; border-radius: 9px;
+    background: var(--grad-primary); color: #fff; font-size: 9px; font-weight: 700;
+  }
+
+  /* ruang supaya konten tidak tertutup tab bar */
+  .cx-app { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)); }
+  .cx-ai-fab { bottom: calc(var(--tab-h) + 16px + env(safe-area-inset-bottom)) !important; }
+  .cx-toast { bottom: calc(var(--tab-h) + 18px + env(safe-area-inset-bottom)); }
+  .cx-footer { border-top: 1px solid var(--b1); }
+
+  /* ── TIPOGRAFI: mono hanya untuk kredensial/kode ── */
+  body { font-size: 15px; line-height: 1.6; letter-spacing: -.005em; }
+  .cx-kicker, .cx-section-sub, .cx-product-type { letter-spacing: .04em; }
+  h1, h2, h3 { letter-spacing: -.03em; }
+  .cx-section-header h2 { font-size: 20px; }
+  .cx-product-title { font-size: 16px; letter-spacing: -.02em; }
+  .cx-product-desc { font-size: 13px; color: var(--muted); }
+
+  /* ── HERO lebih padat + glow modern ── */
+  .cx-hero { position: relative; padding: 28px 0 24px; overflow: hidden; }
+  .cx-hero::before {
+    content: ""; position: absolute; top: -140px; left: 50%; transform: translateX(-50%);
+    width: 420px; height: 320px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(168,85,247,.28), transparent 65%);
+    pointer-events: none;
+  }
+  .cx-hero h1 { font-size: clamp(30px, 9.5vw, 42px); line-height: 1.03; }
+  .cx-hero-sub { margin-bottom: 18px; }
+  .cx-hero-actions .cx-btn { height: 48px; border-radius: 999px; font-size: 14px; font-weight: 600; }
+  .cx-btn-primary { background: var(--grad-primary); border: 0; color: #fff; box-shadow: 0 8px 22px rgba(124,58,237,.35); }
+  .cx-benefits { padding: 14px 0 0; }
+  .cx-benefit { border: 1px solid var(--b1); border-radius: var(--r-md); padding: 12px 14px; background: var(--s1); }
+  main#catalog { padding-top: 18px !important; padding-bottom: 28px !important; }
+
+  /* ── KARTU PRODUK ── */
+  .cx-product-card {
+    border: 1px solid var(--b1); border-radius: var(--r-lg);
+    background: linear-gradient(180deg, var(--s1), color-mix(in oklab, var(--s1) 70%, var(--bg)));
+    box-shadow: var(--shadow-soft); overflow: hidden;
+  }
+  .cx-product-body { padding: 16px; display: grid; gap: 10px; }
+  .cx-product-badge { border-radius: 999px; padding: 4px 10px; font-size: 10.5px; }
+  .cx-cred-preview { border-radius: var(--r-md); padding: 10px; gap: 8px; }
+  .cx-cred-pick { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+    padding: 10px; border-radius: var(--r-sm); border: 1px solid var(--b1); background: rgba(255,255,255,.02); min-height: 52px; }
+  .cx-cred-pick.is-picked { border-color: var(--indigo); background: rgba(168,85,247,.12); }
+  .cx-cred-check { width: 20px; height: 20px; accent-color: var(--indigo); }
+  .cx-cred-no { display: none; }
+  .cx-cred-pair { min-width: 0; display: grid; gap: 2px; }
+  .cx-cred-row { display: flex; gap: 6px; min-width: 0; font-size: 11px; }
+  .cx-cred-row code { font-family: ui-monospace, SFMono-Regular, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cx-cred-price { font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+
+  .cx-product-bottom { display: grid; gap: 10px; align-items: stretch; padding-top: 2px; }
+  .cx-product-price { font-size: 20px; font-weight: 700; letter-spacing: -.02em; display: flex; flex-direction: column; }
+  .cx-product-price-note { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0; text-transform: none; }
+  .cx-product-buy {
+    width: 100%; height: 48px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--grad-primary); color: #fff; font-size: 14px; font-weight: 700;
+    box-shadow: 0 8px 22px rgba(124,58,237,.32);
+  }
+  .cx-product-buy:disabled { background: var(--s3); color: var(--muted); box-shadow: none; opacity: 1; }
+  .cx-product-buy:active { transform: scale(.98); }
+
+  /* ── SEARCH & MODAL ── */
+  .cx-search { border-radius: 999px; height: 46px; padding: 0 16px; background: var(--s1); border: 1px solid var(--b1); }
+  .cx-modal { border-radius: var(--r-lg) var(--r-lg) 0 0; }
+  .cx-cart-drawer { border-radius: var(--r-lg) var(--r-lg) 0 0; }
+  .cx-empty { border-radius: var(--r-lg); }
+}
+
+/* tombol beli desktop tetap ringkas */
+@media (min-width: 721px) {
+  .cx-product-buy { width: auto; padding: 0 16px; height: 38px; border-radius: 999px; gap: 8px; font-size: 12.5px; font-weight: 600; background: var(--grad-primary); color: #fff; }
+  .cx-product-buy span { display: inline; }
+}
