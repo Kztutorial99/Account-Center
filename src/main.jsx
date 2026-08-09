@@ -1275,7 +1275,7 @@ function AdminPage({ onBack, onNotice }) {
 
   const loadOrders = () => {
     setOrdersLoading(true);
-    return jsonRequest("/api/admin/orders", { method: "GET" })
+    return jsonRequest("/api/orders?scope=admin", { method: "GET" })
       .then((p) => setOrders(p.orders || []))
       .catch((e) => setApiError(e.message))
       .finally(() => setOrdersLoading(false));
@@ -1292,7 +1292,7 @@ function AdminPage({ onBack, onNotice }) {
   const deleteAdminOrder = async (id) => {
     if (!window.confirm("Hapus pesanan ini dari riwayat?")) return;
     try {
-      await jsonRequest("/api/admin/orders", { method: "DELETE", body: JSON.stringify({ id }) });
+      await jsonRequest("/api/orders?scope=admin", { method: "DELETE", body: JSON.stringify({ id }) });
       setOrders((list) => list.filter((o) => o.id !== id));
       onNotice("Pesanan dihapus");
     } catch (e) { setApiError(e.message); }
