@@ -219,11 +219,16 @@ function App() {
     />
   );
 
+  const tabbar = (
+    <MobileTabBar activePage={activePage} navigate={navigate} cart={cart} onCartOpen={() => setCartOpen(true)} />
+  );
+
   if (activePage === "account") return (
     <div className="cx-app">
       {topbar}
       <ProfilePage user={auth.user} onBack={() => navigate("store")} onTopup={() => navigate("topup")} />
       <StoreFooter navigate={navigate} />
+      {tabbar}
     </div>
   );
 
@@ -232,6 +237,7 @@ function App() {
       {topbar}
       <TopUpPage user={auth.user} onBack={() => navigate("store")} onNotice={showNotice} onRefresh={loadSession} />
       <StoreFooter navigate={navigate} />
+      {tabbar}
     </div>
   );
 
@@ -241,6 +247,7 @@ function App() {
       {topbar}
       <OrdersPage onBack={() => navigate("store")} onNotice={showNotice} navigate={navigate} />
       <StoreFooter navigate={navigate} />
+      {tabbar}
 
     </div>
   );
@@ -256,6 +263,7 @@ function App() {
         <p>Untuk pertanyaan seputar produk, pembayaran, atau pengiriman akun — hubungi kami via WhatsApp atau DM Instagram. Respon dalam 1×24 jam.</p>
       </div>
       <StoreFooter navigate={navigate} />
+      {tabbar}
     </div>
   );
 
@@ -352,6 +360,7 @@ function App() {
       </main>
 
       <StoreFooter navigate={navigate} />
+      {tabbar}
 
       {/* Buy modal */}
       {buyItem && (
@@ -784,6 +793,40 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
 }
 
 /* ═══════════════════════════════════════════════════
+   MOBILE TAB BAR (bottom nav)
+════════════════════════════════════════════════════ */
+function MobileTabBar({ activePage, navigate, cart, onCartOpen }) {
+  const items = [
+    { key: "store",  label: "Store",    Icon: Package },
+    { key: "orders", label: "Pesanan",  Icon: BadgeCheck },
+    { key: "cart",   label: "Keranjang",Icon: ShoppingBag },
+    { key: "help",   label: "Bantuan",  Icon: CircleHelp },
+    { key: "account",label: "Akun",     Icon: User },
+  ];
+  return (
+    <nav className="cx-tabbar" aria-label="Navigasi utama">
+      {items.map(({ key, label, Icon }) => {
+        const active = key !== "cart" && activePage === key;
+        return (
+          <button
+            key={key}
+            className={`cx-tabbar-item${active ? " is-active" : ""}`}
+            aria-current={active ? "page" : undefined}
+            onClick={() => (key === "cart" ? onCartOpen() : navigate(key))}
+          >
+            <span className="cx-tabbar-icon">
+              <Icon size={19} strokeWidth={active ? 2.4 : 1.9} />
+              {key === "cart" && cart.length > 0 && <b>{cart.length}</b>}
+            </span>
+            {label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
    STORE FOOTER
 ════════════════════════════════════════════════════ */
 function StoreFooter({ navigate }) {
@@ -850,7 +893,7 @@ function ProductCard({ product, colorIdx, onBuy }) {
             {formatPrice(total)}
             <small className="cx-product-price-note">{selected.length ? `${selected.length} akun dipilih` : "pilih akun dulu"}</small>
           </span>
-          <button className="cx-product-buy" disabled={selected.length === 0} onClick={() => onBuy(selected)} aria-label={`Pilih akun ${product.title}`}><ArrowRight size={13} /></button>
+          <button className="cx-product-buy" disabled={selected.length === 0} onClick={() => onBuy(selected)} aria-label={`Beli ${product.title}`}><span>{selected.length ? "Beli sekarang" : "Pilih akun"}</span><ArrowRight size={15} /></button>
         </div>
       </div>
     </article>
