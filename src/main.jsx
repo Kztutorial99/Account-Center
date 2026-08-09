@@ -225,7 +225,7 @@ function App() {
   );
 
   const tabbar = (
-    <MobileTabBar activePage={activePage} navigate={navigate} cart={cart} onCartOpen={() => setCartOpen(true)} />
+    <MobileTabBar activePage={activePage} navigate={navigate} cart={cart} cartOpen={cartOpen} onCartOpen={() => setCartOpen(true)} />
   );
 
   /* Overlay global: dirender di SEMUA halaman supaya keranjang, modal beli,
@@ -290,7 +290,7 @@ function App() {
                 <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => setBuySel((buyItem.accounts || []).map((a) => a.index))}>Pilih semua</button>
                 <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => setBuySel([])}>Kosongkan</button>
               </div>
-              <div style={{ borderTop: "1px solid var(--b1)", paddingTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div className="cx-buy-foot">
                 <div className="cx-buy-price">
                   <small>Total harga</small>
                   <strong>{formatPrice(sumSelected(buyItem, buySel))}</strong>
@@ -578,11 +578,25 @@ function OrdersPage({ onBack, onNotice, navigate }) {
   }, []);
 
   return (
-    <div className="cx-simple-page cx-container" style={{ textAlign: "left" }}>
+    <div className="cx-orders-page cx-container">
       <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
-      <h1 style={{ marginBottom: 4 }}>Pesanan Saya</h1>
-      <p style={{ marginBottom: 20 }}>Semua akun yang sudah kamu bayar tersimpan di sini.</p>
-      {state.loading && <p style={{ color: "var(--muted)", fontSize: 12 }}>Memuat pesanan...</p>}
+      <header className="cx-orders-hero">
+        <span className="cx-orders-kicker">Riwayat pembelian</span>
+        <h1>Pesanan Saya</h1>
+        <p>Semua akun yang sudah kamu bayar tersimpan aman di sini.</p>
+        {!state.loading && !state.error && state.orders.length > 0 && (
+          <div className="cx-orders-stats">
+            <div><small>Total pesanan</small><strong>{state.orders.length}</strong></div>
+            <div><small>Akun dibeli</small><strong>{state.orders.reduce((a, o) => a + (Number(o.itemCount) || 0), 0)}</strong></div>
+            <div><small>Total belanja</small><strong>{formatPrice(state.orders.reduce((a, o) => a + (Number(o.total) || 0), 0))}</strong></div>
+          </div>
+        )}
+      </header>
+      {state.loading && (
+        <div className="cx-orders-skeleton">
+          <span /><span /><span />
+        </div>
+      )}
       {state.error && <p className="cx-field-error">{state.error}</p>}
       {!state.loading && !state.error && state.orders.length === 0 && (
         <div className="cx-empty"><Package size={24} /><h3>Belum ada pesanan</h3><p>Beli akun dari katalog untuk mulai.</p>
@@ -590,16 +604,21 @@ function OrdersPage({ onBack, onNotice, navigate }) {
         </div>
       )}
       {state.orders.map((order) => (
-        <div key={order.id} className="cx-order-card">
+        <article key={order.id} className="cx-order-card">
           <div className="cx-order-card-head">
-            <div>
-              <strong>{formatPrice(order.total)}</strong>
-              <small>{order.itemCount} akun · {formatDate(order.createdAt)}</small>
+            <div className="cx-order-card-id">
+              <span className="cx-order-icon"><Package size={16} /></span>
+              <div>
+                <strong>{formatPrice(order.total)}</strong>
+                <small>{order.itemCount} akun · {formatDate(order.createdAt)}</small>
+              </div>
             </div>
-            <span className="cx-badge">{order.status === "paid" ? "Lunas" : order.status}</span>
+            <span className={`cx-order-status${order.status === "paid" ? " is-paid" : ""}`}>
+              <BadgeCheck size={12} /> {order.status === "paid" ? "Lunas" : order.status}
+            </span>
           </div>
           <OrderItems items={order.items} onNotice={onNotice} />
-        </div>
+        </article>
       ))}
     </div>
   );
@@ -815,7 +834,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
 /* ═══════════════════════════════════════════════════
    MOBILE TAB BAR (bottom nav)
 ════════════════════════════════════════════════════ */
-function MobileTabBar({ activePage, navigate, cart, onCartOpen }) {
+function MobileTabBar({ activePage, navigate, cart, onCartOpen, cartOpen }) {
   const items = [
     { key: "store",  label: "Store",    Icon: Package },
     { key: "orders", label: "Pesanan",  Icon: BadgeCheck },
@@ -826,7 +845,7 @@ function MobileTabBar({ activePage, navigate, cart, onCartOpen }) {
   return (
     <nav className="cx-tabbar" aria-label="Navigasi utama">
       {items.map(({ key, label, Icon }) => {
-        const active = key !== "cart" && activePage === key;
+        const active = key === "cart" ? !!cartOpen : (activePage === key && !cartOpen);
         return (
           <button
             key={key}
