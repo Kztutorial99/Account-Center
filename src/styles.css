@@ -1903,3 +1903,41 @@ html { scroll-behavior: smooth; }
   .cx-cart-summary > div { margin-bottom: 6px; }
   .cx-cart-summary .cx-checkout-note { margin: 6px 0 8px; }
 }
+
+/* ── Custom email: tampilan terkunci saat slot penuh ── */
+.cx-ce-lockbar{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:10px;
+  background:rgba(148,163,184,.12);border:1px dashed rgba(148,163,184,.4);
+  color:var(--muted);font-size:11.5px;line-height:1.4;margin-bottom:10px}
+.cx-input-wrap.is-locked{opacity:.65;background:rgba(148,163,184,.08);
+  border-style:dashed;cursor:not-allowed}
+.cx-input-wrap.is-locked input{cursor:not-allowed}
+.cx-btn.is-locked{opacity:.6;cursor:not-allowed;filter:grayscale(.4)}
+.cx-panel-sub.is-locked{display:inline-flex;align-items:center;gap:4px;color:var(--muted)}
+.cx-ce-box.is-locked{opacity:.85;border-style:dashed}
+.cx-ce-locked{display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--muted);margin:0}
+
+/* ── Hasil custom email di Pesanan Saya ── */
+.cx-ce-result{display:flex;flex-direction:column;gap:6px;margin:8px 0;padding:9px 10px;
+  border-radius:12px;border:1px solid var(--border);background:rgba(148,163,184,.06)}
+.cx-ce-result .cx-custom-email-tag{margin:0}
+.cx-ce-result-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cx-ce-result-label{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)}
+.cx-ce-result-row code{font-size:12px;letter-spacing:.4px;flex:1;min-width:90px;word-break:break-all}
+.cx-ce-result-actions{display:flex;gap:6px;margin-left:auto}
+.cx-ce-result-note{display:flex;align-items:flex-start;gap:6px;margin:0;font-size:11.5px;
+  line-height:1.5;color:var(--muted)}
+
+/* ── Admin: form password & catatan custom email ── */
+.cx-ce-admin-fields{display:flex;flex-direction:column;gap:8px;margin-top:8px;
+  padding-top:9px;border-top:1px dashed var(--border)}
+.cx-ce-admin-field{display:flex;flex-direction:column;gap:4px}
+.cx-ce-admin-field > span{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.cx-ce-admin-field input,.cx-ce-admin-field textarea{width:100%;padding:8px 10px;border-radius:9px;
+  border:1px solid var(--border);background:var(--surface,rgba(148,163,184,.06));
+  color:inherit;font-size:12.5px;font-family:inherit;resize:vertical}
+.cx-ce-admin-field input:focus,.cx-ce-admin-field textarea:focus{outline:none;border-color:var(--indigo2,#818cf8)}
+.cx-ce-admin-fields .cx-btn{justify-content:center;gap:6px;font-size:12px}
+@media (max-width:640px){
+  .cx-ce-result-actions{margin-left:0}
+  .cx-ce-admin-field input,.cx-ce-admin-field textarea{font-size:13px}
+}
