@@ -194,7 +194,7 @@ function RowSkeleton({ rows = 4 }) {
 /* ═══════════════════════════════════════════════════
    APP ROOT
 ════════════════════════════════════════════════════ */
-const PAGE_PATHS = ["admin", "orders", "help", "account", "topup", "terms", "privacy", "refund"];
+const PAGE_PATHS = ["admin", "orders", "help", "account", "topup", "custom-email", "terms", "privacy", "refund"];
 const pageFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
   return PAGE_PATHS.includes(slug) ? slug : "store";
@@ -571,6 +571,22 @@ function App() {
     <div className="cx-app">
       {topbar}
       <OrdersPage onBack={() => navigate("store")} onNotice={showNotice} navigate={navigate} />
+      <StoreFooter navigate={navigate} />
+      {tabbar}
+      {overlays}
+    </div>
+  );
+
+  if (activePage === "custom-email") return (
+    <div className="cx-app">
+      {topbar}
+      <CustomEmailPage
+        value={customEmail}
+        setValue={setCustomEmail}
+        check={emailCheck}
+        onBack={() => navigate("store")}
+        onUse={() => { showNotice("Nama disimpan, lanjut checkout di keranjang"); navigate("store"); }}
+      />
       <StoreFooter navigate={navigate} />
       {tabbar}
       {overlays}
@@ -1014,9 +1030,9 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
             <button key={page} className={activePage === page ? "active" : ""} onClick={() => navigate(page)}>{label}</button>
           ))}
           <button
-            className="cx-custom-email-nav"
+            className={`cx-custom-email-nav${activePage === "custom-email" ? " active" : ""}`}
             title="Cek dan buat request email/username custom"
-            onClick={() => { window.location.href = "/custom-email.html"; }}
+            onClick={() => navigate("custom-email")}
           >
             Custom Email
           </button>
@@ -1079,6 +1095,49 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
   );
 }
 
+function CustomEmailPage({ value, setValue, check, onBack, onUse }) {
+  return (
+    <main className="cx-page cx-custom-page">
+      <div className="cx-container">
+        <button className="cx-back-link" onClick={onBack}>
+          <ArrowRight size={12} style={{ transform: "rotate(180deg)" }} /> Kembali ke Store
+        </button>
+        <div className="cx-panel" style={{ marginTop: 14 }}>
+          <div className="cx-panel-header">
+            <h3><Mail size={14} /> Custom Email</h3>
+            <span className="cx-panel-sub">Cek dulu nama email/username yang kamu mau</span>
+          </div>
+          <div style={{ padding: 14, display: "grid", gap: 10 }}>
+            <p style={{ color: "var(--muted)", fontSize: 12, margin: 0 }}>
+              Kalau tersedia, nama ini otomatis dipakai sebagai permintaan email khusus saat kamu checkout di keranjang.
+            </p>
+            <div className={`cx-input-wrap cx-custom-email-input is-${check.state}`}>
+              <Mail size={13} />
+              <input
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="contoh: namaku99 atau namaku99@gmail.com"
+                maxLength={80}
+                autoComplete="off"
+              />
+            </div>
+            <small className={`cx-custom-email-msg is-${check.state}`}>
+              {check.message || "Masukkan minimal 3 karakter untuk mengecek ketersediaan."}
+            </small>
+            <button
+              className="cx-btn cx-btn-primary"
+              disabled={check.state !== "available"}
+              onClick={onUse}
+            >
+              <BadgeCheck size={13} /> Pakai nama ini
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 /* ═══════════════════════════════════════════════════
    MOBILE TAB BAR (bottom nav)
 ════════════════════════════════════════════════════ */
@@ -1087,26 +1146,20 @@ function MobileTabBar({ activePage, navigate, cart, onCartOpen, cartOpen }) {
     { key: "store",  label: "Store",    Icon: Package },
     { key: "orders", label: "Pesanan",  Icon: BadgeCheck },
     { key: "cart",   label: "Keranjang",Icon: ShoppingBag },
-    { key: "custom-email", label: "Email", Icon: Mail, href: "/custom-email.html" },
+    { key: "custom-email", label: "Email", Icon: Mail },
     { key: "help",   label: "Bantuan",  Icon: CircleHelp },
     { key: "account",label: "Akun",     Icon: User },
   ];
   return (
     <nav className="cx-tabbar" aria-label="Navigasi utama">
-      {items.map(({ key, label, Icon, href }) => {
-        const active = href
-          ? (typeof window !== "undefined" && window.location.pathname === href)
-          : key === "cart" ? !!cartOpen : (activePage === key && !cartOpen);
+      {items.map(({ key, label, Icon }) => {
+        const active = key === "cart" ? !!cartOpen : (activePage === key && !cartOpen);
         return (
           <button
             key={key}
             className={`cx-tabbar-item${active ? " is-active" : ""}`}
             aria-current={active ? "page" : undefined}
-            onClick={() => {
-              if (href) { window.location.href = href; return; }
-              if (key === "cart") { onCartOpen(); return; }
-              navigate(key);
-            }}
+            onClick={() => (key === "cart" ? onCartOpen() : navigate(key))}
           >
             <span className="cx-tabbar-icon">
               <Icon size={19} strokeWidth={active ? 2.4 : 1.9} />
