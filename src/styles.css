@@ -1379,6 +1379,11 @@ html, body { max-width: 100%; overflow-x: hidden; }
     border-top: 1px solid var(--b1);
   }
   .cx-cart-summary .cx-btn { height: 50px; border-radius: 999px; font-weight: 700; }
+  .cx-cart-summary { max-height: 62vh; overflow-y: auto; }
+  .cx-cart-summary > div { font-size: 12px; margin-bottom: 8px; }
+  .cx-cart-summary strong { font-size: 15px; }
+  .cx-cart-summary > .cx-custom-email label { font-size: 10.5px; }
+  .cx-cart-summary .cx-checkout-note { font-size: 10.5px; line-height: 1.4; }
 }
 
 /* ── Pesanan: tampilan modern ── */
@@ -1675,6 +1680,19 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .cx-custom-email-msg.is-available { color: var(--green); }
 .cx-custom-email-msg.is-taken, .cx-custom-email-msg.is-invalid { color: var(--red); }
 .cx-custom-email-msg.is-checking { color: var(--muted); }
+.cx-custom-email-msg.is-unknown { color: #eab308; }
+.cx-custom-email-input.is-unknown { border-color: rgba(234,179,8,.5); }
+
+/* keranjang: blok custom email selalu bertumpuk (bukan sebaris) */
+.cx-cart-summary > .cx-custom-email {
+  display: grid; gap: 6px; margin: 10px 0 12px;
+}
+.cx-cart-summary > .cx-custom-email label { justify-content: flex-start; flex-wrap: wrap; }
+.cx-cart-summary > .cx-custom-email .cx-input-wrap { width: 100%; }
+.cx-cart-summary > .cx-custom-email input { width: 100%; min-width: 0; font-size: 13px; }
+.cx-cart-summary > div { gap: 12px; align-items: baseline; }
+.cx-cart-summary > div > span { min-width: 0; }
+.cx-cart-summary strong { white-space: nowrap; }
 
 /* ── Hero modern ── */
 .cx-hero-modern { position: relative; overflow: hidden; }
