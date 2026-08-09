@@ -1781,3 +1781,30 @@ html { scroll-behavior: smooth; }
   .cx-legal-tabs button { flex: 1 1 100%; }
   .cx-admin-product-meta { grid-template-columns: 1fr; }
 }
+
+/* ── status & sinyal custom email ── */
+.cx-custom-email-signals {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+.cx-custom-email-signals li {
+  font-size: 10.5px;
+  color: var(--muted);
+  padding-left: 12px;
+  position: relative;
+  line-height: 1.4;
+}
+.cx-custom-email-signals li::before {
+  content: "•";
+  position: absolute;
+  left: 2px;
+  color: var(--accent, #6ea8fe);
+}
+.cx-status.cx-cemail-pending   { background: rgba(234,179,8,.14);  color: #eab308; }
+.cx-status.cx-cemail-processing{ background: rgba(110,168,254,.14); color: #6ea8fe; }
+.cx-status.cx-cemail-done      { background: rgba(34,197,94,.14);  color: #22c55e; }
+.cx-status.cx-cemail-rejected  { background: rgba(239,68,68,.14);  color: #ef4444; }
+.cx-row-btn.is-active { border-color: currentColor; opacity: 1; }
