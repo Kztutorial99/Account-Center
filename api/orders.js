@@ -138,12 +138,53 @@ async function isCustomEmailTaken(sql, value) {
   return Boolean(row);
 }
 
+/* Nama yang sudah pasti dipakai / dicadangkan Google & layanan besar.
+   Dipakai untuk memblokir hasil "tersedia" palsu seperti test@gmail.com. */
+const RESERVED_LOCALS = new Set([
+  "test", "tester", "testing", "test123", "admin", "administrator", "root", "info",
+  "support", "help", "helpdesk", "contact", "hello", "hi", "mail", "email", "gmail",
+  "google", "youtube", "android", "abuse", "postmaster", "webmaster", "noreply",
+  "no-reply", "security", "billing", "sales", "team", "office", "service", "user",
+  "users", "demo", "example", "sample", "guest", "me", "you", "myself", "name",
+  "developer", "dev", "official", "customerservice", "marketing", "news", "login",
+  "password", "account", "accounts", "system", "server", "api", "bot", "spam",
+]);
+
+// Kata umum yang hampir pasti sudah dipakai kalau berdiri sendiri tanpa angka.
+const COMMON_WORDS = [
+  "john", "jane", "doe", "smith", "michael", "david", "maria", "anna", "andi",
+  "budi", "agus", "rizky", "putri", "sari", "dewi", "love", "cool", "keren",
+  "ganteng", "cantik", "gaming", "gamer", "music", "photo", "business", "shop",
+  "store", "toko", "online", "indonesia", "jakarta", "bandung", "surabaya",
+];
+
+/* Skor "kemungkinan sudah dipakai" untuk alamat Gmail. Google tidak membuka
+   API ketersediaan publik, jadi alamat pendek/umum tanpa angka kita anggap
+   hampir pasti sudah dimiliki orang lain, bukan "tersedia". */
+function gmailLikelyTaken(base) {
+  if (RESERVED_LOCALS.has(base)) {
+    return "Nama ini dicadangkan / sudah pasti dipakai Google. Pilih nama lain.";
+  }
+  const hasDigit = /[0-9]/.test(base);
+  const stripped = base.replace(/[0-9]/g, "");
+  if (COMMON_WORDS.includes(stripped) && (!hasDigit || /^[0-9]{1,2}$/.test(base.replace(/[^0-9]/g, "")))) {
+    return "Kata ini terlalu umum, hampir pasti sudah dipakai. Tambahkan angka/nama unik.";
+  }
+  if (!hasDigit && base.length <= 12) {
+    return "Nama pendek tanpa angka hampir pasti sudah dipakai. Tambahkan angka atau kata unik.";
+  }
+  return "";
+}
+
 /* Cek lengkap: dipakai pembeli CodeXa lain, aturan Gmail, jejak publik
-   (Gravatar), dan MX domain. Google tidak lagi membuka API ketersediaan
-   username publik, jadi hasil "tersedia" = tidak ada sinyal terpakai. */
+   (Gravatar), MX domain, plus heuristik nama umum/dicadangkan. Google tidak
+   membuka API ketersediaan username, jadi hasil terbaik untuk Gmail adalah
+   "belum bisa dipastikan" — bukan klaim pasti tersedia. */
 async function inspectCustomEmail(sql, parsed) {
   const { value, local, domain } = parsed;
   const canonical = canonicalOf(local, domain);
+  const isGoogle = GOOGLE_DOMAINS.includes(domain);
+  const base = canonical.split("@")[0];
   const signals = [];
 
   await ensureCustomEmailTable(sql);
@@ -153,7 +194,7 @@ async function inspectCustomEmail(sql, parsed) {
   }
   signals.push("Belum dipesan di CodeXa");
 
-  if (GOOGLE_DOMAINS.includes(domain)) {
+  if (isGoogle) {
     const policy = gmailPolicyError(local);
     if (policy) {
       return { available: false, state: "invalid", normalized: value, canonical, reason: `${policy} (aturan Gmail)`, signals };
@@ -167,13 +208,34 @@ async function inspectCustomEmail(sql, parsed) {
     if (mx) signals.push(`Domain ${domain} punya server email aktif`);
   }
 
+  // Nama dicadangkan / terlalu umum → tolak sebelum cek jaringan.
+  const likely = RESERVED_LOCALS.has(base)
+    ? "Nama ini dicadangkan / sudah pasti dipakai. Pilih nama lain."
+    : (isGoogle ? gmailLikelyTaken(base) : "");
+  if (likely) {
+    return {
+      available: false, state: "taken", normalized: value, canonical,
+      reason: likely,
+      signals: [...signals, "Terdeteksi sebagai nama umum/dicadangkan"],
+    };
+  }
+
   const used = await gravatarUsed(canonical);
   if (used) {
     return { available: false, state: "taken", normalized: value, canonical, reason: "Alamat ini sudah dipakai orang lain (terdaftar di profil publik Gravatar)", signals: [...signals, "Terdaftar di Gravatar → sudah dimiliki orang"] };
   }
   signals.push(used === null ? "Cek jejak publik tidak bisa dijangkau" : "Tidak ada jejak pemakaian publik");
-  if (GOOGLE_DOMAINS.includes(domain)) {
+  if (isGoogle) {
     signals.push("Titik diabaikan Gmail, dicek sebagai " + canonical);
+    signals.push("Google tidak membuka data ketersediaan username — final saat pembuatan akun");
+    return {
+      available: true,
+      state: "unknown",
+      normalized: value,
+      canonical,
+      reason: `${value} belum bisa dipastikan bebas — kalau ternyata sudah dipakai, admin akan hubungi kamu untuk ganti nama`,
+      signals,
+    };
   }
 
   return {
