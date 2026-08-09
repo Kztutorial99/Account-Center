@@ -30,6 +30,22 @@
     {
       "source": "/help",
       "destination": "/"
+    },
+    {
+      "source": "/terms",
+      "destination": "/"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/"
+    },
+    {
+      "source": "/refund",
+      "destination": "/"
+    },
+    {
+      "source": "/disclaimer",
+      "destination": "/"
     }
   ]
 }

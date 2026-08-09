@@ -78,18 +78,130 @@ function InputWrap({ icon: Icon, children }) {
   return <div className="cx-input-wrap">{Icon && <Icon size={13} />}{children}</div>;
 }
 
+/* ─── Spinner kecil untuk state loading tombol ─── */
+function Spinner({ size = 12 }) {
+  return <RefreshCw size={size} className="cx-spin" aria-hidden="true" />;
+}
+
+/* ─── Tombol dengan loading state bawaan ───
+   Selama busy: tombol otomatis disabled + spinner, jadi tidak ada aksi yang
+   terlihat "diam" dan user tidak menekan berkali-kali. */
+function ActionBtn({ busy, disabled, children, busyLabel, className = "cx-btn cx-btn-secondary cx-btn-sm", ...rest }) {
+  return (
+    <button {...rest} className={className} disabled={busy || disabled} aria-busy={busy ? "true" : undefined}>
+      {busy ? <><Spinner /> {busyLabel || "Memproses..."}</> : children}
+    </button>
+  );
+}
+
+/* ─── Modal konfirmasi (pengganti window.confirm) ───
+   Dipakai untuk semua aksi penting: hapus, setujui, tolak, bersihkan riwayat. */
+function useConfirmDialog() {
+  const [req, setReq] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const resolver = useRef(null);
+
+  const confirm = (options) =>
+    new Promise((resolve) => {
+      resolver.current = resolve;
+      setReq({
+        title: "Konfirmasi tindakan",
+        description: "",
+        confirmText: "Konfirmasi",
+        cancelText: "Batal",
+        danger: false,
+        ...options,
+      });
+    });
+
+  const settle = (value) => {
+    setReq(null); setBusy(false);
+    if (resolver.current) { const r = resolver.current; resolver.current = null; r(value); }
+  };
+
+  useEffect(() => {
+    if (!req) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") settle(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [req]);
+
+  const element = req ? (
+    <div className="cx-modal-backdrop cx-confirm-backdrop" onClick={() => !busy && settle(false)}>
+      <div className={`cx-modal cx-confirm-modal${req.danger ? " is-danger" : ""}`} role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div className="cx-confirm-icon">{req.danger ? <Trash2 size={18} /> : <ShieldCheck size={18} />}</div>
+        <h3>{req.title}</h3>
+        {req.description && <p>{req.description}</p>}
+        {req.detail && <div className="cx-confirm-detail">{req.detail}</div>}
+        <div className="cx-confirm-buttons">
+          <button className="cx-btn cx-btn-ghost" onClick={() => settle(false)} disabled={busy}>{req.cancelText}</button>
+          <button
+            className={`cx-btn ${req.danger ? "cx-btn-danger" : "cx-btn-primary"}`}
+            onClick={() => { setBusy(true); settle(true); }}
+            disabled={busy}
+            autoFocus
+          >
+            {busy ? <><Spinner /> Memproses...</> : req.confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  return [confirm, element];
+}
+
+/* ─── Penanda aksi yang sedang berjalan (per-baris/per-tombol) ─── */
+function usePendingActions() {
+  const [pending, setPending] = useState({});
+  const isPending = (key) => Boolean(pending[key]);
+  const run = async (key, fn) => {
+    if (pending[key]) return undefined;
+    setPending((p) => ({ ...p, [key]: true }));
+    try { return await fn(); }
+    finally { setPending((p) => { const next = { ...p }; delete next[key]; return next; }); }
+  };
+  return [isPending, run];
+}
+
+/* ─── Teks panjang: tampil 3 baris dulu, sisanya lewat "Lihat selengkapnya" ─── */
+function ExpandableText({ text: value, lines = 3, className = "", limit = 140 }) {
+  const [open, setOpen] = useState(false);
+  const raw = String(value == null ? "" : value);
+  if (!raw.trim()) return null;
+  const needsToggle = raw.length > limit || raw.split("\n").length > lines;
+  return (
+    <div className={`cx-expandable ${className}`.trim()}>
+      <p className={open || !needsToggle ? "" : `cx-clamp cx-clamp-${lines}`}>{raw}</p>
+      {needsToggle && (
+        <button type="button" className="cx-expand-btn" onClick={() => setOpen((v) => !v)}>
+          {open ? "Sembunyikan" : "Lihat selengkapnya"} <ChevronDown size={11} style={open ? { transform: "rotate(180deg)" } : undefined} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ─── Skeleton baris untuk state loading daftar ─── */
+function RowSkeleton({ rows = 4 }) {
+  return (
+    <div className="cx-skeleton-list">
+      {Array.from({ length: rows }).map((_, i) => <span key={i} className="cx-skeleton" />)}
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════
    APP ROOT
 ════════════════════════════════════════════════════ */
+const PAGE_PATHS = ["admin", "orders", "help", "account", "topup", "terms", "privacy", "refund"];
+const pageFromPath = (pathname) => {
+  const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
+  return PAGE_PATHS.includes(slug) ? slug : "store";
+};
+
 function App() {
-  const [activePage, setActivePage] = useState(() =>
-    window.location.pathname === "/admin" ? "admin"
-    : window.location.pathname === "/orders" ? "orders"
-    : window.location.pathname === "/help" ? "help"
-    : window.location.pathname === "/account" ? "account"
-    : window.location.pathname === "/topup" ? "topup"
-    : "store"
-  );
+  const [activePage, setActivePage] = useState(() => pageFromPath(window.location.pathname));
   const [search, setSearch]   = useState("");
   const [notice, setNotice]   = useState("");
   const [cart, setCart]       = useState([]);
@@ -101,7 +213,26 @@ function App() {
   const [auth, setAuth]         = useState({ user: null, loading: true });
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkout, setCheckout] = useState({ loading: false, error: "", order: null });
+  const [customEmail, setCustomEmail] = useState("");
+  const [emailCheck, setEmailCheck] = useState({ state: "idle", message: "" });
   const noticeTimer = useRef(null);
+
+  /* Cek ketersediaan email/username kustom (debounce 500ms) supaya pembeli
+     tahu lebih dulu apakah nama yang diminta masih bisa dipakai. */
+  useEffect(() => {
+    const value = customEmail.trim();
+    if (!value) { setEmailCheck({ state: "idle", message: "" }); return undefined; }
+    if (value.length < 3) { setEmailCheck({ state: "invalid", message: "Minimal 3 karakter" }); return undefined; }
+    setEmailCheck({ state: "checking", message: "Mengecek ketersediaan..." });
+    const timer = window.setTimeout(() => {
+      jsonRequest(`/api/orders?resource=check-email&value=${encodeURIComponent(value)}`)
+        .then((p) => setEmailCheck(p.available
+          ? { state: "available", message: `${p.normalized} tersedia dan bisa dipakai` }
+          : { state: "taken", message: p.reason || "Sudah dipakai pembeli lain, coba nama lain" }))
+        .catch((e) => setEmailCheck({ state: "invalid", message: e.message }));
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [customEmail]);
 
 
   const loadSession = () =>
@@ -126,13 +257,7 @@ function App() {
   };
 
   useEffect(() => {
-    const pop = () => setActivePage(
-      window.location.pathname === "/admin"  ? "admin"
-      : window.location.pathname === "/orders" ? "orders"
-      : window.location.pathname === "/help"   ? "help"
-      : window.location.pathname === "/account" ? "account"
-      : window.location.pathname === "/topup" ? "topup" : "store"
-    );
+    const pop = () => setActivePage(pageFromPath(window.location.pathname));
     window.addEventListener("popstate", pop);
     loadSession();
     loadCatalog();
@@ -189,8 +314,13 @@ function App() {
     if (!items.length) { setCheckout({ loading: false, error: "Belum ada akun yang dipilih", order: null }); return; }
     setCheckout({ loading: true, error: "", order: null });
     try {
-      const result = await jsonRequest("/api/orders", { method: "POST", body: JSON.stringify({ items }) });
+      const result = await jsonRequest("/api/orders", {
+        method: "POST",
+        body: JSON.stringify({ items, customEmail: customEmail.trim() }),
+      });
       setCart([]);
+      setCustomEmail("");
+      setEmailCheck({ state: "idle", message: "" });
       setCartOpen(false);
       setCheckout({ loading: false, error: "", order: result.order });
       loadSession();
@@ -336,10 +466,35 @@ function App() {
               <div className="cx-cart-summary">
                 <div><span>Subtotal ({cart.reduce((a, c) => a + (Number(c.qty) || 1), 0)} akun)</span><strong>{formatPrice(cartTotal)}</strong></div>
                 <div><span>Saldo kamu</span><strong>{formatPrice(auth.user ? auth.user.balance : 0)}</strong></div>
+                <div className="cx-custom-email">
+                  <label htmlFor="cx-custom-email-input">
+                    <Mail size={11} /> Email / username khusus <span>opsional</span>
+                  </label>
+                  <div className={`cx-input-wrap cx-custom-email-input is-${emailCheck.state}`}>
+                    <input
+                      id="cx-custom-email-input"
+                      value={customEmail}
+                      onChange={(e) => setCustomEmail(e.target.value)}
+                      placeholder="mis. namaku99 atau namaku99@gmail.com"
+                      maxLength={80}
+                      autoComplete="off"
+                    />
+                    {emailCheck.state === "checking" && <Spinner />}
+                    {emailCheck.state === "available" && <Check size={12} color="var(--green)" />}
+                    {(emailCheck.state === "taken" || emailCheck.state === "invalid") && <X size={12} color="var(--red)" />}
+                  </div>
+                  <small className={`cx-custom-email-msg is-${emailCheck.state}`}>
+                    {emailCheck.message || "Kosongkan kalau kamu tidak butuh nama akun tertentu."}
+                  </small>
+                </div>
                 <p className="cx-checkout-note"><ShieldCheck size={11} /> Saldo dipotong otomatis, detail akun langsung terbuka</p>
                 {checkout.error && <p className="cx-field-error" style={{ margin: "0 0 8px" }}>{checkout.error}</p>}
-                <button className="cx-btn cx-btn-primary cx-btn-full" disabled={checkout.loading} onClick={doCheckout}>
-                  {checkout.loading ? "Memproses..." : <>Bayar {formatPrice(cartTotal)} <ArrowRight size={13} /></>}
+                <button
+                  className="cx-btn cx-btn-primary cx-btn-full"
+                  disabled={checkout.loading || emailCheck.state === "checking" || emailCheck.state === "taken"}
+                  onClick={doCheckout}
+                >
+                  {checkout.loading ? <><Spinner size={13} /> Memproses pembayaran...</> : <>Bayar {formatPrice(cartTotal)} <ArrowRight size={13} /></>}
                 </button>
                 {auth.user && cartTotal > auth.user.balance && (
                   <button className="cx-btn cx-btn-ghost cx-btn-full" style={{ marginTop: 8 }} onClick={() => { setCartOpen(false); navigate("topup"); }}>
@@ -379,6 +534,16 @@ function App() {
 
       {notice && <div className="cx-toast"><Check size={14} />{notice}</div>}
     </>
+  );
+
+  if (activePage === "terms" || activePage === "privacy" || activePage === "refund") return (
+    <div className="cx-app">
+      {topbar}
+      <LegalPage kind={activePage} onBack={() => navigate("store")} navigate={navigate} />
+      <StoreFooter navigate={navigate} />
+      {tabbar}
+      {overlays}
+    </div>
   );
 
   if (activePage === "account") return (
@@ -428,11 +593,13 @@ function App() {
       {topbar}
 
       {/* Hero */}
-      <section className="cx-hero">
+      <section className="cx-hero cx-hero-modern">
+        <div className="cx-hero-glow" aria-hidden="true" />
         <div className="cx-container cx-hero-inner">
+          <div className="cx-hero-badge"><span className="cx-hero-pulse" /> Stok live · {data.loading ? "memuat" : `${data.products.length} listing`} siap kirim</div>
           <div className="cx-kicker">CODEXA ACCESS</div>
           <h1>Akun digital,<br /><em>tanpa drama.</em></h1>
-          <p className="cx-hero-sub">Akun siap pakai dari katalog nyata. Detail login hanya dikirim setelah pembelian berhasil.</p>
+          <p className="cx-hero-sub">Akun siap pakai dari katalog nyata. Detail login hanya dibuka setelah pembayaran berhasil — otomatis, tanpa nunggu admin.</p>
           <div className="cx-hero-actions">
             <button className="cx-btn cx-btn-primary" onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}>
               Lihat katalog <ArrowRight size={13} />
@@ -440,6 +607,11 @@ function App() {
             <button className="cx-btn cx-btn-ghost" onClick={() => navigate("help")}>
               Cara beli
             </button>
+          </div>
+          <div className="cx-hero-metrics">
+            <div><strong>{data.loading ? "—" : data.products.reduce((a, x) => a + (Number(x.stock) || 0), 0)}</strong><small>Akun tersedia</small></div>
+            <div><strong>&lt; 1 mnt</strong><small>Rata-rata pengiriman</small></div>
+            <div><strong>24/7</strong><small>Bantuan admin</small></div>
           </div>
         </div>
 
@@ -562,7 +734,7 @@ function OrderItems({ items, onNotice }) {
               </div>
             );
           })}
-          {item.deliveryDetails && <p className="cx-order-note">{item.deliveryDetails}</p>}
+          {item.deliveryDetails && <ExpandableText className="cx-order-note" text={item.deliveryDetails} />}
         </div>
       ))}
     </div>
@@ -571,6 +743,8 @@ function OrderItems({ items, onNotice }) {
 
 function OrdersPage({ onBack, onNotice, navigate }) {
   const [state, setState] = useState({ orders: [], loading: true, error: "" });
+  const [confirm, confirmDialog] = useConfirmDialog();
+  const [isPending, runAction] = usePendingActions();
   const load = () => {
     setState((x) => ({ ...x, loading: true }));
     jsonRequest("/api/orders")
@@ -580,12 +754,20 @@ function OrdersPage({ onBack, onNotice, navigate }) {
   useEffect(() => { load(); }, []);
 
   const deleteOrder = async (id) => {
-    if (!window.confirm("Hapus pesanan ini dari riwayat? Detail akun tidak bisa dibuka lagi.")) return;
-    try {
-      await jsonRequest("/api/orders", { method: "DELETE", body: JSON.stringify({ id }) });
-      setState((x) => ({ ...x, orders: x.orders.filter((o) => o.id !== id) }));
-      onNotice("Pesanan dihapus dari riwayat");
-    } catch (e) { onNotice(e.message); }
+    const ok = await confirm({
+      title: "Hapus pesanan ini?",
+      description: "Pesanan hilang dari riwayat dan detail akunnya tidak bisa dibuka lagi. Pastikan kamu sudah menyimpan email & password-nya.",
+      confirmText: "Ya, hapus",
+      danger: true,
+    });
+    if (!ok) return;
+    await runAction(`order-${id}`, async () => {
+      try {
+        await jsonRequest("/api/orders", { method: "DELETE", body: JSON.stringify({ id }) });
+        setState((x) => ({ ...x, orders: x.orders.filter((o) => o.id !== id) }));
+        onNotice("Pesanan dihapus dari riwayat");
+      } catch (e) { onNotice(e.message); }
+    });
   };
 
   return (
@@ -628,12 +810,15 @@ function OrdersPage({ onBack, onNotice, navigate }) {
               <span className={`cx-order-status${order.status === "paid" ? " is-paid" : ""}`}>
                 <BadgeCheck size={12} /> {order.status === "paid" ? "Lunas" : order.status}
               </span>
-              <button className="cx-row-btn danger" onClick={() => deleteOrder(order.id)} aria-label="Hapus pesanan"><Trash2 size={12} /></button>
+              <button className="cx-row-btn danger" onClick={() => deleteOrder(order.id)} aria-label="Hapus pesanan" disabled={isPending(`order-${order.id}`)}>
+                {isPending(`order-${order.id}`) ? <Spinner /> : <Trash2 size={12} />}
+              </button>
             </div>
           </div>
           <OrderItems items={order.items} onNotice={onNotice} />
         </article>
       ))}
+      {confirmDialog}
     </div>
   );
 }
@@ -1030,6 +1215,155 @@ function HelpPage({ navigate, onAskAssistant }) {
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   HALAMAN LEGAL (Syarat, Privasi, Refund)
+════════════════════════════════════════════════════ */
+const LEGAL_CONTENT = {
+  terms: {
+    kicker: "Dokumen resmi",
+    title: "Syarat & Ketentuan",
+    intro: "Dengan mendaftar dan bertransaksi di CodeXa Store, kamu dianggap sudah membaca dan menyetujui ketentuan di bawah ini.",
+    sections: [
+      { h: "1. Ketentuan akun pembeli", p: [
+        "Satu orang hanya boleh memakai satu akun CodeXa. Data yang didaftarkan wajib benar dan aktif, terutama email dan nomor WhatsApp.",
+        "Keamanan password akun CodeXa sepenuhnya tanggung jawab pemilik akun. Segala aktivitas yang terjadi setelah login dianggap dilakukan oleh pemilik akun.",
+        "CodeXa berhak menangguhkan atau memblokir akun yang terindikasi melakukan penipuan, chargeback, spam pembelian, atau menyalahgunakan sistem saldo.",
+      ] },
+      { h: "2. Saldo dan pembayaran", p: [
+        "Seluruh pembelian di CodeXa memakai saldo. Saldo diisi lewat menu Top Up dan baru masuk setelah admin memverifikasi bukti pembayaran.",
+        "Permintaan top up diproses pada jam operasional. Nominal yang masuk mengikuti jumlah yang benar-benar diterima admin.",
+        "Saldo yang sudah masuk tidak dapat dicairkan kembali menjadi uang tunai dan hanya bisa dipakai untuk transaksi di CodeXa Store.",
+      ] },
+      { h: "3. Produk akun digital", p: [
+        "Produk yang dijual adalah akun digital dengan stok terbatas. Stok yang ditampilkan adalah stok nyata dari database, bukan contoh.",
+        "Detail login (email dan password) hanya terbuka setelah pembayaran berhasil dan dapat dilihat kapan saja di halaman Pesanan.",
+        "Pembeli wajib segera mengganti password akun yang dibeli setelah menerima detail login.",
+      ] },
+      { h: "4. Larangan", p: [
+        "Dilarang menjual ulang akun dengan klaim garansi atas nama CodeXa tanpa izin tertulis.",
+        "Dilarang memakai akun yang dibeli untuk aktivitas ilegal, penipuan, atau tindakan yang melanggar ketentuan penyedia layanan asal.",
+      ] },
+      { h: "5. Perubahan ketentuan", p: [
+        "CodeXa dapat memperbarui syarat dan ketentuan ini sewaktu-waktu. Versi terbaru yang tayang di halaman ini adalah versi yang berlaku.",
+      ] },
+    ],
+  },
+  privacy: {
+    kicker: "Dokumen resmi",
+    title: "Kebijakan Privasi",
+    intro: "Kami hanya mengumpulkan data yang benar-benar dibutuhkan untuk menjalankan transaksi dan menjaga keamanan akun kamu.",
+    sections: [
+      { h: "1. Data yang kami kumpulkan", p: [
+        "Data akun: nama, email, dan nomor WhatsApp (opsional) yang kamu isi saat mendaftar.",
+        "Data transaksi: riwayat top up, riwayat pesanan, nominal, metode pembayaran, dan catatan yang kamu kirim ke admin.",
+        "Data teknis dasar yang diperlukan agar sesi login tetap aman.",
+      ] },
+      { h: "2. Cara kami memakai data", p: [
+        "Memproses pembelian, verifikasi top up, dan pengiriman detail akun.",
+        "Mengirim notifikasi terkait status pesanan dan saldo di dalam aplikasi.",
+        "Mendeteksi penyalahgunaan, penipuan, dan aktivitas mencurigakan.",
+      ] },
+      { h: "3. Keamanan data", p: [
+        "Password akun CodeXa disimpan dalam bentuk hash, bukan teks biasa.",
+        "Kredensial akun yang dijual disimpan dalam bentuk terenkripsi dan hanya terbuka untuk pembeli sah setelah pembayaran.",
+        "Akses admin dilindungi sesi terpisah dan tidak dibagikan ke pihak ketiga.",
+      ] },
+      { h: "4. Berbagi data", p: [
+        "Kami tidak menjual maupun menyewakan data pribadi kamu ke pihak mana pun.",
+        "Data hanya dibagikan bila diwajibkan oleh hukum yang berlaku.",
+      ] },
+      { h: "5. Hak kamu", p: [
+        "Kamu bisa meminta perubahan atau penghapusan data akun kapan saja lewat menu Bantuan atau kontak admin.",
+        "Penghapusan akun akan menghapus riwayat top up dan pesanan yang terkait secara permanen.",
+      ] },
+    ],
+  },
+  refund: {
+    kicker: "Dokumen resmi",
+    title: "Kebijakan Refund",
+    intro: "Kami ingin transaksi berjalan adil untuk semua pihak. Berikut aturan pengembalian dana yang berlaku.",
+    sections: [
+      { h: "1. Refund yang disetujui", p: [
+        "Akun yang dibeli tidak bisa dipakai sama sekali sejak awal (salah kredensial) dan dilaporkan maksimal 1x24 jam setelah pembelian.",
+        "Terjadi kesalahan sistem sehingga saldo terpotong tetapi detail akun tidak diterima.",
+      ] },
+      { h: "2. Refund yang ditolak", p: [
+        "Password akun sudah diganti oleh pembeli lalu terjadi masalah setelahnya.",
+        "Pembeli salah membeli produk karena tidak membaca deskripsi.",
+        "Laporan dikirim lewat dari batas waktu klaim.",
+      ] },
+      { h: "3. Bentuk pengembalian", p: [
+        "Refund yang disetujui dikembalikan dalam bentuk saldo CodeXa, bukan uang tunai.",
+        "Proses peninjauan maksimal 2x24 jam sejak laporan lengkap diterima admin.",
+      ] },
+    ],
+  },
+  disclaimer: {
+    kicker: "Dokumen resmi",
+    title: "Disclaimer",
+    intro: "Batasan tanggung jawab CodeXa atas produk digital dan layanan yang dijual di platform ini.",
+    sections: [
+      { h: "1. Status platform", p: [
+        "CodeXa adalah toko digital independen yang menjual akun dan lisensi layanan pihak ketiga. Kami tidak berafiliasi, tidak disponsori, dan tidak mewakili merek mana pun yang produknya tercantum di katalog.",
+        "Seluruh nama merek, logo, dan tanda dagang adalah milik pemiliknya masing-masing dan hanya dipakai sebagai keterangan produk.",
+      ] },
+      { h: "2. Ketersediaan layanan", p: [
+        "Stok, harga, dan masa aktif produk dapat berubah sewaktu-waktu mengikuti kebijakan penyedia layanan aslinya.",
+        "Kami berusaha menjaga situs tetap online, namun tidak menjamin layanan bebas gangguan, pemeliharaan, atau kendala pada penyedia pihak ketiga.",
+      ] },
+      { h: "3. Tanggung jawab pengguna", p: [
+        "Pembeli bertanggung jawab menjaga kerahasiaan detail akun yang diterima dan tidak membagikannya ke pihak lain.",
+        "Penyalahgunaan akun, pelanggaran ketentuan penyedia layanan, atau perubahan kredensial oleh pembeli berada di luar tanggung jawab CodeXa.",
+      ] },
+      { h: "4. Batasan ganti rugi", p: [
+        "Tanggung jawab maksimum CodeXa atas satu transaksi terbatas pada nilai saldo yang dibayarkan untuk transaksi tersebut.",
+        "Kami tidak bertanggung jawab atas kerugian tidak langsung seperti kehilangan data, kehilangan pendapatan, atau gangguan pekerjaan.",
+      ] },
+      { h: "5. Konten informasi", p: [
+        "Deskripsi produk, panduan, dan jawaban asisten di situs ini bersifat informatif dan dapat berubah tanpa pemberitahuan.",
+        "Untuk keputusan penting, konfirmasikan terlebih dahulu ke admin lewat halaman Bantuan.",
+      ] },
+    ],
+  },
+};
+
+function LegalPage({ kind, onBack, navigate }) {
+  const doc = LEGAL_CONTENT[kind] || LEGAL_CONTENT.terms;
+  useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [kind]);
+  return (
+    <div className="cx-legal-page cx-container">
+      <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
+      <header className="cx-legal-hero">
+        <span className="cx-orders-kicker">{doc.kicker}</span>
+        <h1>{doc.title}</h1>
+        <p>{doc.intro}</p>
+        <small>Terakhir diperbarui: {formatDate(new Date())}</small>
+      </header>
+      <div className="cx-legal-tabs">
+        {[["terms", "Syarat & Ketentuan"], ["privacy", "Kebijakan Privasi"], ["refund", "Kebijakan Refund"], ["disclaimer", "Disclaimer"]].map(([id, label]) => (
+          <button key={id} className={kind === id ? "active" : ""} onClick={() => navigate(id)}>{label}</button>
+        ))}
+      </div>
+      <article className="cx-legal-body">
+        {doc.sections.map((sec) => (
+          <section key={sec.h}>
+            <h2>{sec.h}</h2>
+            {sec.p.map((line, i) => <p key={i}>{line}</p>)}
+          </section>
+        ))}
+        <div className="cx-legal-contact">
+          <FileText size={14} />
+          <div>
+            <strong>Ada yang belum jelas?</strong>
+            <p>Hubungi admin lewat halaman Bantuan, kami balas di jam operasional.</p>
+          </div>
+          <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => navigate("help")}>Buka Bantuan</button>
+        </div>
+      </article>
+    </div>
+  );
+}
+
 function StoreFooter({ navigate }) {
   return (
     <footer className="cx-footer">
@@ -1042,7 +1376,12 @@ function StoreFooter({ navigate }) {
         <div className="cx-footer-links">
           <button onClick={() => navigate("help")}>Bantuan</button>
           <button onClick={() => navigate("orders")}>Pesanan</button>
+          <button onClick={() => navigate("terms")}>Syarat &amp; Ketentuan</button>
+          <button onClick={() => navigate("privacy")}>Kebijakan Privasi</button>
+          <button onClick={() => navigate("refund")}>Kebijakan Refund</button>
+          <button onClick={() => navigate("disclaimer")}>Disclaimer</button>
         </div>
+        <p className="cx-footer-copy">© {new Date().getFullYear()} CodeXa Store. Seluruh transaksi tunduk pada Syarat &amp; Ketentuan.</p>
       </div>
     </footer>
   );
@@ -1069,7 +1408,12 @@ function ProductCard({ product, colorIdx, onBuy }) {
           <span className="cx-product-badge">{product.stock} stok</span>
         </div>
         <h3 className="cx-product-title">{product.title}</h3>
-        <p className="cx-product-desc">{product.description || "Akun digital siap digunakan. Detail dikirim setelah pembayaran."}</p>
+        <ExpandableText
+          className="cx-product-desc"
+          lines={3}
+          limit={120}
+          text={product.description || "Akun digital siap digunakan. Detail dikirim setelah pembayaran."}
+        />
         {accounts.length > 0 && (
           <div className="cx-cred-preview">
             <div className="cx-cred-head">Ceklis akun yang mau dibeli ({selected.length}/{accounts.length})</div>
@@ -1134,6 +1478,26 @@ function AdminPage({ onBack, onNotice }) {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [refreshing, setRefreshing]       = useState(false);
   const [headerMenu, setHeaderMenu]       = useState("");
+  const [confirm, confirmDialog]          = useConfirmDialog();
+  const [isPending, runAction]            = usePendingActions();
+  const [dismissedAlerts, setDismissedAlerts] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("codexa.admin.alerts.dismissed") || "[]"); }
+    catch (_) { return []; }
+  });
+  const contentRef = useRef(null);
+
+  const persistDismissed = (list) => {
+    setDismissedAlerts(list);
+    try { localStorage.setItem("codexa.admin.alerts.dismissed", JSON.stringify(list)); } catch (_) {}
+  };
+  const dismissAlert = (key) => { persistDismissed([...new Set([...dismissedAlerts, key])]); onNotice("Notifikasi dihapus"); };
+
+  // Pindah menu = konten selalu mulai dari atas, tidak menggantung di tengah.
+  const goNav = (label) => {
+    setActiveNav(label);
+    setNavOpen(false);
+    if (label === "Pengguna") setUserQuery("");
+  };
 
   const loadSettings = () =>
     jsonRequest("/api/admin/settings", { method: "GET" })
@@ -1176,7 +1540,12 @@ function AdminPage({ onBack, onNotice }) {
   };
 
   const clearApiKey = async () => {
-    if (!window.confirm("Hapus API key Assisten yang tersimpan?")) return;
+    const ok = await confirm({
+      title: "Hapus API key Assisten?",
+      description: "Assisten tidak bisa dipakai sampai kamu memasukkan API key baru.",
+      confirmText: "Ya, hapus key", danger: true,
+    });
+    if (!ok) return;
     setSavingAi(true); setAiError(""); setAiNotice("");
     try {
       const p = await jsonRequest("/api/admin/settings", { method: "PATCH", body: JSON.stringify({ apiKey: "__CLEAR__" }) });
@@ -1243,19 +1612,40 @@ function AdminPage({ onBack, onNotice }) {
   };
 
   const deleteUser = async (u) => {
-    if (!window.confirm(`Hapus akun ${u.email}? Semua riwayat top up ikut terhapus.`)) return;
-    try {
-      await jsonRequest("/api/admin/users", { method: "DELETE", body: JSON.stringify({ id: u.id }) });
-      loadUsersData(); onNotice("User dihapus");
-    } catch (e) { setApiError(e.message); }
+    const ok = await confirm({
+      title: "Hapus akun pengguna ini?",
+      description: "Semua riwayat top up dan pesanan milik akun ini ikut terhapus permanen.",
+      detail: `${u.name || "Tanpa nama"} · ${u.email}`,
+      confirmText: "Ya, hapus akun", danger: true,
+    });
+    if (!ok) return;
+    await runAction(`user-del-${u.id}`, async () => {
+      try {
+        await jsonRequest("/api/admin/users", { method: "DELETE", body: JSON.stringify({ id: u.id }) });
+        await loadUsersData(); onNotice("User dihapus");
+      } catch (e) { setApiError(e.message); }
+    });
   };
 
-  const reviewTopup = async (id, action) => {
-    try {
-      await jsonRequest("/api/admin/topups", { method: "PATCH", body: JSON.stringify({ id, action }) });
-      onNotice(action === "approve" ? "Top up disetujui, saldo user bertambah" : "Top up ditolak");
-      loadUsersData();
-    } catch (e) { setApiError(e.message); }
+  const reviewTopup = async (id, action, info) => {
+    const approve = action === "approve";
+    const ok = await confirm({
+      title: approve ? "Setujui permintaan top up?" : "Tolak permintaan top up?",
+      description: approve
+        ? "Saldo pengguna langsung bertambah dan notifikasi terkirim ke akunnya."
+        : "Pengguna akan menerima notifikasi bahwa permintaannya ditolak.",
+      detail: info,
+      confirmText: approve ? "Ya, setujui" : "Ya, tolak",
+      danger: !approve,
+    });
+    if (!ok) return;
+    await runAction(`topup-${id}`, async () => {
+      try {
+        await jsonRequest("/api/admin/topups", { method: "PATCH", body: JSON.stringify({ id, action }) });
+        onNotice(approve ? "Top up disetujui, saldo user bertambah" : "Top up ditolak");
+        await loadUsersData();
+      } catch (e) { setApiError(e.message); }
+    });
   };
 
   const checkAuth = () =>
@@ -1290,30 +1680,54 @@ function AdminPage({ onBack, onNotice }) {
   };
 
   const deleteAdminOrder = async (id) => {
-    if (!window.confirm("Hapus pesanan ini dari riwayat?")) return;
-    try {
-      await jsonRequest("/api/orders?scope=admin", { method: "DELETE", body: JSON.stringify({ id }) });
-      setOrders((list) => list.filter((o) => o.id !== id));
-      onNotice("Pesanan dihapus");
-    } catch (e) { setApiError(e.message); }
+    const ok = await confirm({
+      title: "Hapus pesanan ini?",
+      description: "Pesanan dihapus dari riwayat admin dan pembeli. Tindakan ini tidak bisa dibatalkan.",
+      detail: `#${String(id).slice(0, 8)}`,
+      confirmText: "Ya, hapus", danger: true,
+    });
+    if (!ok) return;
+    await runAction(`aorder-${id}`, async () => {
+      try {
+        await jsonRequest("/api/orders?scope=admin", { method: "DELETE", body: JSON.stringify({ id }) });
+        setOrders((list) => list.filter((o) => o.id !== id));
+        onNotice("Pesanan dihapus");
+      } catch (e) { setApiError(e.message); }
+    });
   };
 
   const deleteTopup = async (id) => {
-    if (!window.confirm("Hapus permintaan top up ini dari riwayat?")) return;
-    try {
-      await jsonRequest("/api/admin/topups", { method: "DELETE", body: JSON.stringify({ id }) });
-      setTopups((list) => list.filter((t) => t.id !== id));
-      onNotice("Permintaan top up dihapus");
-    } catch (e) { setApiError(e.message); }
+    const ok = await confirm({
+      title: "Hapus permintaan top up ini?",
+      description: "Catatan permintaan ini hilang dari riwayat admin.",
+      confirmText: "Ya, hapus", danger: true,
+    });
+    if (!ok) return;
+    await runAction(`topup-del-${id}`, async () => {
+      try {
+        await jsonRequest("/api/admin/topups", { method: "DELETE", body: JSON.stringify({ id }) });
+        setTopups((list) => list.filter((t) => t.id !== id));
+        onNotice("Permintaan top up dihapus");
+      } catch (e) { setApiError(e.message); }
+    });
   };
 
   const clearTopupHistory = async () => {
-    if (!window.confirm("Hapus semua permintaan top up yang sudah selesai?")) return;
-    try {
-      await jsonRequest("/api/admin/topups", { method: "DELETE", body: JSON.stringify({ scope: "resolved" }) });
-      setTopups((list) => list.filter((t) => t.status === "pending"));
-      onNotice("Riwayat top up dibersihkan");
-    } catch (e) { setApiError(e.message); }
+    const done = topups.filter((t) => t.status !== "pending").length;
+    const ok = await confirm({
+      title: "Bersihkan riwayat top up?",
+      description: "Semua permintaan yang sudah disetujui atau ditolak akan dihapus. Permintaan yang masih menunggu tetap aman.",
+      detail: `${done} riwayat akan dihapus`,
+      confirmText: "Ya, bersihkan", danger: true,
+    });
+    if (!ok) return;
+    await runAction("topup-clear", async () => {
+      try {
+        await jsonRequest("/api/admin/topups", { method: "DELETE", body: JSON.stringify({ scope: "resolved" }) });
+        setTopups((list) => list.filter((t) => t.status === "pending"));
+        onNotice("Riwayat top up dibersihkan");
+      } catch (e) { setApiError(e.message); }
+    });
   };
 
   const login = async (e) => {
@@ -1365,10 +1779,21 @@ function AdminPage({ onBack, onNotice }) {
     finally { setSaving(false); }
   };
 
-  const deleteListing = async (id) => {
-    if (!window.confirm("Hapus produk ini?")) return;
-    try { await jsonRequest("/api/admin/products", { method: "DELETE", body: JSON.stringify({ id }) }); loadListings(); onNotice("Produk dihapus"); }
-    catch (e) { setApiError(e.message); }
+  const deleteListing = async (listing) => {
+    const id = typeof listing === "string" ? listing : listing.id;
+    const ok = await confirm({
+      title: "Hapus produk ini?",
+      description: "Listing beserta seluruh akun yang belum terjual di dalamnya akan dihapus permanen.",
+      detail: typeof listing === "string" ? `#${String(id).slice(0, 8)}` : `${listing.title} · stok ${listing.stock} akun`,
+      confirmText: "Ya, hapus produk", danger: true,
+    });
+    if (!ok) return;
+    await runAction(`prod-${id}`, async () => {
+      try {
+        await jsonRequest("/api/admin/products", { method: "DELETE", body: JSON.stringify({ id }) });
+        await loadListings(); onNotice("Produk dihapus");
+      } catch (e) { setApiError(e.message); }
+    });
   };
 
   const filtered = useMemo(() => {
@@ -1397,8 +1822,23 @@ function AdminPage({ onBack, onNotice }) {
     const blocked = users.filter((u) => u.status !== "active");
     if (blocked.length) list.push({ key: "user", nav: "Pengguna", title: `${blocked.length} akun tidak aktif`, desc: "Tinjau status pengguna" });
     if (orders.length) list.push({ key: "order", nav: "Pesanan", title: `${orders.length} pesanan tercatat`, desc: "Lihat detail pembeli" });
-    return list;
-  }, [pendingTopups, listings, users, orders]);
+    return list.filter((a) => !dismissedAlerts.includes(a.key));
+  }, [pendingTopups, listings, users, orders, dismissedAlerts]);
+
+  /* Pesanan dikelompokkan per akun pembeli: satu kartu = satu akun,
+     transaksinya ditumpuk di dalam kartu itu. */
+  const groupedOrders = useMemo(() => {
+    const map = new Map();
+    filteredOrders.forEach((o) => {
+      const key = o.buyer.id || o.buyer.email;
+      const group = map.get(key) || { buyer: o.buyer, orders: [], total: 0, accounts: 0 };
+      group.orders.push(o);
+      group.total += Number(o.total) || 0;
+      group.accounts += Number(o.itemCount) || 0;
+      map.set(key, group);
+    });
+    return [...map.values()].sort((a, b) => new Date(b.orders[0].createdAt || 0) - new Date(a.orders[0].createdAt || 0));
+  }, [filteredOrders]);
 
   const recentActivity = useMemo(() => {
     const feed = [
@@ -1430,6 +1870,11 @@ function AdminPage({ onBack, onNotice }) {
   // Reset halaman hanya saat pencarian berubah; refresh data setelah aksi admin
   // tidak boleh menendang admin kembali ke halaman 1.
   useEffect(() => { setUserPage(1); }, [userQuery]);
+
+  useEffect(() => {
+    if (contentRef.current) contentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeNav]);
 
   /* stats */
   const totalProducts = listings.length;
@@ -1495,7 +1940,7 @@ function AdminPage({ onBack, onNotice }) {
         <div className="cx-sidebar-section">Workspace</div>
         <nav>
           {NAV_ITEMS.map(({ label, shortcut, icon: NavIcon, dot }) => (
-            <button key={label} className={`cx-sidebar-item ${activeNav === label ? "active" : ""}`} onClick={() => { setActiveNav(label); setNavOpen(false); }}>
+            <button key={label} className={`cx-sidebar-item ${activeNav === label ? "active" : ""}`} onClick={() => goNav(label)}>
               <NavIcon size={14} strokeWidth={1.7} />
               <span>{label}</span>
               {dot && <span className="cx-sidebar-dot" />}
@@ -1562,14 +2007,38 @@ function AdminPage({ onBack, onNotice }) {
               </button>
               {headerMenu === "notif" && (
                 <div className="cx-admin-menu">
-                  <div className="cx-admin-menu-title">Notifikasi</div>
+                  <div className="cx-admin-menu-title">
+                    Notifikasi
+                    {adminAlerts.length > 0 && (
+                      <button
+                        type="button"
+                        className="cx-menu-clear"
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: "Hapus semua notifikasi?",
+                            description: "Daftar notifikasi admin dikosongkan. Notifikasi baru tetap akan muncul lagi kalau ada kejadian baru.",
+                            confirmText: "Ya, hapus semua", danger: true,
+                          });
+                          if (!ok) return;
+                          persistDismissed([...new Set([...dismissedAlerts, ...adminAlerts.map((a) => a.key)])]);
+                          setHeaderMenu("");
+                          onNotice("Semua notifikasi dihapus");
+                        }}
+                      >
+                        <Trash2 size={10} /> Hapus semua
+                      </button>
+                    )}
+                  </div>
                   {adminAlerts.length === 0
                     ? <p>Tidak ada notifikasi baru.</p>
                     : adminAlerts.map((a) => (
-                      <button key={a.key} className="cx-admin-menu-item" onClick={() => { setActiveNav(a.nav); setHeaderMenu(""); }}>
-                        <strong>{a.title}</strong>
-                        <small>{a.desc}</small>
-                      </button>
+                      <div key={a.key} className="cx-admin-menu-row">
+                        <button className="cx-admin-menu-item" onClick={() => { goNav(a.nav); setHeaderMenu(""); }}>
+                          <strong>{a.title}</strong>
+                          <small>{a.desc}</small>
+                        </button>
+                        <button className="cx-row-btn danger" aria-label="Hapus notifikasi" onClick={() => dismissAlert(a.key)}><Trash2 size={11} /></button>
+                      </div>
                     ))}
                 </div>
               )}
@@ -1582,7 +2051,7 @@ function AdminPage({ onBack, onNotice }) {
                     <div className="cx-avatar">AR</div>
                     <div><strong>Admin</strong><small>Owner · CodeXa Store</small></div>
                   </div>
-                  <button className="cx-admin-menu-item" onClick={() => { setActiveNav("Pengaturan"); setHeaderMenu(""); }}><Settings size={12} /> Pengaturan</button>
+                  <button className="cx-admin-menu-item" onClick={() => { goNav("Pengaturan"); setHeaderMenu(""); }}><Settings size={12} /> Pengaturan</button>
                   <button className="cx-admin-menu-item" onClick={() => { onBack(); setHeaderMenu(""); }}><ShoppingBag size={12} /> Lihat store</button>
                   <button className="cx-admin-menu-item danger" onClick={() => { setHeaderMenu(""); logout(); }}><LogOut size={12} /> Keluar</button>
                 </div>
@@ -1599,7 +2068,7 @@ function AdminPage({ onBack, onNotice }) {
         </div>
 
         {/* Content */}
-        <div className="cx-admin-content">
+        <div className="cx-admin-content" ref={contentRef}>
           {activeNav === "Assisten" ? (
             <>
               <div className="cx-admin-top">
@@ -1765,7 +2234,7 @@ function AdminPage({ onBack, onNotice }) {
                   { label: "Pengguna", nav: "Pengguna", icon: User, info: `${users.length} akun` },
                   { label: "Produk", nav: "Produk", icon: Package, info: `${listings.length} listing` },
                 ].map(({ label, nav, icon: QIcon, info }) => (
-                  <button key={nav} className="cx-quick-card" onClick={() => setActiveNav(nav)}>
+                  <button key={nav} className="cx-quick-card" onClick={() => goNav(nav)}>
                     <span className="cx-quick-icon"><QIcon size={15} /></span>
                     <span className="cx-quick-copy">
                       <strong>{label}</strong>
@@ -1802,99 +2271,125 @@ function AdminPage({ onBack, onNotice }) {
 
           {/* ══ PRODUK ══ */}
           {activeNav === "Produk" && (
-            <div className="cx-panel">
+            <div className="cx-panel cx-panel-plain">
               <div className="cx-panel-header">
                 <h3>Produk</h3>
-                <span className="cx-panel-sub">{filtered.length} dari {listings.length}</span>
-                <button className="cx-icon-btn" style={{ marginLeft: "auto" }} onClick={loadListings} aria-label="Muat ulang produk">
-                  <RefreshCw size={13} className={loading ? "cx-spin" : ""} />
-                </button>
-                <button className="cx-icon-btn" onClick={() => openForm()} aria-label="Tambah produk"><Plus size={13} /></button>
+                <span className="cx-panel-sub">{filtered.length} dari {listings.length} listing</span>
+                <div className="cx-panel-actions">
+                  <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => openForm()}><Plus size={11} /> Tambah Produk</button>
+                </div>
               </div>
-              {loading
-                ? <div style={{ padding: "20px 14px", color: "var(--muted)", fontSize: 11 }}>Memuat produk...</div>
-                : <>
-                  <div className="cx-table-head">
-                    <span>PRODUK</span><span>HARGA</span><span>STOK</span><span>STATUS</span><span />
-                  </div>
-                  {filtered.length === 0
-                    ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11, textAlign: "center" }}>Tidak ada produk ditemukan.</div>
-                    : filtered.map((l) => (
-                      <div key={l.id} className="cx-table-row">
-                        <div className="cx-product-name">
-                          <strong>{l.title}</strong>
-                          <small style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                            <ProviderIcon type={l.loginType} size={13} />
-                            {l.loginType}
-                          </small>
-                        </div>
-                        <span className="cx-mono" data-label="Harga">{(() => {
-                          const prices = (l.accounts || []).map((a) => Number(a.price) || Number(l.price) || 0);
-                          const min = prices.length ? Math.min(...prices) : Number(l.price) || 0;
-                          const max = prices.length ? Math.max(...prices) : min;
-                          return min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
-                        })()}</span>
-                        <span className="cx-mono" data-label="Stok" style={{ color: Number(l.stock) === 0 ? "var(--red)" : Number(l.stock) <= 3 ? "var(--amber)" : "var(--ink2)" }}>{l.stock} akun</span>
-                        <span className={`cx-status ${l.status === "available" ? "cx-status-ok" : Number(l.stock) <= 3 ? "cx-status-low" : "cx-status-out"}`}>
-                          {l.status === "available" ? "Aktif" : "Habis"}
-                        </span>
-                        <div className="cx-row-actions">
-                          <button className="cx-row-btn" onClick={() => openForm(l)} aria-label="Edit"><Pencil size={11} /> <span>Edit</span></button>
-                          <button className="cx-row-btn danger" onClick={() => deleteListing(l.id)} aria-label="Hapus"><Trash2 size={11} /> <span>Hapus</span></button>
-                        </div>
-                      </div>
-                    ))
-                  }
-                </>
+              {loading && !listings.length
+                ? <RowSkeleton rows={4} />
+                : filtered.length === 0
+                  ? <div className="cx-panel-empty"><Package size={20} /><p>Tidak ada produk ditemukan.</p></div>
+                  : (
+                    <div className="cx-product-grid">
+                      {filtered.map((l) => {
+                        const prices = (l.accounts || []).map((a) => Number(a.price) || Number(l.price) || 0);
+                        const min = prices.length ? Math.min(...prices) : Number(l.price) || 0;
+                        const max = prices.length ? Math.max(...prices) : min;
+                        const stock = Number(l.stock) || 0;
+                        return (
+                          <article key={l.id} className="cx-admin-product-card">
+                            <header>
+                              <span className="cx-admin-product-icon"><ProviderIcon type={l.loginType} size={18} /></span>
+                              <div className="cx-admin-product-title">
+                                <strong title={l.title}>{l.title}</strong>
+                                <small>{l.loginType}</small>
+                              </div>
+                              <span className={`cx-status ${l.status === "available" ? "cx-status-ok" : stock <= 3 ? "cx-status-low" : "cx-status-out"}`}>
+                                {l.status === "available" ? "Aktif" : "Habis"}
+                              </span>
+                            </header>
+                            <div className="cx-admin-product-meta">
+                              <div>
+                                <small>Harga</small>
+                                <strong className="cx-mono">{min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`}</strong>
+                              </div>
+                              <div>
+                                <small>Stok</small>
+                                <strong className="cx-mono" style={{ color: stock === 0 ? "var(--red)" : stock <= 3 ? "var(--amber)" : "var(--ink2)" }}>{stock} akun</strong>
+                              </div>
+                            </div>
+                            {l.description && <ExpandableText className="cx-admin-product-desc" text={l.description} lines={2} limit={90} />}
+                            <footer>
+                              <button className="cx-row-btn" onClick={() => openForm(l)}><Pencil size={11} /> <span>Edit</span></button>
+                              <button className="cx-row-btn danger" onClick={() => deleteListing(l)} disabled={isPending(`prod-${l.id}`)}>
+                                {isPending(`prod-${l.id}`) ? <Spinner /> : <Trash2 size={11} />} <span>Hapus</span>
+                              </button>
+                            </footer>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )
               }
             </div>
           )}
 
           {/* ══ PESANAN ══ */}
           {activeNav === "Pesanan" && (
-            <div className="cx-panel">
+            <div className="cx-panel cx-panel-plain">
               <div className="cx-panel-header">
                 <h3>Pesanan Masuk</h3>
-                <span className="cx-panel-sub">{filteredOrders.length} dari {orders.length} transaksi</span>
-                <button className="cx-icon-btn" style={{ marginLeft: "auto" }} onClick={loadOrders} aria-label="Muat ulang pesanan">
-                  <RefreshCw size={13} className={ordersLoading ? "cx-spin" : ""} />
-                </button>
+                <span className="cx-panel-sub">{groupedOrders.length} akun pembeli · {filteredOrders.length} transaksi</span>
               </div>
               {ordersLoading && !orders.length
-                ? <div style={{ padding: "20px 14px", color: "var(--muted)", fontSize: 11 }}>Memuat pesanan...</div>
-                : filteredOrders.length === 0
-                  ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada pesanan masuk.</div>
-                  : filteredOrders.map((o) => (
-                    <div key={o.id} className="cx-order-card">
+                ? <RowSkeleton rows={3} />
+                : groupedOrders.length === 0
+                  ? <div className="cx-panel-empty"><ShoppingBag size={20} /><p>Belum ada pesanan masuk.</p></div>
+                  : groupedOrders.map((g) => (
+                    <div key={g.buyer.id || g.buyer.email} className="cx-order-card cx-buyer-card">
                       <div className="cx-order-card-head">
-                        <div className="cx-avatar">{String(o.buyer.name || "U").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</div>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <strong>{o.buyer.name}</strong>
-                          <small>{o.buyer.email}{o.buyer.phone ? ` · ${o.buyer.phone}` : ""}</small>
+                        <div className="cx-avatar">{String(g.buyer.name || "U").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</div>
+                        <div className="cx-buyer-ident">
+                          <strong>{g.buyer.name}</strong>
+                          <small>{g.buyer.email}{g.buyer.phone ? ` · ${g.buyer.phone}` : ""}</small>
                         </div>
                         <div className="cx-order-total">
-                          <strong className="cx-mono">{formatPrice(o.total)}</strong>
-                          <small>{o.itemCount} akun</small>
+                          <strong className="cx-mono">{formatPrice(g.total)}</strong>
+                          <small>{g.orders.length} transaksi · {g.accounts} akun</small>
                         </div>
                       </div>
                       <div className="cx-order-meta">
-                        <span className="cx-mono">#{String(o.id).slice(0, 8)}</span>
-                        <span>{formatDate(o.createdAt)}</span>
-                        <span className={`cx-status ${o.status === "paid" ? "cx-status-ok" : "cx-status-low"}`}>{o.status === "paid" ? "Lunas" : "Refund"}</span>
-                        <span>Saldo pembeli: {formatPrice(o.buyer.balance)}</span>
+                        <span>Saldo pembeli: {formatPrice(g.buyer.balance)}</span>
+                        <span>Terakhir: {formatDate(g.orders[0].createdAt)}</span>
                       </div>
-                      <div className="cx-order-items">
-                        {(o.items || []).map((it, i) => (
-                          <div key={i} className="cx-order-item">
-                            <ProviderIcon type={it.loginType} size={13} />
-                            <span className="cx-order-item-title">{it.title}</span>
-                            <span className="cx-order-item-sub">{(it.accounts || []).length} akun · {(it.accounts || []).map((a) => a.email).join(", ")}</span>
+                      <div className="cx-buyer-orders">
+                        {g.orders.map((o) => (
+                          <div key={o.id} className="cx-buyer-order">
+                            <div className="cx-buyer-order-head">
+                              <span className="cx-mono">#{String(o.id).slice(0, 8)}</span>
+                              <span>{formatDate(o.createdAt)}</span>
+                              <span className={`cx-status ${o.status === "paid" ? "cx-status-ok" : "cx-status-low"}`}>{o.status === "paid" ? "Lunas" : "Refund"}</span>
+                              <strong className="cx-mono" style={{ marginLeft: "auto" }}>{formatPrice(o.total)}</strong>
+                              <button
+                                className="cx-row-btn danger"
+                                onClick={() => deleteAdminOrder(o.id)}
+                                aria-label="Hapus pesanan"
+                                disabled={isPending(`aorder-${o.id}`)}
+                              >
+                                {isPending(`aorder-${o.id}`) ? <Spinner /> : <Trash2 size={11} />}
+                              </button>
+                            </div>
+                            {o.customEmail && (
+                              <div className="cx-custom-email-tag"><Mail size={11} /> Permintaan email khusus: <strong>{o.customEmail}</strong></div>
+                            )}
+                            <div className="cx-order-items">
+                              {(o.items || []).map((it, i) => (
+                                <div key={i} className="cx-order-item">
+                                  <ProviderIcon type={it.loginType} size={13} />
+                                  <span className="cx-order-item-title">{it.title}</span>
+                                  <span className="cx-order-item-sub">{(it.accounts || []).length} akun · {(it.accounts || []).map((a) => a.email).join(", ")}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         ))}
                       </div>
                       <div className="cx-order-actions">
-                        <button className="cx-row-btn" onClick={() => { setUserQuery(o.buyer.email); setActiveNav("Pengguna"); }}><User size={11} /> <span>Lihat akun</span></button>
-                        <button className="cx-row-btn danger" onClick={() => deleteAdminOrder(o.id)}><Trash2 size={11} /> <span>Hapus</span></button>
+                        <button className="cx-row-btn" onClick={() => { setUserQuery(g.buyer.email); setActiveNav("Pengguna"); }}><User size={11} /> <span>Lihat akun</span></button>
                       </div>
                     </div>
                   ))
@@ -1908,10 +2403,17 @@ function AdminPage({ onBack, onNotice }) {
               <div className="cx-panel-header">
                 <h3>Permintaan Top Up</h3>
                 <span className="cx-panel-sub">{pendingTopups} menunggu · {topups.length - pendingTopups} selesai</span>
-                <button className="cx-btn cx-btn-ghost cx-btn-sm" style={{ marginLeft: "auto" }} onClick={clearTopupHistory} disabled={topups.length - pendingTopups === 0}>
-                  <Trash2 size={11} /> Bersihkan riwayat
-                </button>
-                <button className="cx-icon-btn" onClick={refreshAll} aria-label="Muat ulang"><RefreshCw size={13} className={refreshing ? "cx-spin" : ""} /></button>
+                <div className="cx-panel-actions">
+                  <ActionBtn
+                    className="cx-btn cx-btn-ghost cx-btn-sm"
+                    onClick={clearTopupHistory}
+                    disabled={topups.length - pendingTopups === 0}
+                    busy={isPending("topup-clear")}
+                    busyLabel="Membersihkan..."
+                  >
+                    <Trash2 size={11} /> Bersihkan riwayat
+                  </ActionBtn>
+                </div>
               </div>
               {topups.length === 0
                 ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada permintaan top up.</div>
@@ -1919,20 +2421,35 @@ function AdminPage({ onBack, onNotice }) {
                   <div key={t.id} className="cx-topup-row">
                     <div>
                       <strong>{formatPrice(t.amount)}</strong>
-                      <small>{t.userName} · {t.userEmail} · {t.method}{t.reference ? ` · ID trx: ${t.reference}` : ""}{t.note ? ` · catatan: ${t.note}` : ""}</small>
+                      <small>{t.userName} · {t.userEmail} · {t.method}{t.reference ? ` · ID trx: ${t.reference}` : ""}</small>
+                      {t.note && <ExpandableText className="cx-topup-note" text={`Catatan: ${t.note}`} lines={2} limit={80} />}
                     </div>
                     <span className="cx-topup-date">{formatDate(t.createdAt)}</span>
                     {t.status === "pending"
-                      ? <div style={{ display: "flex", gap: 6 }}>
-                          <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => reviewTopup(t.id, "approve")}><Check size={11} /> Setujui</button>
-                          <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => reviewTopup(t.id, "reject")}><X size={11} /> Tolak</button>
+                      ? <div className="cx-topup-review">
+                          <ActionBtn
+                            className="cx-btn cx-btn-primary cx-btn-sm"
+                            onClick={() => reviewTopup(t.id, "approve", `${formatPrice(t.amount)} · ${t.userName} (${t.userEmail})`)}
+                            busy={isPending(`topup-${t.id}`)}
+                          >
+                            <Check size={11} /> Setujui
+                          </ActionBtn>
+                          <ActionBtn
+                            className="cx-btn cx-btn-ghost cx-btn-sm"
+                            onClick={() => reviewTopup(t.id, "reject", `${formatPrice(t.amount)} · ${t.userName} (${t.userEmail})`)}
+                            busy={isPending(`topup-${t.id}`)}
+                          >
+                            <X size={11} /> Tolak
+                          </ActionBtn>
                         </div>
                       : <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                           <span className={`cx-topup-badge ${t.status === "approved" ? "ok" : "bad"}`}>
                             {t.status === "approved" ? <BadgeCheck size={11} /> : <X size={11} />}
                             {t.status === "approved" ? " Disetujui" : " Ditolak"}
                           </span>
-                          <button className="cx-row-btn danger" onClick={() => deleteTopup(t.id)} aria-label="Hapus permintaan"><Trash2 size={11} /></button>
+                          <button className="cx-row-btn danger" onClick={() => deleteTopup(t.id)} aria-label="Hapus permintaan" disabled={isPending(`topup-del-${t.id}`)}>
+                            {isPending(`topup-del-${t.id}`) ? <Spinner /> : <Trash2 size={11} />}
+                          </button>
                         </div>}
                   </div>
                 ))}
@@ -1944,18 +2461,36 @@ function AdminPage({ onBack, onNotice }) {
           <div className="cx-panel">
             <div className="cx-panel-header">
               <h3>Pengguna</h3>
-              <span className="cx-panel-sub">{filteredUsers.length} dari {users.length} akun</span>
-              <div className="cx-search" style={{ marginLeft: "auto", maxWidth: 240 }}>
-                <Search size={12} />
-                <input value={userQuery} onChange={(e) => setUserQuery(e.target.value)} placeholder="Cari nama / email / no. HP" />
+              <span className="cx-panel-sub">
+                {userQuery.trim() ? `${filteredUsers.length} hasil dari ${users.length} akun` : `${users.length} akun terdaftar`}
+              </span>
+              <div className="cx-panel-actions">
+                <div className="cx-search" style={{ maxWidth: 240 }}>
+                  <Search size={12} />
+                  <input value={userQuery} onChange={(e) => setUserQuery(e.target.value)} placeholder="Cari nama / email / no. HP" />
+                </div>
               </div>
-              <button className="cx-icon-btn" onClick={loadUsersData} aria-label="Muat ulang user"><RefreshCw size={13} /></button>
             </div>
+            {userQuery.trim() && (
+              <div className="cx-filter-bar">
+                <span className="cx-filter-chip">
+                  <Search size={10} /> Filter: “{userQuery.trim()}”
+                  <button type="button" onClick={() => setUserQuery("")} aria-label="Hapus filter"><X size={10} /></button>
+                </span>
+                <button type="button" className="cx-filter-reset" onClick={() => setUserQuery("")}>Tampilkan semua {users.length} akun</button>
+              </div>
+            )}
             <div className="cx-user-head">
               <span>USER</span><span>SALDO</span><span>TOP UP</span><span>STATUS</span><span>BERGABUNG</span><span />
             </div>
             {filteredUsers.length === 0
-              ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada user terdaftar.</div>
+              ? (
+                <div className="cx-panel-empty">
+                  <User size={20} />
+                  <p>{userQuery.trim() ? `Tidak ada akun cocok dengan “${userQuery.trim()}”.` : "Belum ada user terdaftar."}</p>
+                  {userQuery.trim() && <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => setUserQuery("")}>Tampilkan semua akun</button>}
+                </div>
+              )
               : pagedUsers.map((u) => (
                 <div key={u.id} className="cx-user-row">
                   <div className="cx-user-ident">
@@ -1991,7 +2526,9 @@ function AdminPage({ onBack, onNotice }) {
                       <ShieldCheck size={11} />
                     </button>
                     <button className="cx-row-btn" onClick={() => openUserForm(u)} aria-label="Edit user"><Pencil size={11} /></button>
-                    <button className="cx-row-btn danger" onClick={() => deleteUser(u)} aria-label="Hapus user"><Trash2 size={11} /></button>
+                    <button className="cx-row-btn danger" onClick={() => deleteUser(u)} aria-label="Hapus user" disabled={isPending(`user-del-${u.id}`)}>
+                      {isPending(`user-del-${u.id}`) ? <Spinner /> : <Trash2 size={11} />}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -2041,7 +2578,7 @@ function AdminPage({ onBack, onNotice }) {
                 </div>
                 <div className="cx-setting-row">
                   <div><strong>Assisten AI</strong><small>{aiCfg && aiCfg.enabled && aiCfg.hasKey ? "Terhubung dan aktif" : "Belum dikonfigurasi"}</small></div>
-                  <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => setActiveNav("Assisten")}><Sparkles size={11} /> Atur</button>
+                  <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => goNav("Assisten")}><Sparkles size={11} /> Atur</button>
                 </div>
               </div>
             </div>
@@ -2227,6 +2764,7 @@ function AdminPage({ onBack, onNotice }) {
       )}
 
       <AssistantWidget open={asstOpen} onOpenChange={setAsstOpen} hideFab />
+      {confirmDialog}
     </div>
   );
 }

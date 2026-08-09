@@ -47,6 +47,41 @@ async function ensureOrderTables(sql) {
   await sql`CREATE INDEX IF NOT EXISTS codexa_orders_user_idx ON codexa_orders (user_id, created_at DESC)`;
 }
 
+/* ── permintaan email/username kustom dari pembeli ── */
+async function ensureCustomEmailTable(sql) {
+  await sql`
+    CREATE TABLE IF NOT EXISTS codexa_custom_emails (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES codexa_users(id) ON DELETE CASCADE,
+      order_id TEXT,
+      requested TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS codexa_custom_emails_unique ON codexa_custom_emails (lower(requested))`;
+}
+
+// "Nama Ku 99" → "namaku99". Boleh username polos atau email lengkap.
+function normalizeCustomEmail(value) {
+  const raw = String(value == null ? "" : value).trim().toLowerCase().slice(0, 80);
+  if (!raw) return { ok: true, value: "" };
+  if (raw.includes("@")) {
+    if (!/^[a-z0-9._%+-]{3,}@[a-z0-9.-]+\.[a-z]{2,}$/.test(raw)) {
+      return { ok: false, error: "Format email tidak valid" };
+    }
+    return { ok: true, value: raw };
+  }
+  if (!/^[a-z0-9._-]{3,40}$/.test(raw)) {
+    return { ok: false, error: "Gunakan 3-40 karakter: huruf, angka, titik, garis bawah, atau strip" };
+  }
+  return { ok: true, value: raw };
+}
+
+async function isCustomEmailTaken(sql, value) {
+  const [row] = await sql`SELECT id FROM codexa_custom_emails WHERE lower(requested) = ${value} LIMIT 1`;
+  return Boolean(row);
+}
+
 const MAX_ITEMS = 50;
 const MAX_PICKS_PER_ITEM = 100;
 
@@ -88,6 +123,12 @@ async function handleAdmin(sql, request, response) {
       FROM codexa_orders o JOIN codexa_users u ON u.id = o.user_id
       ORDER BY o.created_at DESC LIMIT 100
     `;
+    let customByOrder = new Map();
+    try {
+      await ensureCustomEmailTable(sql);
+      const custom = await sql`SELECT order_id AS "orderId", requested FROM codexa_custom_emails WHERE order_id IS NOT NULL`;
+      customByOrder = new Map(custom.map((c) => [c.orderId, c.requested]));
+    } catch (_) { customByOrder = new Map(); }
     const orders = rows.map((row) => {
       let items = [];
       try { items = (decryptCredentials(row.payloadBlob) || {}).items || []; } catch (_) { items = []; }
@@ -97,6 +138,7 @@ async function handleAdmin(sql, request, response) {
         itemCount: row.itemCount,
         status: row.status,
         createdAt: row.createdAt,
+        customEmail: customByOrder.get(row.id) || "",
         buyer: {
           id: row.userId, name: row.userName, email: row.userEmail,
           phone: row.userPhone || "", balance: Number(row.userBalance) || 0,
@@ -135,6 +177,24 @@ module.exports = async function handler(request, response) {
     const user = await currentUser(sql, request);
     if (!user) return response.status(401).json({ error: "Silakan masuk terlebih dahulu" });
 
+    const resource = String((request.query && request.query.resource) || "");
+    if (resource === "check-email") {
+      if (request.method !== "GET") {
+        response.setHeader("Allow", "GET");
+        return response.status(405).json({ error: "Method not allowed" });
+      }
+      const check = normalizeCustomEmail((request.query && request.query.value) || "");
+      if (!check.ok) return response.status(200).json({ available: false, normalized: "", reason: check.error });
+      if (!check.value) return response.status(200).json({ available: false, normalized: "", reason: "Isi dulu nama yang diinginkan" });
+      await ensureCustomEmailTable(sql);
+      const taken = await isCustomEmailTaken(sql, check.value);
+      return response.status(200).json({
+        available: !taken,
+        normalized: check.value,
+        reason: taken ? "Sudah dipakai pembeli lain, coba nama lain" : "",
+      });
+    }
+
     if (request.method === "GET") {
       const rows = await sql`
         SELECT id, total, item_count AS "itemCount", status, payload_blob AS "payloadBlob", created_at AS "createdAt"
@@ -168,8 +228,19 @@ module.exports = async function handler(request, response) {
       return response.status(405).json({ error: "Method not allowed" });
     }
 
-    const items = normalizeItems(bodyOf(request));
+    const payload = bodyOf(request) || {};
+    const items = normalizeItems(payload);
     if (!items.length) return response.status(400).json({ error: "Keranjang kosong atau belum ada akun yang dipilih" });
+
+    const customCheck = normalizeCustomEmail(payload.customEmail);
+    if (!customCheck.ok) return response.status(400).json({ error: customCheck.error });
+    const customEmail = customCheck.value;
+    if (customEmail) {
+      await ensureCustomEmailTable(sql);
+      if (await isCustomEmailTaken(sql, customEmail)) {
+        return response.status(409).json({ error: `${customEmail} sudah dipakai pembeli lain, pilih nama lain` });
+      }
+    }
 
     // Ambil listing yang dibeli, validasi ketersediaan & hitung total
     const purchases = [];
@@ -286,6 +357,18 @@ module.exports = async function handler(request, response) {
       throw error;
     }
 
+    if (customEmail) {
+      try {
+        await sql`
+          INSERT INTO codexa_custom_emails (id, user_id, order_id, requested)
+          VALUES (${crypto.randomUUID()}, ${user.id}, ${order.id}, ${customEmail})
+          ON CONFLICT DO NOTHING
+        `;
+      } catch (error) {
+        console.error("Custom email reserve failure", error && error.message);
+      }
+    }
+
     await createNotification(sql, {
       userId: user.id,
       type: "order_paid",
@@ -295,7 +378,7 @@ module.exports = async function handler(request, response) {
     });
 
     return response.status(201).json({
-      order: { ...order, total: Number(order.total) || 0, items: orderItems },
+      order: { ...order, total: Number(order.total) || 0, items: orderItems, customEmail },
       balance: Number(debited.balance) || 0,
     });
   } catch (error) {
