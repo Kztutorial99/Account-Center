@@ -36,8 +36,24 @@ module.exports = async function handler(request, response) {
       });
     }
 
+    if (request.method === "DELETE") {
+      const body = bodyOf(request);
+      const id = text(body.id, 60);
+      const scope = text(body.scope, 20);
+      if (scope === "resolved") {
+        const rows = await sql`DELETE FROM codexa_topups WHERE status <> 'pending' RETURNING id`;
+        return response.status(200).json({ deleted: rows.length });
+      }
+      if (!id) return response.status(400).json({ error: "id permintaan wajib diisi" });
+      const [row] = await sql`SELECT status FROM codexa_topups WHERE id = ${id} LIMIT 1`;
+      if (!row) return response.status(404).json({ error: "Permintaan tidak ditemukan" });
+      if (row.status === "pending") return response.status(409).json({ error: "Selesaikan dulu permintaan ini sebelum dihapus" });
+      await sql`DELETE FROM codexa_topups WHERE id = ${id}`;
+      return response.status(200).json({ deleted: 1 });
+    }
+
     if (request.method !== "PATCH") {
-      response.setHeader("Allow", "GET, PATCH");
+      response.setHeader("Allow", "GET, PATCH, DELETE");
       return response.status(405).json({ error: "Method not allowed" });
     }
 
