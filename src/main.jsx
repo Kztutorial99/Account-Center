@@ -230,8 +230,10 @@ function App() {
     const timer = window.setTimeout(() => {
       jsonRequest(`/api/orders?resource=check-email&value=${encodeURIComponent(value)}`)
         .then((p) => setEmailCheck({
-          state: p.available ? "available" : (p.state === "invalid" ? "invalid" : "taken"),
-          message: p.reason || (p.available ? `${p.normalized} tersedia` : "Sudah dipakai, coba nama lain"),
+          state: p.state === "invalid" ? "invalid"
+            : p.state === "unknown" ? "unknown"
+            : p.available ? "available" : "taken",
+          message: p.reason || (p.available ? `${p.normalized} bisa dicoba` : "Sudah dipakai, coba nama lain"),
           signals: Array.isArray(p.signals) ? p.signals : [],
         }))
         .catch((e) => setEmailCheck({ state: "invalid", message: e.message, signals: [] }));
@@ -491,7 +493,9 @@ function App() {
             {(cart.length > 0 || customFee > 0) && (
 
               <div className="cx-cart-summary">
-                <div><span>Subtotal ({cart.reduce((a, c) => a + (Number(c.qty) || 1), 0)} akun)</span><strong>{formatPrice(itemsTotal)}</strong></div>
+                {cart.length > 0 && (
+                  <div><span>Subtotal ({cart.reduce((a, c) => a + (Number(c.qty) || 1), 0)} akun)</span><strong>{formatPrice(itemsTotal)}</strong></div>
+                )}
                 {customFee > 0 && (
                   <div><span>Custom email (1x)</span><strong>{formatPrice(customFee)}</strong></div>
                 )}
@@ -512,6 +516,7 @@ function App() {
                     />
                     {emailCheck.state === "checking" && <Spinner />}
                     {emailCheck.state === "available" && <Check size={12} color="var(--green)" />}
+                    {emailCheck.state === "unknown" && <ShieldCheck size={12} color="#eab308" />}
                     {(emailCheck.state === "taken" || emailCheck.state === "invalid") && <X size={12} color="var(--red)" />}
                   </div>
                   <small className={`cx-custom-email-msg is-${emailCheck.state}`}>
@@ -1177,11 +1182,11 @@ function CustomEmailPage({ value, setValue, check, onBack, onUse }) {
               </ul>
             )}
             <p style={{ color: "var(--muted)", fontSize: 11, margin: 0 }}>
-              Pengecekan mencakup: daftar pesanan CodeXa, aturan penamaan Gmail (6-30 karakter, titik diabaikan), jejak pemakaian publik, dan keaktifan domain email.
+              Pengecekan mencakup: daftar pesanan CodeXa, aturan penamaan Gmail (6-30 karakter, titik diabaikan), daftar nama umum/dicadangkan, jejak pemakaian publik, dan keaktifan domain email. Google tidak membuka data ketersediaan username, jadi untuk Gmail hasilnya "belum bisa dipastikan" dan baru final saat akun dibuat.
             </p>
             <button
               className="cx-btn cx-btn-primary"
-              disabled={check.state !== "available"}
+              disabled={check.state !== "available" && check.state !== "unknown"}
               onClick={onUse}
             >
               <ShoppingBag size={13} /> Masukkan ke keranjang · {formatPrice(CUSTOM_EMAIL_FEE)}
