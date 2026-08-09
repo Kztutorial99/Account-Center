@@ -219,14 +219,14 @@ function App() {
   const [emailCheck, setEmailCheck] = useState({ state: "idle", message: "", signals: [] });
   const noticeTimer = useRef(null);
 
-  /* Cek ketersediaan email/username kustom (debounce 500ms): dicek ke database
-     CodeXa sekaligus jejak pemakaian publik (Gravatar/MX) supaya nama yang
-     dipesan tidak nabrak akun milik orang lain. */
+  /* Cek ketersediaan email/username kustom (debounce 1200ms): untuk Gmail,
+     server mengecek langsung ke pendaftaran Google lewat actor Apify — tiap
+     cek adalah run berbayar, jadi debounce sengaja lebih panjang. */
   useEffect(() => {
     const value = customEmail.trim();
     if (!value) { setEmailCheck({ state: "idle", message: "", signals: [] }); return undefined; }
     if (value.length < 3) { setEmailCheck({ state: "invalid", message: "Minimal 3 karakter", signals: [] }); return undefined; }
-    setEmailCheck({ state: "checking", message: "Mengecek ketersediaan...", signals: [] });
+    setEmailCheck({ state: "checking", message: "Mengecek langsung ke Gmail...", signals: [] });
     const timer = window.setTimeout(() => {
       jsonRequest(`/api/orders?resource=check-email&value=${encodeURIComponent(value)}`)
         .then((p) => setEmailCheck({
@@ -237,7 +237,7 @@ function App() {
           signals: Array.isArray(p.signals) ? p.signals : [],
         }))
         .catch((e) => setEmailCheck({ state: "invalid", message: e.message, signals: [] }));
-    }, 500);
+    }, 1200);
     return () => window.clearTimeout(timer);
   }, [customEmail]);
 
