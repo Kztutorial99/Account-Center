@@ -133,6 +133,76 @@ async function domainHasMx(domain) {
   } catch (_) { return null; }
 }
 
+/* ── cek ketersediaan Gmail definitif via actor Apify ──
+   Actor "maximedupre/gmail-username-checker" mengecek langsung ke formulir
+   pendaftaran Google, jadi hasilnya pasti (available/taken), bukan tebakan.
+   Tiap run berbayar → hasilnya di-cache di database. */
+
+async function ensureEmailCheckCacheTable(sql) {
+  await sql`
+    CREATE TABLE IF NOT EXISTS codexa_email_checks (
+      canonical TEXT PRIMARY KEY,
+      status TEXT NOT NULL,
+      checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+}
+
+/* Cache: "taken" disimpan 7 hari (Google tidak mendaur ulang username),
+   "available" cuma 1 jam (bisa diambil orang kapan saja).
+   Return true/false kalau ada cache segar, undefined kalau miss/error. */
+async function cachedGmailStatus(sql, canonical) {
+  try {
+    await ensureEmailCheckCacheTable(sql);
+    const [row] = await sql`
+      SELECT status, checked_at AS "checkedAt" FROM codexa_email_checks WHERE canonical = ${canonical} LIMIT 1
+    `;
+    if (!row) return undefined;
+    const ageMs = Date.now() - new Date(row.checkedAt).getTime();
+    const ttlMs = row.status === "taken" ? 7 * 24 * 3600 * 1000 : 3600 * 1000;
+    if (!(ageMs >= 0 && ageMs <= ttlMs)) return undefined;
+    return row.status === "available";
+  } catch (_) { return undefined; }
+}
+
+async function rememberGmailStatus(sql, canonical, available) {
+  try {
+    await ensureEmailCheckCacheTable(sql);
+    await sql`
+      INSERT INTO codexa_email_checks (canonical, status, checked_at)
+      VALUES (${canonical}, ${available ? "available" : "taken"}, NOW())
+      ON CONFLICT (canonical) DO UPDATE SET status = EXCLUDED.status, checked_at = NOW()
+    `;
+  } catch (_) { /* cache gagal tidak fatal */ }
+}
+
+/* Tanya actor Apify. Return true = tersedia, false = sudah dipakai,
+   null = tidak bisa dipastikan (token hilang, timeout, error actor). */
+async function apifyGmailAvailability(canonical) {
+  const token = process.env.APIFY_TOKEN || "";
+  if (!token) return null;
+  try {
+    const res = await fetchWithTimeout(
+      `https://api.apify.com/v2/acts/maximedupre~gmail-username-checker/run-sync-get-dataset-items?token=${encodeURIComponent(token)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ targets: [canonical] }),
+      },
+      55000
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return null;
+    const row = rows.find((r) => String((r && r.email) || "").toLowerCase() === canonical)
+      || rows.find((r) => String((r && r.username) || "").toLowerCase() === canonical.split("@")[0]);
+    const status = String((row && row.availabilityStatus) || "").toLowerCase();
+    if (status === "available") return true;
+    if (status === "taken") return false;
+    return null;
+  } catch (_) { return null; }
+}
+
 async function isCustomEmailTaken(sql, value) {
   const [row] = await sql`SELECT id FROM codexa_custom_emails WHERE lower(requested) = ${value} LIMIT 1`;
   return Boolean(row);
@@ -176,10 +246,10 @@ function gmailLikelyTaken(base) {
   return "";
 }
 
-/* Cek lengkap: dipakai pembeli CodeXa lain, aturan Gmail, jejak publik
-   (Gravatar), MX domain, plus heuristik nama umum/dicadangkan. Google tidak
-   membuka API ketersediaan username, jadi hasil terbaik untuk Gmail adalah
-   "belum bisa dipastikan" — bukan klaim pasti tersedia. */
+/* Cek lengkap: dipakai pembeli CodeXa lain, aturan Gmail, heuristik nama
+   umum/dicadangkan, lalu cek definitif ke pendaftaran Gmail via actor Apify
+   (dengan cache). Kalau actor tidak bisa dijangkau, fallback ke jejak publik
+   (Gravatar) + status "belum bisa dipastikan". */
 async function inspectCustomEmail(sql, parsed) {
   const { value, local, domain } = parsed;
   const canonical = canonicalOf(local, domain);
@@ -220,14 +290,37 @@ async function inspectCustomEmail(sql, parsed) {
     };
   }
 
-  const used = await gravatarUsed(canonical);
-  if (used) {
-    return { available: false, state: "taken", normalized: value, canonical, reason: "Alamat ini sudah dipakai orang lain (terdaftar di profil publik Gravatar)", signals: [...signals, "Terdaftar di Gravatar → sudah dimiliki orang"] };
-  }
-  signals.push(used === null ? "Cek jejak publik tidak bisa dijangkau" : "Tidak ada jejak pemakaian publik");
   if (isGoogle) {
     signals.push("Titik diabaikan Gmail, dicek sebagai " + canonical);
-    signals.push("Google tidak membuka data ketersediaan username — final saat pembuatan akun");
+
+    // Cek definitif: cache dulu (hemat run berbayar), baru actor Apify.
+    let status = await cachedGmailStatus(sql, canonical);
+    if (status === undefined) {
+      status = await apifyGmailAvailability(canonical);
+      if (status === true || status === false) await rememberGmailStatus(sql, canonical, status);
+    }
+    if (status === false) {
+      return {
+        available: false, state: "taken", normalized: value, canonical,
+        reason: `${canonical} sudah dipakai orang lain (dicek langsung ke Gmail)`,
+        signals: [...signals, "Cek langsung ke pendaftaran Gmail → sudah dipakai"],
+      };
+    }
+    if (status === true) {
+      return {
+        available: true, state: "available", normalized: value, canonical,
+        reason: `${canonical} terverifikasi masih tersedia di Gmail`,
+        signals: [...signals, "Cek langsung ke pendaftaran Gmail → tersedia"],
+      };
+    }
+
+    // Actor tidak bisa dijangkau → fallback heuristik lama.
+    const usedFallback = await gravatarUsed(canonical);
+    if (usedFallback) {
+      return { available: false, state: "taken", normalized: value, canonical, reason: "Alamat ini sudah dipakai orang lain (terdaftar di profil publik Gravatar)", signals: [...signals, "Terdaftar di Gravatar → sudah dimiliki orang"] };
+    }
+    signals.push(usedFallback === null ? "Cek jejak publik tidak bisa dijangkau" : "Tidak ada jejak pemakaian publik");
+    signals.push("Cek langsung Gmail sedang tidak bisa dijangkau — final saat pembuatan akun");
     return {
       available: true,
       state: "unknown",
@@ -238,6 +331,11 @@ async function inspectCustomEmail(sql, parsed) {
     };
   }
 
+  const used = await gravatarUsed(canonical);
+  if (used) {
+    return { available: false, state: "taken", normalized: value, canonical, reason: "Alamat ini sudah dipakai orang lain (terdaftar di profil publik Gravatar)", signals: [...signals, "Terdaftar di Gravatar → sudah dimiliki orang"] };
+  }
+  signals.push(used === null ? "Cek jejak publik tidak bisa dijangkau" : "Tidak ada jejak pemakaian publik");
   return {
     available: true,
     state: "available",
