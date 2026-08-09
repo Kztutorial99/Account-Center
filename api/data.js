@@ -30,8 +30,6 @@ function decryptCredentials(value) {
   } catch (_) { return null; }
 }
 
-// Sensor email: tampilkan awal local-part + **** , domain tetap terlihat
-// contoh: aliyahputri@gmail.com -> aliya****@gmail.com
 function maskEmail(raw) {
   const value = typeof raw === "string" ? raw.trim() : "";
   if (!value) return "";
@@ -43,7 +41,6 @@ function maskEmail(raw) {
   return local.slice(0, keep) + "****" + domain;
 }
 
-// Password disensor seluruhnya
 function maskPassword(raw) {
   const value = typeof raw === "string" ? raw.trim() : "";
   if (!value) return "";
@@ -52,6 +49,9 @@ function maskPassword(raw) {
 
 module.exports = async function handler(request, response) {
   if (request.method !== "GET") { response.setHeader("Allow", "GET"); return response.status(405).json({ error: "Method not allowed" }); }
+  response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  response.setHeader("Pragma", "no-cache");
+  response.setHeader("Expires", "0");
   if (!process.env.DATABASE_URL) return response.status(500).json({ error: "DATABASE_URL is not configured" });
   try {
     const sql = neon(process.env.DATABASE_URL);
@@ -59,15 +59,16 @@ module.exports = async function handler(request, response) {
     const rows = await sql`
       SELECT id, title, description, login_type AS "loginType", price, stock, status, credential_blob AS "credentialBlob"
       FROM codexa_account_listings
-      WHERE status = 'available'
+      WHERE status = 'available' AND stock > 0
       ORDER BY created_at DESC
     `;
+
     const products = rows.map((row) => {
       const credentials = decryptCredentials(row.credentialBlob) || {};
       const accounts = Array.isArray(credentials.accounts) && credentials.accounts.length
         ? credentials.accounts
         : (credentials.email || credentials.username || credentials.password
-            ? [{ email: credentials.email || credentials.username || "", password: credentials.password || "" }]
+            ? [{ email: credentials.email || credentials.username || "", password: credentials.password || "", price: row.price }]
             : []);
       const basePrice = Math.max(0, Math.round(Number(row.price) || 0));
       const maskedAccounts = accounts.map((account, index) => {
@@ -79,20 +80,22 @@ module.exports = async function handler(request, response) {
           maskedPassword: maskPassword(account.password),
         };
       });
+      const effectiveStock = maskedAccounts.length || Math.max(0, Number(row.stock) || 0);
       return {
         id: row.id,
         title: row.title,
         description: row.description,
         loginType: row.loginType,
-        price: maskedAccounts.length ? Math.min(...maskedAccounts.map((a) => a.price)) : Number(row.price),
-        stock: maskedAccounts.length || row.stock,
+        price: maskedAccounts.length ? Math.min(...maskedAccounts.map((a) => a.price)) : basePrice,
+        stock: effectiveStock,
         status: row.status,
         accounts: maskedAccounts,
         maskedEmail: maskedAccounts[0] ? maskedAccounts[0].maskedEmail : "",
         maskedPassword: maskedAccounts[0] ? maskedAccounts[0].maskedPassword : "",
       };
-    });
-    return response.status(200).json({ products: products.filter((p) => p.stock > 0), source: "codexa_account_listings" });
+    }).filter((p) => p.status === "available" && p.stock > 0);
+
+    return response.status(200).json({ products, source: "codexa_account_listings", generatedAt: new Date().toISOString() });
   } catch (error) {
     console.error("Failed to read public catalog", error);
     return response.status(500).json({ error: "Unable to read product catalog" });
