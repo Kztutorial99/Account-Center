@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#100a1a">
+  <title>Custom Email — CodeXa Store</title>
+  <link rel="stylesheet" href="/src/styles.css">
+  <link rel="stylesheet" href="/src/fixes.css">
+  <link rel="icon" href="/favicon.svg">
+</head>
+<body>
+  <main class="cx-custom-page">
+    <div class="cx-custom-shell">
+      <section class="cx-custom-card">
+        <div class="cx-custom-kicker">CodeXa Store</div>
+        <h1>Custom Email</h1>
+        <p>Ingin menggunakan nama email atau username pilihanmu? Cek ketersediaannya terlebih dahulu. Jika tersedia, gunakan nama tersebut saat checkout.</p>
+        <div class="cx-custom-form">
+          <input id="email" class="cx-custom-input" autocomplete="off" maxlength="80" placeholder="contoh: namaku99 atau namaku99@gmail.com">
+          <div id="status" class="cx-custom-status">Masukkan minimal 3 karakter untuk mengecek ketersediaan.</div>
+          <div class="cx-custom-actions">
+            <a class="cx-btn cx-btn-primary" href="/">← Kembali ke Store</a>
+            <button id="check" class="cx-btn cx-btn-secondary" type="button">Cek Ketersediaan</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+<script>
+const input = document.getElementById('email');
+const status = document.getElementById('status');
+const button = document.getElementById('check');
+let timer;
+async function check() {
+  const value = input.value.trim();
+  if (value.length < 3) {
+    status.className = 'cx-custom-status bad';
+    status.textContent = 'Minimal 3 karakter.';
+    return;
+  }
+  status.className = 'cx-custom-status checking';
+  status.textContent = 'Mengecek ketersediaan...';
+  button.disabled = true;
+  try {
+    const r = await fetch('/api/orders?resource=check-email&value=' + encodeURIComponent(value), { cache: 'no-store', credentials: 'same-origin' });
+    const p = await r.json();
+    if (!r.ok) throw new Error(p.error || 'Pengecekan gagal');
+    if (p.available) {
+      status.className = 'cx-custom-status ok';
+      status.textContent = (p.normalized || value) + ' tersedia dan bisa dipakai.';
+      localStorage.setItem('codexa_custom_email', p.normalized || value);
+    } else {
+      status.className = 'cx-custom-status bad';
+      status.textContent = p.reason || 'Nama tersebut sudah digunakan. Silakan pilih nama lain.';
+    }
+  } catch (e) {
+    status.className = 'cx-custom-status bad';
+    status.textContent = e.message || 'Pengecekan gagal.';
+  } finally {
+    button.disabled = false;
+  }
+}
+button.addEventListener('click', check);
+input.addEventListener('input', () => {
+  clearTimeout(timer);
+  timer = setTimeout(check, 500);
+});
+input.addEventListener('keydown', (e) => { if (e.key === 'Enter') check(); });
+const saved = localStorage.getItem('codexa_custom_email');
+if (saved) input.value = saved;
+</script>
+</body>
+</html>
