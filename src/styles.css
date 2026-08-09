@@ -1826,3 +1826,80 @@ html { scroll-behavior: smooth; }
 .cx-status.cx-cemail-done      { background: rgba(34,197,94,.14);  color: #22c55e; }
 .cx-status.cx-cemail-rejected  { background: rgba(239,68,68,.14);  color: #ef4444; }
 .cx-row-btn.is-active { border-color: currentColor; opacity: 1; }
+
+/* ═══════════════════════════════════════════
+   CUSTOM EMAIL v2 — daftar maks 3 per tugas
+   + keranjang/checkout rapi di mobile
+═══════════════════════════════════════════ */
+
+/* ── keranjang: body scroll + footer ringkas ── */
+.cx-cart-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: grid; gap: 10px; align-content: start; padding-bottom: 12px; }
+.cx-cart-drawer .cx-cart-summary { max-height: none; overflow: visible; margin-top: 0; }
+
+.cx-ce-box { border: 1px dashed var(--b3); border-radius: 14px; padding: 12px; display: grid; gap: 8px; background: color-mix(in oklab, var(--s1) 85%, #000); }
+.cx-ce-box-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font: 600 11px Inter, system-ui, sans-serif; color: var(--ink2); }
+.cx-ce-box-head span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+.cx-ce-quota { font: 700 11px/1 Inter, system-ui, sans-serif; color: var(--muted); background: var(--bg); border: 1px solid var(--b1); border-radius: 999px; padding: 4px 8px; }
+.cx-ce-locked { margin: 0; display: flex; gap: 6px; font-size: 10.5px; line-height: 1.5; color: var(--muted); }
+.cx-ce-locked svg { flex: 0 0 auto; margin-top: 2px; }
+
+/* ── halaman custom email ── */
+.cx-ce-wrap { display: grid; gap: 14px; max-width: 640px; }
+.cx-ce-hero {
+  display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 12px;
+  border: 1px solid var(--b1); border-radius: var(--r-lg, 20px); padding: 16px;
+  background: color-mix(in oklab, var(--s1) 92%, #000);
+}
+.cx-ce-hero-icon { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--bg); border: 1px solid var(--b1); color: var(--indigo2); }
+.cx-ce-hero-copy { min-width: 0; }
+.cx-ce-hero-copy h1 { margin: 0; font: 700 17px Inter, system-ui, sans-serif; color: var(--ink); }
+.cx-ce-hero-copy p { margin: 4px 0 0; font-size: 11.5px; line-height: 1.55; color: var(--muted); }
+.cx-ce-hero-quota { flex: 0 0 auto; text-align: center; display: grid; gap: 2px; padding: 8px 10px; border-radius: 12px; background: var(--bg); border: 1px solid var(--b1); }
+.cx-ce-hero-quota b { font: 700 15px Inter, system-ui, sans-serif; color: var(--ink); }
+.cx-ce-hero-quota small { font-size: 9.5px; color: var(--faint); }
+
+.cx-ce-alert { display: flex; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid rgba(234,179,8,.28); background: rgba(234,179,8,.08); }
+.cx-ce-alert svg { flex: 0 0 auto; margin-top: 2px; color: #eab308; }
+.cx-ce-alert strong { display: block; font-size: 12.5px; color: var(--ink); }
+.cx-ce-alert p { margin: 3px 0 8px; font-size: 11px; line-height: 1.5; color: var(--ink2); }
+.cx-ce-open-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cx-ce-open-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--ink); background: var(--bg); border: 1px solid var(--b1); border-radius: 10px; padding: 7px 9px; }
+.cx-ce-open-list li span { min-width: 0; overflow-wrap: anywhere; }
+.cx-ce-open-list em { font-style: normal; flex: 0 0 auto; }
+
+.cx-ce-panel-body { padding: 14px; display: grid; gap: 10px; }
+.cx-ce-empty { margin: 0; font-size: 11.5px; line-height: 1.55; color: var(--muted); }
+.cx-ce-chips { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cx-ce-chip { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 12px; background: var(--bg); border: 1px solid var(--b1); font-size: 12px; color: var(--ink); }
+.cx-ce-chip span { min-width: 0; overflow-wrap: anywhere; }
+.cx-ce-chip button { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--b1); background: transparent; color: var(--muted); cursor: pointer; }
+.cx-ce-chip button:hover { color: var(--red); border-color: rgba(253,164,175,.3); }
+.cx-ce-total { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--b1); padding-top: 10px; font-size: 12px; color: var(--ink2); }
+.cx-ce-total strong { font: 700 15px Inter, system-ui, sans-serif; color: var(--ink); }
+.cx-ce-note { margin: 0; font-size: 10.5px; line-height: 1.6; color: var(--faint); }
+
+/* ── admin: kartu permintaan ── */
+.cx-ce-admin-list { display: grid; gap: 10px; padding: 12px; }
+.cx-ce-admin-card { border: 1px solid var(--b1); border-radius: 14px; padding: 12px; display: grid; gap: 10px; background: color-mix(in oklab, var(--s1) 94%, #000); }
+.cx-ce-admin-head { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px; }
+.cx-ce-admin-name { display: flex; align-items: center; gap: 7px; min-width: 0; color: var(--indigo2); }
+.cx-ce-admin-name strong { min-width: 0; font: 600 13px Inter, system-ui, sans-serif; color: var(--ink); overflow-wrap: anywhere; }
+.cx-ce-admin-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 10.5px; color: var(--muted); }
+.cx-ce-admin-email { overflow-wrap: anywhere; }
+.cx-ce-admin-actions { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
+.cx-ce-admin-actions .cx-row-btn { width: 100%; justify-content: center; min-height: 34px; }
+.cx-ce-admin-link { width: 100%; justify-content: center; min-height: 34px; }
+
+@media (min-width: 641px) {
+  .cx-ce-admin-actions { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .cx-ce-admin-link { width: auto; }
+}
+
+@media (max-width: 640px) {
+  .cx-ce-hero { grid-template-columns: auto minmax(0,1fr); padding: 14px; }
+  .cx-ce-hero-quota { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .cx-ce-hero-quota small { font-size: 10px; }
+  .cx-ce-wrap { gap: 12px; }
+  .cx-cart-summary > div { margin-bottom: 6px; }
+  .cx-cart-summary .cx-checkout-note { margin: 6px 0 8px; }
+}
