@@ -97,8 +97,16 @@ module.exports = async function handler(request, response) {
       return response.status(200).json({ orders, balance: user.balance });
     }
 
+    if (request.method === "DELETE") {
+      const id = String((bodyOf(request) || {}).id || "").trim().slice(0, 60);
+      if (!id) return response.status(400).json({ error: "id pesanan wajib diisi" });
+      const [row] = await sql`DELETE FROM codexa_orders WHERE id = ${id} AND user_id = ${user.id} RETURNING id`;
+      if (!row) return response.status(404).json({ error: "Pesanan tidak ditemukan" });
+      return response.status(200).json({ deleted: row.id });
+    }
+
     if (request.method !== "POST") {
-      response.setHeader("Allow", "GET, POST");
+      response.setHeader("Allow", "GET, POST, DELETE");
       return response.status(405).json({ error: "Method not allowed" });
     }
 
