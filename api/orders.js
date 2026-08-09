@@ -59,6 +59,9 @@ async function ensureCustomEmailTable(sql) {
     )
   `;
   await sql`ALTER TABLE codexa_custom_emails ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending'`;
+  // Hasil kerja admin: password akun Google yang dibuat + catatan untuk pembeli.
+  await sql`ALTER TABLE codexa_custom_emails ADD COLUMN IF NOT EXISTS result_password TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE codexa_custom_emails ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT ''`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS codexa_custom_emails_unique ON codexa_custom_emails (lower(requested))`;
 }
 
@@ -423,10 +426,10 @@ async function handleAdmin(sql, request, response) {
     let customByOrder = new Map();
     try {
       await ensureCustomEmailTable(sql);
-      const custom = await sql`SELECT id, order_id AS "orderId", requested, status, created_at AS "createdAt" FROM codexa_custom_emails WHERE order_id IS NOT NULL ORDER BY created_at ASC`;
+      const custom = await sql`SELECT id, order_id AS "orderId", requested, status, result_password AS "password", note, created_at AS "createdAt" FROM codexa_custom_emails WHERE order_id IS NOT NULL ORDER BY created_at ASC`;
       for (const c of custom) {
         const list = customByOrder.get(c.orderId) || [];
-        list.push({ id: c.id, requested: c.requested, status: c.status || "pending" });
+        list.push({ id: c.id, requested: c.requested, status: c.status || "pending", password: c.password || "", note: c.note || "" });
         customByOrder.set(c.orderId, list);
       }
     } catch (_) { customByOrder = new Map(); }
@@ -458,38 +461,55 @@ async function handleAdmin(sql, request, response) {
     return response.status(200).json({ orders });
   }
   if (request.method === "PATCH") {
-    // Update status permintaan custom email dari panel admin.
+    // Update status / password / catatan permintaan custom email dari panel admin.
     const body = bodyOf(request) || {};
     const requestId = String(body.id || "").trim().slice(0, 60);
     const orderId = String(body.orderId || "").trim().slice(0, 60);
     const status = String(body.status || "").trim();
-    if ((!requestId && !orderId) || !CUSTOM_EMAIL_STATUS.includes(status)) {
-      return response.status(400).json({ error: "id permintaan dan status valid wajib diisi" });
+    const hasPassword = Object.prototype.hasOwnProperty.call(body, "password");
+    const hasNote = Object.prototype.hasOwnProperty.call(body, "note");
+    const password = String(body.password == null ? "" : body.password).trim().slice(0, 120);
+    const note = String(body.note == null ? "" : body.note).trim().slice(0, 600);
+    if (!requestId && !orderId) {
+      return response.status(400).json({ error: "id permintaan custom email wajib diisi" });
+    }
+    if (status && !CUSTOM_EMAIL_STATUS.includes(status)) {
+      return response.status(400).json({ error: "Status tidak valid" });
+    }
+    if (!status && !hasPassword && !hasNote) {
+      return response.status(400).json({ error: "Tidak ada perubahan yang dikirim" });
     }
     await ensureCustomEmailTable(sql);
-    const [row] = requestId
-      ? await sql`
-          UPDATE codexa_custom_emails SET status = ${status} WHERE id = ${requestId}
-          RETURNING id, order_id AS "orderId", requested, status
-        `
-      : await sql`
-          UPDATE codexa_custom_emails SET status = ${status} WHERE order_id = ${orderId}
-          RETURNING id, order_id AS "orderId", requested, status
-        `;
-    if (!row) return response.status(404).json({ error: "Permintaan custom email tidak ditemukan" });
+    const [existing] = requestId
+      ? await sql`SELECT id, user_id AS "userId", requested, status, result_password AS "password", note
+                  FROM codexa_custom_emails WHERE id = ${requestId} LIMIT 1`
+      : await sql`SELECT id, user_id AS "userId", requested, status, result_password AS "password", note
+                  FROM codexa_custom_emails WHERE order_id = ${orderId} ORDER BY created_at ASC LIMIT 1`;
+    if (!existing) return response.status(404).json({ error: "Permintaan custom email tidak ditemukan" });
+
+    const nextStatus = status || existing.status || "pending";
+    const nextPassword = hasPassword ? password : (existing.password || "");
+    const nextNote = hasNote ? note : (existing.note || "");
+    const [row] = await sql`
+      UPDATE codexa_custom_emails
+      SET status = ${nextStatus}, result_password = ${nextPassword}, note = ${nextNote}
+      WHERE id = ${existing.id}
+      RETURNING id, order_id AS "orderId", requested, status, result_password AS "password", note
+    `;
     try {
-      const [owner] = await sql`SELECT user_id AS "userId" FROM codexa_custom_emails WHERE id = ${row.id} LIMIT 1`;
-      if (owner) {
-        await createNotification(sql, {
-          userId: owner.userId,
-          type: "custom_email",
-          title: "Status custom email diperbarui",
-          body: `Permintaan ${row.requested} sekarang berstatus ${status}.`,
-          link: "orders",
-        });
-      }
+      const changed = [];
+      if (status && status !== existing.status) changed.push(`status menjadi ${status}`);
+      if (hasPassword && nextPassword !== (existing.password || "")) changed.push("password akun sudah dikirim");
+      if (hasNote && nextNote !== (existing.note || "")) changed.push("ada catatan baru dari admin");
+      await createNotification(sql, {
+        userId: existing.userId,
+        type: "custom_email",
+        title: "Custom email diperbarui",
+        body: `Permintaan ${row.requested}: ${changed.length ? changed.join(", ") : "diperbarui admin"}. Buka Pesanan Saya untuk melihat detailnya.`,
+        link: "orders",
+      });
     } catch (_) {}
-    return response.status(200).json({ custom: row });
+    return response.status(200).json({ custom: { ...row, password: row.password || "", note: row.note || "" } });
   }
   if (request.method === "DELETE") {
     const id = String((bodyOf(request) || {}).id || "").trim().slice(0, 60);
@@ -555,10 +575,10 @@ module.exports = async function handler(request, response) {
       let mine = new Map();
       try {
         await ensureCustomEmailTable(sql);
-        const custom = await sql`SELECT id, order_id AS "orderId", requested, status, created_at AS "createdAt" FROM codexa_custom_emails WHERE user_id = ${user.id} AND order_id IS NOT NULL ORDER BY created_at ASC`;
+        const custom = await sql`SELECT id, order_id AS "orderId", requested, status, result_password AS "password", note, created_at AS "createdAt" FROM codexa_custom_emails WHERE user_id = ${user.id} AND order_id IS NOT NULL ORDER BY created_at ASC`;
         for (const c of custom) {
           const list = mine.get(c.orderId) || [];
-          list.push({ id: c.id, requested: c.requested, status: c.status || "pending" });
+          list.push({ id: c.id, requested: c.requested, status: c.status || "pending", password: c.password || "", note: c.note || "" });
           mine.set(c.orderId, list);
         }
       } catch (_) { mine = new Map(); }
