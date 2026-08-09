@@ -82,6 +82,7 @@ async function isCustomEmailTaken(sql, value) {
   return Boolean(row);
 }
 
+const CUSTOM_EMAIL_FEE = 5000;
 const MAX_ITEMS = 50;
 const MAX_PICKS_PER_ITEM = 100;
 
@@ -270,6 +271,9 @@ module.exports = async function handler(request, response) {
       const remaining = accounts.filter((_, i) => !item.indexes.includes(i + 1));
       purchases.push({ row, credentials, accounts, taken, remaining });
     }
+
+    // Permintaan email/username khusus dikenakan biaya tetap.
+    if (customEmail) total += CUSTOM_EMAIL_FEE;
 
     if (total > user.balance) {
       return response.status(402).json({
