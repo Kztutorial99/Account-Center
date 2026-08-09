@@ -540,17 +540,17 @@ function App() {
                     </div>
                   ))}
 
-                  <div className="cx-ce-box">
+                  <div className={`cx-ce-box${customBlocked || customQuotaLeft === 0 ? " is-locked" : ""}`}>
                     <div className="cx-ce-box-head">
                       <span><Mail size={12} /> Custom email</span>
                       <span className="cx-ce-quota">{customEmails.length}/{customStatus.max || CUSTOM_EMAIL_MAX}</span>
                     </div>
                     {customBlocked ? (
                       <p className="cx-ce-locked">
-                        <ShieldCheck size={11} /> Permintaan sebelumnya belum selesai ({customStatus.open.map((r) => r.requested).join(", ")}). Kamu bisa pesan lagi setelah admin menandai selesai.
+                        <LockKeyhole size={11} /> Permintaan sebelumnya belum selesai ({customStatus.open.map((r) => r.requested).join(", ")}). Kamu bisa pesan lagi setelah admin menandai selesai.
                       </p>
                     ) : customQuotaLeft === 0 ? (
-                      <p className="cx-ce-locked"><Check size={11} /> Sudah {customStatus.max || CUSTOM_EMAIL_MAX} nama · batas 1 tugas tercapai.</p>
+                      <p className="cx-ce-locked"><LockKeyhole size={11} /> Slot penuh — sudah {customStatus.max || CUSTOM_EMAIL_MAX} nama · batas 1 tugas tercapai.</p>
                     ) : (
                       <>
                         <div className={`cx-input-wrap cx-custom-email-input is-${emailCheck.state}`}>
@@ -823,6 +823,43 @@ function App() {
 
    ORDER RESULT / PESANAN SAYA
 ════════════════════════════════════════════════════ */
+/* Hasil custom email untuk pembeli: nama yang dipesan, status, password akun
+   Google yang dibuat admin, dan catatan tambahan. */
+function CustomEmailResult({ req, onNotice }) {
+  const [open, setOpen] = useState(false);
+  const status = req.status || "pending";
+  const password = req.password || "";
+  const note = req.note || "";
+  const copy = (value, label) => {
+    if (navigator.clipboard) navigator.clipboard.writeText(value).then(() => onNotice(`${label} disalin`)).catch(() => {});
+  };
+  return (
+    <div className="cx-ce-result">
+      <div className="cx-custom-email-tag">
+        <Mail size={11} /> <strong>{req.requested}</strong>
+        <span className={`cx-status cx-cemail-${status}`}>{CUSTOM_EMAIL_STATUS_LABEL[status]}</span>
+      </div>
+      {password && (
+        <div className="cx-ce-result-row">
+          <span className="cx-ce-result-label"><LockKeyhole size={11} /> Password</span>
+          <code className="cx-mono">{open ? password : "•".repeat(Math.min(10, password.length))}</code>
+          <div className="cx-ce-result-actions">
+            <button className="cx-row-btn" onClick={() => setOpen((v) => !v)} aria-label="Lihat password">
+              {open ? <EyeOff size={12} /> : <Eye size={12} />}
+            </button>
+            <button className="cx-row-btn" onClick={() => copy(password, "Password")} aria-label="Salin password">
+              <Copy size={12} />
+            </button>
+          </div>
+        </div>
+      )}
+      {note && (
+        <p className="cx-ce-result-note"><FileText size={11} /> {note}</p>
+      )}
+    </div>
+  );
+}
+
 function OrderItems({ items, onNotice }) {
   const [shown, setShown] = useState({});
   const copy = (value, label) => {
@@ -942,12 +979,7 @@ function OrdersPage({ onBack, onNotice, navigate }) {
             </div>
           </div>
           {customEmailsOf(order).map((req) => (
-            <div key={req.id} className="cx-custom-email-tag">
-              <Mail size={11} /> <strong>{req.requested}</strong>
-              <span className={`cx-status cx-cemail-${req.status || "pending"}`}>
-                {CUSTOM_EMAIL_STATUS_LABEL[req.status || "pending"]}
-              </span>
-            </div>
+            <CustomEmailResult key={req.id} req={req} onNotice={onNotice} />
           ))}
           <OrderItems items={order.items} onNotice={onNotice} />
 
@@ -1216,6 +1248,8 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
 
 function CustomEmailPage({ draft, setDraft, check, list, status, quotaLeft, canAdd, blocked, onAdd, onRemove, onBack, onCheckout }) {
   const max = status.max || CUSTOM_EMAIL_MAX;
+  // Slot penuh atau tugas lama belum selesai → input & tombol dikunci.
+  const locked = blocked || quotaLeft === 0;
   return (
     <main className="cx-page cx-custom-page">
       <div className="cx-container cx-ce-wrap">
@@ -1256,18 +1290,29 @@ function CustomEmailPage({ draft, setDraft, check, list, status, quotaLeft, canA
         <div className="cx-panel cx-ce-panel">
           <div className="cx-panel-header">
             <h3><Plus size={14} /> Tambah nama</h3>
-            <span className="cx-panel-sub">Sisa {quotaLeft} slot</span>
+            <span className={`cx-panel-sub${locked ? " is-locked" : ""}`}>
+              {locked ? <><LockKeyhole size={11} /> Terkunci</> : `Sisa ${quotaLeft} slot`}
+            </span>
           </div>
           <div className="cx-ce-panel-body">
-            <div className={`cx-input-wrap cx-custom-email-input is-${check.state}`}>
-              <Mail size={13} />
+            {locked && (
+              <div className="cx-ce-lockbar">
+                <LockKeyhole size={13} />
+                <span>{blocked
+                  ? "Terkunci: permintaan sebelumnya belum selesai."
+                  : `Terkunci: slot ${max} nama untuk tugas ini sudah penuh.`}</span>
+              </div>
+            )}
+            <div className={`cx-input-wrap cx-custom-email-input is-${check.state}${locked ? " is-locked" : ""}`}>
+              {locked ? <LockKeyhole size={13} /> : <Mail size={13} />}
               <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="namaku99 atau namaku99@gmail.com"
                 maxLength={80}
                 autoComplete="off"
-                disabled={blocked || quotaLeft === 0}
+                disabled={locked}
+                readOnly={locked}
                 onKeyDown={(e) => { if (e.key === "Enter" && canAdd) onAdd(); }}
               />
               {check.state === "checking" && <Spinner />}
@@ -1287,8 +1332,9 @@ function CustomEmailPage({ draft, setDraft, check, list, status, quotaLeft, canA
                 {check.signals.map((sg, i) => <li key={i}>{sg}</li>)}
               </ul>
             )}
-            <button className="cx-btn cx-btn-primary cx-btn-full" disabled={!canAdd} onClick={onAdd}>
-              <Plus size={13} /> Tambah ke daftar · {formatPrice(CUSTOM_EMAIL_FEE)}
+            <button className={`cx-btn cx-btn-primary cx-btn-full${locked ? " is-locked" : ""}`} disabled={locked || !canAdd} onClick={onAdd}>
+              {locked ? <LockKeyhole size={13} /> : <Plus size={13} />}
+              {locked ? " Slot terkunci" : ` Tambah ke daftar · ${formatPrice(CUSTOM_EMAIL_FEE)}`}
             </button>
           </div>
         </div>
@@ -1739,6 +1785,7 @@ function AdminPage({ onBack, onNotice }) {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [refreshing, setRefreshing]       = useState(false);
   const [headerMenu, setHeaderMenu]       = useState("");
+  const [ceDraft, setCeDraft]             = useState({});
   const [confirm, confirmDialog]          = useConfirmDialog();
   const [isPending, runAction]            = usePendingActions();
   const [dismissedAlerts, setDismissedAlerts] = useState(() => {
@@ -1957,23 +2004,44 @@ function AdminPage({ onBack, onNotice }) {
     });
   };
 
-  // Ubah status pengerjaan permintaan custom email (pending → processing → done/rejected).
-  const setCustomEmailStatus = async (requestId, status) => {
+  /* Satu pintu untuk update permintaan custom email: status, password akun
+     Google hasil pembuatan, dan catatan untuk pembeli. */
+  const patchCustomEmail = async (requestId, patch, message) => {
     await runAction(`cemail-${requestId}`, async () => {
       try {
-        await jsonRequest("/api/orders?scope=admin&resource=custom-email", {
+        const res = await jsonRequest("/api/orders?scope=admin&resource=custom-email", {
           method: "PATCH",
-          body: JSON.stringify({ id: requestId, status }),
+          body: JSON.stringify({ id: requestId, ...patch }),
         });
+        const saved = (res && res.custom) || {};
         setOrders((list) => list.map((o) => {
           const reqs = customEmailsOf(o);
           if (!reqs.some((r) => r.id === requestId)) return o;
-          const next = reqs.map((r) => (r.id === requestId ? { ...r, status } : r));
+          const next = reqs.map((r) => (r.id === requestId
+            ? { ...r, status: saved.status || r.status, password: saved.password || "", note: saved.note || "" }
+            : r));
           return { ...o, customEmails: next, customEmailStatus: next[0].status };
         }));
-        onNotice("Status custom email diperbarui");
+        setCeDraft((m) => { const copy = { ...m }; delete copy[requestId]; return copy; });
+        onNotice(message || "Custom email diperbarui");
       } catch (e) { setApiError(e.message); }
     });
+  };
+
+  const setCustomEmailStatus = (requestId, status) =>
+    patchCustomEmail(requestId, { status }, "Status custom email diperbarui");
+
+  const ceField = (r, field) => {
+    const draft = ceDraft[r.id];
+    return draft && draft[field] !== undefined ? draft[field] : (r[field] || "");
+  };
+  const setCeField = (id, field, value) =>
+    setCeDraft((m) => ({ ...m, [id]: { ...(m[id] || {}), [field]: value } }));
+  const ceDirty = (r) => {
+    const draft = ceDraft[r.id];
+    if (!draft) return false;
+    return (draft.password !== undefined && draft.password !== (r.password || ""))
+      || (draft.note !== undefined && draft.note !== (r.note || ""));
   };
 
 
@@ -2095,14 +2163,19 @@ function AdminPage({ onBack, onNotice }) {
 
   const pendingTopups = topups.filter((t) => t.status === "pending").length;
 
+  /* Notifikasi admin. Kunci dibuat ikut jumlah kejadian ("topup:2"), supaya
+     setelah dihapus notifikasi tetap muncul lagi begitu ada kejadian baru —
+     sebelumnya kunci tetap ("topup") membuat panel selamanya kosong. */
   const adminAlerts = useMemo(() => {
     const list = [];
-    if (pendingTopups) list.push({ key: "topup", nav: "Top Up", title: `${pendingTopups} permintaan top up menunggu`, desc: "Butuh persetujuan admin" });
+    if (pendingTopups) list.push({ key: `topup:${pendingTopups}`, nav: "Top Up", title: `${pendingTopups} permintaan top up menunggu`, desc: "Butuh persetujuan admin" });
     const low = listings.filter((l) => Number(l.stock) <= 3 && l.status !== "sold");
-    if (low.length) list.push({ key: "stock", nav: "Produk", title: `${low.length} produk stok menipis`, desc: low.slice(0, 3).map((l) => l.title).join(", ") });
+    if (low.length) list.push({ key: `stock:${low.length}`, nav: "Produk", title: `${low.length} produk stok menipis`, desc: low.slice(0, 3).map((l) => l.title).join(", ") });
+    const openCustom = orders.flatMap((o) => customEmailsOf(o)).filter((r) => (r.status || "pending") === "pending" || r.status === "processing");
+    if (openCustom.length) list.push({ key: `cemail:${openCustom.length}`, nav: "Custom Email", title: `${openCustom.length} custom email belum selesai`, desc: openCustom.slice(0, 3).map((r) => r.requested).join(", ") });
     const blocked = users.filter((u) => u.status !== "active");
-    if (blocked.length) list.push({ key: "user", nav: "Pengguna", title: `${blocked.length} akun tidak aktif`, desc: "Tinjau status pengguna" });
-    if (orders.length) list.push({ key: "order", nav: "Pesanan", title: `${orders.length} pesanan tercatat`, desc: "Lihat detail pembeli" });
+    if (blocked.length) list.push({ key: `user:${blocked.length}`, nav: "Pengguna", title: `${blocked.length} akun tidak aktif`, desc: "Tinjau status pengguna" });
+    if (orders.length) list.push({ key: `order:${orders.length}`, nav: "Pesanan", title: `${orders.length} pesanan tercatat`, desc: "Lihat detail pembeli" });
     return list.filter((a) => !dismissedAlerts.includes(a.key));
   }, [pendingTopups, listings, users, orders, dismissedAlerts]);
 
@@ -2724,6 +2797,39 @@ function AdminPage({ onBack, onNotice }) {
                                   <span>{CUSTOM_EMAIL_STATUS_LABEL[st]}</span>
                                 </button>
                               ))}
+                            </div>
+                            <div className="cx-ce-admin-fields">
+                              <label className="cx-ce-admin-field">
+                                <span><LockKeyhole size={11} /> Password akun</span>
+                                <input
+                                  value={ceField(r, "password")}
+                                  onChange={(e) => setCeField(r.id, "password", e.target.value)}
+                                  placeholder="Password login Google"
+                                  maxLength={120}
+                                  autoComplete="off"
+                                />
+                              </label>
+                              <label className="cx-ce-admin-field">
+                                <span><FileText size={11} /> Catatan untuk pembeli</span>
+                                <textarea
+                                  value={ceField(r, "note")}
+                                  onChange={(e) => setCeField(r.id, "note", e.target.value)}
+                                  placeholder="Contoh: email pemulihan sudah diisi, ganti password setelah login."
+                                  rows={2}
+                                  maxLength={600}
+                                />
+                              </label>
+                              <button
+                                className="cx-btn cx-btn-primary cx-btn-full"
+                                disabled={!ceDirty(r) || isPending(`cemail-${r.id}`)}
+                                onClick={() => patchCustomEmail(r.id, {
+                                  password: ceField(r, "password"),
+                                  note: ceField(r, "note"),
+                                }, "Password & catatan disimpan")}
+                              >
+                                {isPending(`cemail-${r.id}`) ? <Spinner /> : <Check size={12} />}
+                                <span>Simpan password &amp; catatan</span>
+                              </button>
                             </div>
                             <button className="cx-row-btn cx-ce-admin-link" onClick={() => goNav("Pesanan")}>
                               <ShoppingBag size={11} /> <span>Buka di Pesanan</span>
