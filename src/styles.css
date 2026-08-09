@@ -1130,7 +1130,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
   /* ── BOTTOM TAB BAR ── */
   .cx-tabbar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
-    display: grid; grid-template-columns: repeat(5, 1fr);
+    display: grid; grid-template-columns: repeat(6, 1fr);
     padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
     background: color-mix(in oklab, var(--s1) 88%, #000);
     backdrop-filter: saturate(180%) blur(18px);
@@ -1140,7 +1140,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-tabbar-item {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 3px; min-height: 50px; border-radius: 14px;
-    font-size: 10.5px; font-weight: 600; letter-spacing: 0;
+    font-size: 9.5px; font-weight: 600; letter-spacing: 0;
     color: var(--faint); transition: color .18s, background .18s;
   }
   .cx-tabbar-item.is-active { color: var(--ink); background: rgba(168,85,247,.14); }
