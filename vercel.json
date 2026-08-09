@@ -4,6 +4,18 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/products",
+      "destination": "/api/data"
+    },
+    {
+      "source": "/api/catalog",
+      "destination": "/api/data"
+    },
+    {
+      "source": "/api/custom-email",
+      "destination": "/api/orders?resource=check-email"
+    },
+    {
       "source": "/api/notifications",
       "destination": "/api/topup?resource=notifications"
     },
