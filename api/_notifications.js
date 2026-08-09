@@ -44,4 +44,31 @@ async function createNotification(sql, { userId, type, title, body, link } = {})
   }
 }
 
-module.exports = { ensureNotificationTables, createNotification };
+/**
+ * Kirim satu notifikasi ke BANYAK user sekaligus (broadcast admin).
+ * Memakai satu INSERT ... SELECT supaya tetap cepat walau user ribuan.
+ * `statuses` opsional: batasi ke status user tertentu (mis. ["active"]).
+ */
+async function broadcastNotification(sql, { type, title, body, link, statuses } = {}) {
+  if (!title) return 0;
+  await ensureNotificationTables(sql);
+  const t = clamp(type || "admin", 30);
+  const ti = clamp(title, 160);
+  const bo = clamp(body, 600);
+  const li = clamp(link, 60);
+  const list = Array.isArray(statuses) && statuses.length ? statuses : null;
+  const rows = list
+    ? await sql`
+        INSERT INTO codexa_notifications (id, user_id, type, title, body, link)
+        SELECT gen_random_uuid()::text, u.id, ${t}, ${ti}, ${bo}, ${li}
+        FROM codexa_users u WHERE u.status = ANY(${list})
+        RETURNING id`
+    : await sql`
+        INSERT INTO codexa_notifications (id, user_id, type, title, body, link)
+        SELECT gen_random_uuid()::text, u.id, ${t}, ${ti}, ${bo}, ${li}
+        FROM codexa_users u
+        RETURNING id`;
+  return rows.length;
+}
+
+module.exports = { ensureNotificationTables, createNotification, broadcastNotification };

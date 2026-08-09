@@ -94,6 +94,7 @@ function App() {
   const [notice, setNotice]   = useState("");
   const [cart, setCart]       = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [buyItem, setBuyItem]   = useState(null);
   const [buySel, setBuySel]     = useState([]);
   const [data, setData]         = useState({ products: [], loading: true, error: "" });
@@ -146,6 +147,10 @@ function App() {
   const navigate = (page) => {
     window.history.pushState({}, "", page === "store" ? "/" : `/${page}`);
     setActivePage(page);
+    // Pindah menu harus menutup semua panel yang sedang terbuka.
+    setCartOpen(false);
+    setBuyItem(null);
+    setMenuOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   // Timer lama dibersihkan dulu supaya notice baru tidak ikut terhapus.
@@ -223,145 +228,10 @@ function App() {
     <MobileTabBar activePage={activePage} navigate={navigate} cart={cart} onCartOpen={() => setCartOpen(true)} />
   );
 
-  if (activePage === "account") return (
-    <div className="cx-app">
-      {topbar}
-      <ProfilePage user={auth.user} onBack={() => navigate("store")} onTopup={() => navigate("topup")} />
-      <StoreFooter navigate={navigate} />
-      {tabbar}
-    </div>
-  );
-
-  if (activePage === "topup") return (
-    <div className="cx-app">
-      {topbar}
-      <TopUpPage user={auth.user} onBack={() => navigate("store")} onNotice={showNotice} onRefresh={loadSession} />
-      <StoreFooter navigate={navigate} />
-      {tabbar}
-    </div>
-  );
-
-  /* ── simple pages ── */
-  if (activePage === "orders") return (
-    <div className="cx-app">
-      {topbar}
-      <OrdersPage onBack={() => navigate("store")} onNotice={showNotice} navigate={navigate} />
-      <StoreFooter navigate={navigate} />
-      {tabbar}
-
-    </div>
-  );
-
-  if (activePage === "help") return (
-    <div className="cx-app">
-      {topbar}
-      <div className="cx-simple-page cx-container">
-        <button className="cx-back-link" onClick={() => navigate("store")}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
-        <CircleHelp size={28} color="#818cf8" style={{ marginBottom: 12 }} />
-        <p style={{ color: "var(--faint)", fontSize: 10, fontFamily: "ui-monospace,monospace", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 8 }}>CODEXA</p>
-        <h1>Bantuan</h1>
-        <p>Untuk pertanyaan seputar produk, pembayaran, atau pengiriman akun — hubungi kami via WhatsApp atau DM Instagram. Respon dalam 1×24 jam.</p>
-      </div>
-      <StoreFooter navigate={navigate} />
-      {tabbar}
-    </div>
-  );
-
-  /* ── store page ── */
-  return (
-    <div className="cx-app">
-      {topbar}
-
-      {/* Hero */}
-      <section className="cx-hero">
-        <div className="cx-container cx-hero-inner">
-          <div className="cx-kicker">CODEXA ACCESS</div>
-          <h1>Akun digital,<br /><em>tanpa drama.</em></h1>
-          <p className="cx-hero-sub">Akun siap pakai dari katalog nyata. Detail login hanya dikirim setelah pembelian berhasil.</p>
-          <div className="cx-hero-actions">
-            <button className="cx-btn cx-btn-primary" onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}>
-              Lihat katalog <ArrowRight size={13} />
-            </button>
-            <button className="cx-btn cx-btn-ghost" onClick={() => navigate("help")}>
-              Cara beli
-            </button>
-          </div>
-        </div>
-
-        {/* Benefits bar */}
-        <div className="cx-container" style={{ marginTop: 32 }}>
-          <div className="cx-benefits">
-            {[
-              [BadgeCheck, "Live Inventory", "Stok real-time dari database"],
-              [ShieldCheck, "Credentials Protected", "Detail akun aman sampai setelah bayar"],
-              [Package, "Instant Delivery", "Akun dikirim otomatis setelah verifikasi"],
-            ].map(([Icon, title, desc]) => (
-              <div key={title} className="cx-benefit">
-                <Icon size={14} />
-                <div><strong>{title}</strong>{desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Catalog */}
-      <main className="cx-container" id="catalog" style={{ paddingTop: 32, paddingBottom: 64 }}>
-        <div className="cx-section-header cx-section-header-stack">
-          <div>
-            <h2>Akun yang tersedia.</h2>
-            <p className="cx-section-sub">{data.loading ? "Memuat..." : `${products.length} produk ditemukan`}</p>
-          </div>
-          <div className="cx-search">
-            <Search size={13} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari akun atau tipe login..." />
-          </div>
-        </div>
-
-        {data.loading && (
-          <div className="cx-grid">
-            {[1,2,3,4,5,6].map((i) => (
-              <div key={i} style={{ border: "1px solid var(--b1)", borderRadius: 4, overflow: "hidden" }}>
-                <div className="cx-skeleton" style={{ height: 110 }} />
-                <div style={{ padding: 14 }}>
-                  <div className="cx-skeleton" style={{ height: 10, width: "60%", marginBottom: 8 }} />
-                  <div className="cx-skeleton" style={{ height: 13, marginBottom: 6 }} />
-                  <div className="cx-skeleton" style={{ height: 11, width: "80%" }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {data.error && (
-          <div className="cx-empty">
-            <CircleHelp size={28} />
-            <h3>Data belum bisa dimuat</h3>
-            <p>{data.error}</p>
-            <button className="cx-btn cx-btn-secondary" onClick={loadCatalog}><RefreshCw size={13} /> Coba lagi</button>
-          </div>
-        )}
-
-        {!data.loading && !data.error && products.length === 0 && (
-          <div className="cx-empty">
-            <Package size={28} />
-            <h3>Belum ada akun tersedia</h3>
-            <p>{search ? "Tidak ada produk yang cocok dengan pencarian." : "Belum ada listing nyata di database. Panel tidak menampilkan akun contoh."}</p>
-          </div>
-        )}
-
-        {!data.loading && products.length > 0 && (
-          <div className="cx-grid">
-            {products.map((p, i) => (
-              <ProductCard key={p.id || i} product={p} colorIdx={i} onBuy={(sel) => { setBuyItem(p); setBuySel(Array.isArray(sel) ? sel : []); }} />
-            ))}
-          </div>
-        )}
-      </main>
-
-      <StoreFooter navigate={navigate} />
-      {tabbar}
-
+  /* Overlay global: dirender di SEMUA halaman supaya keranjang, modal beli,
+     asisten, dan toast tetap bisa dibuka dari menu mana pun. */
+  const overlays = (
+    <>
       {/* Buy modal */}
       {buyItem && (
         <div className="cx-modal-backdrop" onClick={() => setBuyItem(null)}>
@@ -483,7 +353,7 @@ function App() {
         </div>
       )}
 
-      <AssistantWidget />
+      <AssistantWidget open={aiOpen} onOpenChange={setAiOpen} />
 
       {checkout.order && (
         <div className="cx-modal-backdrop" onClick={() => setCheckout({ loading: false, error: "", order: null })}>
@@ -508,7 +378,145 @@ function App() {
       )}
 
       {notice && <div className="cx-toast"><Check size={14} />{notice}</div>}
+    </>
+  );
 
+  if (activePage === "account") return (
+    <div className="cx-app">
+      {topbar}
+      <ProfilePage user={auth.user} onBack={() => navigate("store")} onTopup={() => navigate("topup")} />
+      <StoreFooter navigate={navigate} />
+      {tabbar}
+      {overlays}
+    </div>
+  );
+
+  if (activePage === "topup") return (
+    <div className="cx-app">
+      {topbar}
+      <TopUpPage user={auth.user} onBack={() => navigate("store")} onNotice={showNotice} onRefresh={loadSession} />
+      <StoreFooter navigate={navigate} />
+      {tabbar}
+      {overlays}
+    </div>
+  );
+
+  /* ── simple pages ── */
+  if (activePage === "orders") return (
+    <div className="cx-app">
+      {topbar}
+      <OrdersPage onBack={() => navigate("store")} onNotice={showNotice} navigate={navigate} />
+      <StoreFooter navigate={navigate} />
+      {tabbar}
+      {overlays}
+    </div>
+  );
+
+  if (activePage === "help") return (
+    <div className="cx-app">
+      {topbar}
+      <HelpPage navigate={navigate} onAskAssistant={() => setAiOpen(true)} />
+      <StoreFooter navigate={navigate} />
+      {tabbar}
+      {overlays}
+    </div>
+  );
+
+  /* ── store page ── */
+  return (
+    <div className="cx-app">
+      {topbar}
+
+      {/* Hero */}
+      <section className="cx-hero">
+        <div className="cx-container cx-hero-inner">
+          <div className="cx-kicker">CODEXA ACCESS</div>
+          <h1>Akun digital,<br /><em>tanpa drama.</em></h1>
+          <p className="cx-hero-sub">Akun siap pakai dari katalog nyata. Detail login hanya dikirim setelah pembelian berhasil.</p>
+          <div className="cx-hero-actions">
+            <button className="cx-btn cx-btn-primary" onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}>
+              Lihat katalog <ArrowRight size={13} />
+            </button>
+            <button className="cx-btn cx-btn-ghost" onClick={() => navigate("help")}>
+              Cara beli
+            </button>
+          </div>
+        </div>
+
+        {/* Benefits bar */}
+        <div className="cx-container" style={{ marginTop: 32 }}>
+          <div className="cx-benefits">
+            {[
+              [BadgeCheck, "Live Inventory", "Stok real-time dari database"],
+              [ShieldCheck, "Credentials Protected", "Detail akun aman sampai setelah bayar"],
+              [Package, "Instant Delivery", "Akun dikirim otomatis setelah verifikasi"],
+            ].map(([Icon, title, desc]) => (
+              <div key={title} className="cx-benefit">
+                <Icon size={14} />
+                <div><strong>{title}</strong>{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Catalog */}
+      <main className="cx-container" id="catalog" style={{ paddingTop: 32, paddingBottom: 64 }}>
+        <div className="cx-section-header cx-section-header-stack">
+          <div>
+            <h2>Akun yang tersedia.</h2>
+            <p className="cx-section-sub">{data.loading ? "Memuat..." : `${products.length} produk ditemukan`}</p>
+          </div>
+          <div className="cx-search">
+            <Search size={13} />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari akun atau tipe login..." />
+          </div>
+        </div>
+
+        {data.loading && (
+          <div className="cx-grid">
+            {[1,2,3,4,5,6].map((i) => (
+              <div key={i} style={{ border: "1px solid var(--b1)", borderRadius: 4, overflow: "hidden" }}>
+                <div className="cx-skeleton" style={{ height: 110 }} />
+                <div style={{ padding: 14 }}>
+                  <div className="cx-skeleton" style={{ height: 10, width: "60%", marginBottom: 8 }} />
+                  <div className="cx-skeleton" style={{ height: 13, marginBottom: 6 }} />
+                  <div className="cx-skeleton" style={{ height: 11, width: "80%" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {data.error && (
+          <div className="cx-empty">
+            <CircleHelp size={28} />
+            <h3>Data belum bisa dimuat</h3>
+            <p>{data.error}</p>
+            <button className="cx-btn cx-btn-secondary" onClick={loadCatalog}><RefreshCw size={13} /> Coba lagi</button>
+          </div>
+        )}
+
+        {!data.loading && !data.error && products.length === 0 && (
+          <div className="cx-empty">
+            <Package size={28} />
+            <h3>Belum ada akun tersedia</h3>
+            <p>{search ? "Tidak ada produk yang cocok dengan pencarian." : "Belum ada listing nyata di database. Panel tidak menampilkan akun contoh."}</p>
+          </div>
+        )}
+
+        {!data.loading && products.length > 0 && (
+          <div className="cx-grid">
+            {products.map((p, i) => (
+              <ProductCard key={p.id || i} product={p} colorIdx={i} onBuy={(sel) => { setBuyItem(p); setBuySel(Array.isArray(sel) ? sel : []); }} />
+            ))}
+          </div>
+        )}
+      </main>
+
+      <StoreFooter navigate={navigate} />
+      {tabbar}
+      {overlays}
     </div>
   );
 }
@@ -616,6 +624,7 @@ function timeAgo(value) {
 }
 
 const NOTIF_TONE = {
+  admin: { icon: Bell, color: "var(--indigo2)" },
   topup_pending: { icon: Clock, color: "var(--amber)" },
   topup_approved: { icon: BadgeCheck, color: "var(--green)" },
   topup_rejected: { icon: X, color: "var(--red)" },
@@ -623,7 +632,7 @@ const NOTIF_TONE = {
 };
 
 /* Lonceng notifikasi: polling ringan tiap 30 detik + refresh saat dibuka. */
-function NotificationBell({ navigate }) {
+function NotificationBell({ navigate, activePage }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -651,6 +660,17 @@ function NotificationBell({ navigate }) {
       window.removeEventListener("codexa:notify", onFocus);
     };
   }, []);
+
+  // Panel notifikasi ikut tertutup begitu user pindah menu.
+  useEffect(() => { setOpen(false); }, [activePage]);
+
+  // Esc juga menutup panel.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   const toggle = () => { const next = !open; setOpen(next); if (next) load(); };
 
@@ -735,7 +755,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
           ))}
         </nav>
         <div className="cx-topbar-actions">
-          <NotificationBell navigate={navigate} />
+          <NotificationBell navigate={navigate} activePage={activePage} />
           <button className="cx-cart-btn" onClick={onCartOpen}>
             <ShoppingBag size={13} />
             {cart.length > 0 && <b>{cart.length}</b>}
@@ -829,6 +849,112 @@ function MobileTabBar({ activePage, navigate, cart, onCartOpen }) {
 /* ═══════════════════════════════════════════════════
    STORE FOOTER
 ════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   HELP PAGE
+════════════════════════════════════════════════════ */
+const HELP_STEPS = [
+  { title: "Isi saldo", body: "Buka menu Top Up, pilih nominal, lalu unggah bukti transfer. Saldo masuk setelah admin verifikasi." },
+  { title: "Pilih akun", body: "Di halaman Toko, buka produk lalu centang akun yang mau dibeli. Harga total muncul otomatis." },
+  { title: "Bayar pakai saldo", body: "Klik Beli sekarang. Saldo langsung terpotong sesuai total akun yang dipilih." },
+  { title: "Ambil detail akun", body: "Email dan password akun tampil di menu Pesanan, bisa disalin kapan saja." },
+];
+
+const HELP_FAQ = [
+  { q: "Berapa lama top up diproses?", a: "Umumnya di bawah 1x24 jam pada jam kerja. Status top up bisa dipantau di menu Top Up." },
+  { q: "Akun yang saya beli bermasalah, bagaimana?", a: "Buka Assisten CodeXa dan laporkan kendalanya. Laporan tersimpan dan dibalas admin lewat notifikasi." },
+  { q: "Bisa refund saldo?", a: "Saldo yang sudah masuk dipakai untuk pembelian akun. Untuk kasus akun gagal dipakai, admin akan mengganti akun atau mengembalikan saldo." },
+  { q: "Di mana melihat detail akun saya?", a: "Menu Pesanan menyimpan semua pembelian beserta kredensial akunnya." },
+  { q: "Kenapa notifikasi tidak muncul?", a: "Tarik ulang halaman atau buka lonceng notifikasi di kanan atas. Pesan dari admin masuk ke situ." },
+];
+
+function HelpPage({ navigate, onAskAssistant }) {
+  const [openFaq, setOpenFaq] = useState(0);
+  return (
+    <main className="cx-help">
+      <div className="cx-container">
+        <button className="cx-back-link" onClick={() => navigate("store")}>
+          <ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali
+        </button>
+
+        <section className="cx-help-hero">
+          <span className="cx-help-badge"><CircleHelp size={12} /> Pusat Bantuan</span>
+          <h1>Ada yang bisa kami bantu?</h1>
+          <p>Panduan singkat memakai CodeXa, mulai dari isi saldo sampai mengambil detail akun.</p>
+          <div className="cx-help-cta">
+            <button className="cx-btn cx-btn-primary" onClick={onAskAssistant}>
+              <Sparkles size={13} /> Tanya Assisten
+            </button>
+            <button className="cx-btn cx-btn-ghost" onClick={() => navigate("orders")}>
+              <Package size={13} /> Cek pesanan
+            </button>
+          </div>
+        </section>
+
+        <section className="cx-help-quick">
+          {[
+            { icon: Wallet, label: "Top Up saldo", desc: "Isi saldo & pantau status", page: "topup" },
+            { icon: ShoppingBag, label: "Belanja akun", desc: "Lihat katalog & stok", page: "store" },
+            { icon: Package, label: "Pesanan saya", desc: "Detail akun yang dibeli", page: "orders" },
+            { icon: User, label: "Akun saya", desc: "Profil & keamanan", page: "account" },
+          ].map((item) => (
+            <button key={item.page} className="cx-help-quick-card" onClick={() => navigate(item.page)}>
+              <span className="cx-help-quick-icon"><item.icon size={15} /></span>
+              <span className="cx-help-quick-text">
+                <strong>{item.label}</strong>
+                <small>{item.desc}</small>
+              </span>
+              <ArrowUpRight size={14} className="cx-help-quick-arrow" />
+            </button>
+          ))}
+        </section>
+
+        <section className="cx-help-section">
+          <h2>Cara belanja di CodeXa</h2>
+          <ol className="cx-help-steps">
+            {HELP_STEPS.map((step, i) => (
+              <li key={step.title}>
+                <span className="cx-help-step-no">{i + 1}</span>
+                <div>
+                  <strong>{step.title}</strong>
+                  <p>{step.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="cx-help-section">
+          <h2>Pertanyaan umum</h2>
+          <div className="cx-help-faq">
+            {HELP_FAQ.map((item, i) => {
+              const open = openFaq === i;
+              return (
+                <div className={`cx-help-faq-item${open ? " is-open" : ""}`} key={item.q}>
+                  <button onClick={() => setOpenFaq(open ? -1 : i)} aria-expanded={open}>
+                    <span>{item.q}</span>
+                    <ChevronDown size={15} />
+                  </button>
+                  {open && <p>{item.a}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="cx-help-contact">
+          <div>
+            <strong>Masih belum terjawab?</strong>
+            <p>Kirim keluhanmu lewat Assisten CodeXa. Laporan langsung masuk ke admin dan balasannya dikirim sebagai notifikasi.</p>
+          </div>
+          <button className="cx-btn cx-btn-primary" onClick={onAskAssistant}>
+            <Send size={13} /> Kirim laporan
+          </button>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 function StoreFooter({ navigate }) {
   return (
     <footer className="cx-footer">

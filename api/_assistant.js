@@ -18,6 +18,7 @@
 
 const crypto = require("crypto");
 const { hashPassword, text } = require("./_users");
+const { createNotification, broadcastNotification } = require("./_notifications");
 const {
   callTelegram, adminChatId, telegramEnabled, escapeHtml, rupiah, waktuWib,
 } = require("./_telegram");
@@ -840,7 +841,7 @@ const adminTools = {
   admin_notify_user_channel: {
     schema: {
       name: "admin_notify_user_channel",
-      description: "Kirim pesan/pengumuman dari admin ke chat admin Telegram (misalnya catatan tindak lanjut atau reminder tim).",
+      description: "Kirim catatan ke chat admin di Telegram (internal tim saja). BUKAN untuk mengirim notifikasi ke user \u2014 untuk itu pakai admin_notify_user atau admin_broadcast_notification.",
       parameters: {
         type: "object",
         properties: {
@@ -861,6 +862,108 @@ const adminTools = {
       });
       if (!sent || sent.ok !== true) return fail("Gagal mengirim pesan");
       return ok({ message: "Pesan terkirim ke chat admin." });
+    },
+  },
+
+  admin_notify_user: {
+    schema: {
+      name: "admin_notify_user",
+      description:
+        "Kirim notifikasi IN-APP ke satu user CodeXa. Notifikasi ini yang muncul di lonceng notifikasi user. " +
+        "Pakai tool ini kalau admin minta 'kirim pesan/notifikasi ke user'. " +
+        "Boleh pakai user_id, atau email user kalau id belum diketahui.",
+      parameters: {
+        type: "object",
+        properties: {
+          user_id: { type: "string", description: "ID user tujuan (opsional kalau email diisi)." },
+          email: { type: "string", description: "Email user tujuan (opsional kalau user_id diisi)." },
+          title: { type: "string", description: "Judul notifikasi, singkat." },
+          message: { type: "string", description: "Isi pesan notifikasi." },
+          link: {
+            type: "string",
+            description: "Opsional. Halaman tujuan saat notifikasi diklik: store, orders, topup, account, atau help.",
+          },
+        },
+        required: ["title", "message"],
+      },
+    },
+    handler: async (args, ctx) => {
+      if (ctx.role !== "admin") return fail("Akses ditolak");
+      const title = text(args.title, 160);
+      const message = text(args.message, 600);
+      if (title.length < 2) return fail("Judul terlalu pendek");
+      if (message.length < 2) return fail("Isi pesan terlalu pendek");
+      const linkRaw = text(args.link, 20).toLowerCase();
+      const link = ["store", "orders", "topup", "account", "help"].includes(linkRaw) ? linkRaw : "";
+
+      let userId = text(args.user_id, 60);
+      let target = null;
+      if (userId) {
+        const [row] = await ctx.sql`SELECT id, name, email FROM codexa_users WHERE id = ${userId} LIMIT 1`;
+        target = row || null;
+      } else {
+        const email = text(args.email, 160).toLowerCase();
+        if (!email) return fail("Sebutkan user_id atau email user tujuan");
+        const [row] = await ctx.sql`SELECT id, name, email FROM codexa_users WHERE email = ${email} LIMIT 1`;
+        target = row || null;
+      }
+      if (!target) return fail("User tidak ditemukan");
+
+      const saved = await createNotification(ctx.sql, {
+        userId: target.id,
+        type: "admin",
+        title,
+        body: message,
+        link,
+      });
+      if (!saved) return fail("Notifikasi gagal disimpan");
+      return ok({
+        message: `Notifikasi terkirim ke ${target.name} (${target.email}).`,
+        userId: target.id,
+        title,
+      });
+    },
+  },
+
+  admin_broadcast_notification: {
+    schema: {
+      name: "admin_broadcast_notification",
+      description:
+        "Kirim notifikasi IN-APP ke SEMUA user (pengumuman). Muncul di lonceng notifikasi setiap user. " +
+        "Karena menyentuh semua user, minta konfirmasi admin dulu lalu panggil dengan confirm=true.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Judul pengumuman." },
+          message: { type: "string", description: "Isi pengumuman." },
+          link: { type: "string", description: "Opsional: store, orders, topup, account, atau help." },
+          only_active: { type: "boolean", description: "true = hanya user berstatus active. Default true." },
+          confirm: { type: "boolean", description: "Wajib true. Konfirmasi admin sebelum broadcast." },
+        },
+        required: ["title", "message", "confirm"],
+      },
+    },
+    handler: async (args, ctx) => {
+      if (ctx.role !== "admin") return fail("Akses ditolak");
+      if (args.confirm !== true) return fail("Broadcast butuh konfirmasi admin (confirm=true)");
+      const title = text(args.title, 160);
+      const message = text(args.message, 600);
+      if (title.length < 2 || message.length < 2) return fail("Judul atau isi pesan terlalu pendek");
+      const linkRaw = text(args.link, 20).toLowerCase();
+      const link = ["store", "orders", "topup", "account", "help"].includes(linkRaw) ? linkRaw : "";
+      const onlyActive = args.only_active !== false;
+      try {
+        const total = await broadcastNotification(ctx.sql, {
+          type: "admin",
+          title,
+          body: message,
+          link,
+          statuses: onlyActive ? ["active"] : null,
+        });
+        return ok({ message: `Pengumuman terkirim ke ${total} user.`, total });
+      } catch (error) {
+        return fail(`Broadcast gagal: ${error && error.message}`);
+      }
     },
   },
 
@@ -1165,6 +1268,7 @@ function systemPrompt(ctx) {
       "- Boleh memanggil beberapa tool berurutan untuk menyelesaikan satu permintaan.",
       "- Jangan pernah menampilkan password hash atau kredensial akun produk.",
       "",
+      "- Kirim notifikasi ke user pakai admin_notify_user (satu user) atau admin_broadcast_notification (semua user). Notifikasi ini langsung muncul di lonceng notifikasi user. admin_notify_user_channel HANYA mengirim catatan ke Telegram tim, bukan ke user.",
       "- Laporan/keluhan user dari Assisten tersimpan di database. Pakai admin_list_reports untuk melihat daftarnya, admin_report_stats untuk ringkasan, dan admin_update_report untuk mengubah status atau menulis balasan yang bisa dibaca user.",
       "",
       "",
