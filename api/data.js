@@ -59,7 +59,7 @@ module.exports = async function handler(request, response) {
     const rows = await sql`
       SELECT id, title, description, login_type AS "loginType", price, stock, status, credential_blob AS "credentialBlob"
       FROM codexa_account_listings
-      WHERE status = 'available' AND stock > 0
+      WHERE status = 'available'
       ORDER BY created_at DESC
     `;
 
