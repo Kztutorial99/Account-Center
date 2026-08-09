@@ -571,11 +571,22 @@ function OrderItems({ items, onNotice }) {
 
 function OrdersPage({ onBack, onNotice, navigate }) {
   const [state, setState] = useState({ orders: [], loading: true, error: "" });
-  useEffect(() => {
+  const load = () => {
+    setState((x) => ({ ...x, loading: true }));
     jsonRequest("/api/orders")
       .then((p) => setState({ orders: p.orders || [], loading: false, error: "" }))
       .catch((e) => setState({ orders: [], loading: false, error: e.message }));
-  }, []);
+  };
+  useEffect(() => { load(); }, []);
+
+  const deleteOrder = async (id) => {
+    if (!window.confirm("Hapus pesanan ini dari riwayat? Detail akun tidak bisa dibuka lagi.")) return;
+    try {
+      await jsonRequest("/api/orders", { method: "DELETE", body: JSON.stringify({ id }) });
+      setState((x) => ({ ...x, orders: x.orders.filter((o) => o.id !== id) }));
+      onNotice("Pesanan dihapus dari riwayat");
+    } catch (e) { onNotice(e.message); }
+  };
 
   return (
     <div className="cx-orders-page cx-container">
@@ -613,9 +624,12 @@ function OrdersPage({ onBack, onNotice, navigate }) {
                 <small>{order.itemCount} akun · {formatDate(order.createdAt)}</small>
               </div>
             </div>
-            <span className={`cx-order-status${order.status === "paid" ? " is-paid" : ""}`}>
-              <BadgeCheck size={12} /> {order.status === "paid" ? "Lunas" : order.status}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className={`cx-order-status${order.status === "paid" ? " is-paid" : ""}`}>
+                <BadgeCheck size={12} /> {order.status === "paid" ? "Lunas" : order.status}
+              </span>
+              <button className="cx-row-btn danger" onClick={() => deleteOrder(order.id)} aria-label="Hapus pesanan"><Trash2 size={12} /></button>
+            </div>
           </div>
           <OrderItems items={order.items} onNotice={onNotice} />
         </article>
@@ -656,6 +670,7 @@ function NotificationBell({ navigate, activePage }) {
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [detail, setDetail] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -705,8 +720,9 @@ function NotificationBell({ navigate, activePage }) {
       setItems((list) => list.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
       setUnread((u) => Math.max(0, u - 1));
     }
+    // Isi pesan dibuka penuh dulu lewat overlay, bukan langsung pindah halaman.
     setOpen(false);
-    if (n.link) navigate(n.link);
+    setDetail(n);
   };
 
   const clearAll = async () => {
@@ -755,11 +771,51 @@ function NotificationBell({ navigate, activePage }) {
           </div>
         </>
       )}
+      {detail && (
+        <div className="cx-modal-backdrop" onClick={() => setDetail(null)}>
+          <div className="cx-modal cx-notif-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cx-modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                {(() => {
+                  const tone = NOTIF_TONE[detail.type] || { icon: Bell, color: "var(--muted)" };
+                  const ToneIcon = tone.icon;
+                  return <span className="cx-notif-icon" style={{ color: tone.color }}><ToneIcon size={16} /></span>;
+                })()}
+                <h3 style={{ margin: 0, minWidth: 0 }}>{detail.title}</h3>
+              </div>
+              <button className="cx-icon-btn" onClick={() => setDetail(null)} aria-label="Tutup"><X size={14} /></button>
+            </div>
+            <div className="cx-notif-modal-body">
+              <p>{detail.body}</p>
+              <span className="cx-notif-modal-time"><Clock size={11} /> {timeAgo(detail.createdAt)}</span>
+            </div>
+            <div className="cx-modal-footer">
+              {detail.link && (
+                <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => { const link = detail.link; setDetail(null); navigate(link); }}>
+                  Buka halaman <ArrowRight size={12} />
+                </button>
+              )}
+              <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => setDetail(null)}>Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, setMenuOpen, onLogout }) {
+  const accountRef = useRef(null);
+  // Klik/tap di mana pun di luar kartu profil harus menutup menunya.
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onDown = (e) => { if (accountRef.current && !accountRef.current.contains(e.target)) setMenuOpen(false); };
+    const onKey = (e) => { if (e.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("pointerdown", onDown, true);
+    window.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("pointerdown", onDown, true); window.removeEventListener("keydown", onKey); };
+  }, [menuOpen, setMenuOpen]);
+
   const initials = String(user && user.name || "CX").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "CX";
   return (
     <header className="cx-topbar">
@@ -780,7 +836,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
             {cart.length > 0 && <b>{cart.length}</b>}
             <span className="cx-cart-label">Keranjang</span>
           </button>
-          <div className="cx-account-menu">
+          <div className="cx-account-menu" ref={accountRef}>
             <button className="cx-account-trigger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Akun saya">
               <div className="cx-avatar">{initials}</div>
               <div className="cx-account-trigger-copy">
@@ -1074,6 +1130,10 @@ function AdminPage({ onBack, onNotice }) {
   const [aiNotice, setAiNotice]           = useState("");
   const [aiError, setAiError]             = useState("");
   const [testingAi, setTestingAi]         = useState(false);
+  const [orders, setOrders]               = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [refreshing, setRefreshing]       = useState(false);
+  const [headerMenu, setHeaderMenu]       = useState("");
 
   const loadSettings = () =>
     jsonRequest("/api/admin/settings", { method: "GET" })
@@ -1200,22 +1260,65 @@ function AdminPage({ onBack, onNotice }) {
 
   const checkAuth = () =>
     jsonRequest("/api/admin/login", { method: "GET" })
-      .then((p) => { setAuthenticated(p.authenticated); if (p.authenticated) { loadListings(); loadUsersData(); loadSettings(); } })
+      .then((p) => { setAuthenticated(p.authenticated); if (p.authenticated) { loadListings(); loadUsersData(); loadSettings(); loadOrders(); } })
       .catch(() => setAuthenticated(false));
 
   useEffect(() => { checkAuth(); }, []);
 
   const loadListings = () => {
     setLoading(true); setApiError("");
-    jsonRequest("/api/admin/products", { method: "GET" })
+    return jsonRequest("/api/admin/products", { method: "GET" })
       .then((p) => setListings(p.products || []))
       .catch((e) => setApiError(e.message))
       .finally(() => setLoading(false));
   };
 
+  const loadOrders = () => {
+    setOrdersLoading(true);
+    return jsonRequest("/api/admin/orders", { method: "GET" })
+      .then((p) => setOrders(p.orders || []))
+      .catch((e) => setApiError(e.message))
+      .finally(() => setOrdersLoading(false));
+  };
+
+  // Satu tombol refresh untuk semua data panel supaya indikator putar akurat.
+  const refreshAll = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try { await Promise.all([loadListings(), loadUsersData(), loadOrders()]); }
+    finally { setRefreshing(false); }
+  };
+
+  const deleteAdminOrder = async (id) => {
+    if (!window.confirm("Hapus pesanan ini dari riwayat?")) return;
+    try {
+      await jsonRequest("/api/admin/orders", { method: "DELETE", body: JSON.stringify({ id }) });
+      setOrders((list) => list.filter((o) => o.id !== id));
+      onNotice("Pesanan dihapus");
+    } catch (e) { setApiError(e.message); }
+  };
+
+  const deleteTopup = async (id) => {
+    if (!window.confirm("Hapus permintaan top up ini dari riwayat?")) return;
+    try {
+      await jsonRequest("/api/admin/topups", { method: "DELETE", body: JSON.stringify({ id }) });
+      setTopups((list) => list.filter((t) => t.id !== id));
+      onNotice("Permintaan top up dihapus");
+    } catch (e) { setApiError(e.message); }
+  };
+
+  const clearTopupHistory = async () => {
+    if (!window.confirm("Hapus semua permintaan top up yang sudah selesai?")) return;
+    try {
+      await jsonRequest("/api/admin/topups", { method: "DELETE", body: JSON.stringify({ scope: "resolved" }) });
+      setTopups((list) => list.filter((t) => t.status === "pending"));
+      onNotice("Riwayat top up dibersihkan");
+    } catch (e) { setApiError(e.message); }
+  };
+
   const login = async (e) => {
     e.preventDefault(); setLoginError("");
-    try { await jsonRequest("/api/admin/login", { method: "POST", body: JSON.stringify({ password }) }); setAuthenticated(true); setPassword(""); loadListings(); loadUsersData(); loadSettings(); }
+    try { await jsonRequest("/api/admin/login", { method: "POST", body: JSON.stringify({ password }) }); setAuthenticated(true); setPassword(""); loadListings(); loadUsersData(); loadSettings(); loadOrders(); }
     catch (e) { setLoginError(e.message); }
   };
 
@@ -1278,6 +1381,48 @@ function AdminPage({ onBack, onNotice }) {
     return q ? users.filter((u) => `${u.name} ${u.email} ${u.phone}`.toLowerCase().includes(q)) : users;
   }, [users, userQuery]);
 
+  const filteredOrders = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return orders;
+    return orders.filter((o) => `${o.buyer.name} ${o.buyer.email} ${o.id} ${(o.items || []).map((i) => i.title).join(" ")}`.toLowerCase().includes(q));
+  }, [orders, search]);
+
+  const pendingTopups = topups.filter((t) => t.status === "pending").length;
+
+  const adminAlerts = useMemo(() => {
+    const list = [];
+    if (pendingTopups) list.push({ key: "topup", nav: "Top Up", title: `${pendingTopups} permintaan top up menunggu`, desc: "Butuh persetujuan admin" });
+    const low = listings.filter((l) => Number(l.stock) <= 3 && l.status !== "sold");
+    if (low.length) list.push({ key: "stock", nav: "Produk", title: `${low.length} produk stok menipis`, desc: low.slice(0, 3).map((l) => l.title).join(", ") });
+    const blocked = users.filter((u) => u.status !== "active");
+    if (blocked.length) list.push({ key: "user", nav: "Pengguna", title: `${blocked.length} akun tidak aktif`, desc: "Tinjau status pengguna" });
+    if (orders.length) list.push({ key: "order", nav: "Pesanan", title: `${orders.length} pesanan tercatat`, desc: "Lihat detail pembeli" });
+    return list;
+  }, [pendingTopups, listings, users, orders]);
+
+  const recentActivity = useMemo(() => {
+    const feed = [
+      ...orders.slice(0, 5).map((o) => ({
+        key: `o-${o.id}`, Icon: ShoppingBag, at: o.createdAt,
+        title: `${o.buyer.name} membeli ${o.itemCount} akun`,
+        desc: `${formatPrice(o.total)} · ${(o.items || []).map((i) => i.title).join(", ") || "-"}`,
+      })),
+      ...topups.slice(0, 5).map((t) => ({
+        key: `t-${t.id}`, Icon: Wallet, at: t.createdAt,
+        title: `Top up ${formatPrice(t.amount)} · ${t.userName}`,
+        desc: t.status === "pending" ? "Menunggu review" : t.status === "approved" ? "Disetujui" : "Ditolak",
+      })),
+      ...listings.slice(0, 5).map((l) => ({
+        key: `l-${l.id}`, Icon: Package, at: l.createdAt,
+        title: l.title, desc: `${l.loginType} · stok ${l.stock}`,
+      })),
+    ];
+    return feed
+      .sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0))
+      .slice(0, 8)
+      .map((a) => ({ ...a, time: formatDate(a.at) }));
+  }, [orders, topups, listings]);
+
   const USERS_PER_PAGE = 8;
   const userPageCount = Math.max(1, Math.ceil(filteredUsers.length / USERS_PER_PAGE));
   const safeUserPage = Math.min(userPage, userPageCount);
@@ -1329,8 +1474,9 @@ function AdminPage({ onBack, onNotice }) {
   const NAV_ITEMS = [
     { label: "Dashboard",   shortcut: "⌘D", icon: LayoutDashboard },
     { label: "Produk",      shortcut: "⌘P", icon: Package,        dot: true },
-    { label: "Pesanan",     shortcut: "⌘O", icon: ShoppingBag,    dot: listings.length > 0 },
+    { label: "Pesanan",     shortcut: "⌘O", icon: ShoppingBag,    dot: orders.length > 0 },
     { label: "Pengguna",    shortcut: "⌘U", icon: User,           dot: users.some((u) => u.status !== "active") },
+    { label: "Top Up",      shortcut: "⌘T", icon: Wallet,         dot: topups.some((t) => t.status === "pending") },
     { label: "Assisten",    shortcut: "⌘I", icon: Sparkles,       dot: !(aiCfg && aiCfg.enabled && aiCfg.hasKey) },
     { label: "Pengaturan",  shortcut: "⌘,", icon: Settings },
   ];
@@ -1358,10 +1504,6 @@ function AdminPage({ onBack, onNotice }) {
           ))}
         </nav>
         <div className="cx-sidebar-footer">
-          <button className="cx-sidebar-item" onClick={logout} style={{ width: "100%" }}>
-            <LogOut size={14} strokeWidth={1.7} /><span>Keluar</span>
-            <span className="cx-sidebar-shortcut">⇧⌘Q</span>
-          </button>
           <div className="cx-sidebar-user">
             <div className="cx-avatar">AR</div>
             <div className="cx-sidebar-user-info">
@@ -1375,6 +1517,7 @@ function AdminPage({ onBack, onNotice }) {
 
       {/* ── Main ── */}
       <main className="cx-admin-main">
+        {headerMenu && <div className="cx-menu-backdrop" onClick={() => setHeaderMenu("")} />}
         {/* Header */}
         <header className="cx-admin-header">
           <button className="cx-mobile-menu-btn" onClick={() => setNavOpen(true)} aria-label="Buka menu">
@@ -1401,9 +1544,50 @@ function AdminPage({ onBack, onNotice }) {
               <Sparkles size={13} />
               <span>Assisten</span>
             </button>
-            <IconBtn label="Bantuan" style={{ }}><CircleHelp size={13} /></IconBtn>
-            <IconBtn label="Notifikasi" style={{ position: "relative" }}><Bell size={13} /></IconBtn>
-            <div className="cx-avatar">AR</div>
+            <div className="cx-admin-menu-wrap">
+              <button className="cx-icon-btn" aria-label="Bantuan" onClick={() => setHeaderMenu((m) => (m === "help" ? "" : "help"))}><CircleHelp size={13} /></button>
+              {headerMenu === "help" && (
+                <div className="cx-admin-menu">
+                  <div className="cx-admin-menu-title">Bantuan cepat</div>
+                  <p>Kelola listing di menu <strong>Produk</strong>, cek transaksi pembeli di <strong>Pesanan</strong>.</p>
+                  <p>Setujui saldo pembeli di menu <strong>Top Up</strong>.</p>
+                  <p>Butuh bantuan lanjut? Buka <strong>Assisten</strong> di kanan atas.</p>
+                </div>
+              )}
+            </div>
+            <div className="cx-admin-menu-wrap">
+              <button className="cx-icon-btn" aria-label="Notifikasi" onClick={() => setHeaderMenu((m) => (m === "notif" ? "" : "notif"))} style={{ position: "relative" }}>
+                <Bell size={13} />
+                {adminAlerts.length > 0 && <span className="cx-admin-badge">{adminAlerts.length}</span>}
+              </button>
+              {headerMenu === "notif" && (
+                <div className="cx-admin-menu">
+                  <div className="cx-admin-menu-title">Notifikasi</div>
+                  {adminAlerts.length === 0
+                    ? <p>Tidak ada notifikasi baru.</p>
+                    : adminAlerts.map((a) => (
+                      <button key={a.key} className="cx-admin-menu-item" onClick={() => { setActiveNav(a.nav); setHeaderMenu(""); }}>
+                        <strong>{a.title}</strong>
+                        <small>{a.desc}</small>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+            <div className="cx-admin-menu-wrap">
+              <button className="cx-avatar cx-admin-avatar-btn" aria-label="Profil admin" onClick={() => setHeaderMenu((m) => (m === "profile" ? "" : "profile"))}>AR</button>
+              {headerMenu === "profile" && (
+                <div className="cx-admin-menu">
+                  <div className="cx-admin-menu-head">
+                    <div className="cx-avatar">AR</div>
+                    <div><strong>Admin</strong><small>Owner · CodeXa Store</small></div>
+                  </div>
+                  <button className="cx-admin-menu-item" onClick={() => { setActiveNav("Pengaturan"); setHeaderMenu(""); }}><Settings size={12} /> Pengaturan</button>
+                  <button className="cx-admin-menu-item" onClick={() => { onBack(); setHeaderMenu(""); }}><ShoppingBag size={12} /> Lihat store</button>
+                  <button className="cx-admin-menu-item danger" onClick={() => { setHeaderMenu(""); logout(); }}><LogOut size={12} /> Keluar</button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -1535,31 +1719,16 @@ function AdminPage({ onBack, onNotice }) {
           <div className="cx-admin-top">
             <div>
               <div className="cx-admin-date">{new Date().toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
-              <h1>Ringkasan</h1>
+              <h1>{activeNav === "Dashboard" ? "Ringkasan" : activeNav}</h1>
             </div>
             <div className="cx-admin-actions">
-              <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={loadListings}><RefreshCw size={11} /> Refresh</button>
-              <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => openForm()}><Plus size={11} /> Tambah Produk</button>
+              <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={refreshAll} disabled={refreshing}>
+                <RefreshCw size={11} className={refreshing ? "cx-spin" : ""} /> {refreshing ? "Memuat..." : "Refresh"}
+              </button>
+              {(activeNav === "Dashboard" || activeNav === "Produk") && (
+                <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => openForm()}><Plus size={11} /> Tambah Produk</button>
+              )}
             </div>
-          </div>
-
-          {/* Stat cards */}
-          <div className="cx-stat-grid">
-            {[
-              { label: "Total Produk", value: totalProducts, delta: `${listings.length} listing`, up: true },
-              { label: "Terjual",      value: totalSold,     delta: "dari total listing", up: totalSold > 0 },
-              { label: "Revenue",      value: formatPrice(revenue), delta: "akumulasi terjual", up: revenue > 0 },
-              { label: "Stok Rendah",  value: lowStock,      delta: "perlu restock", up: false },
-            ].map(({ label, value, delta, up }) => (
-              <div key={label} className="cx-stat-card">
-                <div className="cx-stat-label">{label}</div>
-                <div className="cx-stat-value">{value}</div>
-                <div className={`cx-stat-delta ${up ? "up" : "down"}`}>
-                  {up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-                  <span style={{ marginLeft: 2 }}>{delta}</span>
-                </div>
-              </div>
-            ))}
           </div>
 
           {apiError && (
@@ -1568,37 +1737,211 @@ function AdminPage({ onBack, onNotice }) {
             </div>
           )}
 
-          {/* Top Up requests */}
-          <div className="cx-panel" style={{ marginBottom: 18 }}>
-            <div className="cx-panel-header">
-              <h3>Permintaan Top Up</h3>
-              <span className="cx-panel-sub">{topups.filter((t) => t.status === "pending").length} menunggu · {users.length} user terdaftar</span>
-              <button className="cx-icon-btn" style={{ marginLeft: "auto" }} onClick={loadUsersData} aria-label="Muat ulang"><RefreshCw size={13} /></button>
-            </div>
-            {topups.length === 0
-              ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada permintaan top up.</div>
-              : topups.slice(0, 15).map((t) => (
-                <div key={t.id} className="cx-topup-row">
-                  <div>
-                    <strong>{formatPrice(t.amount)}</strong>
-                    <small>{t.userName} · {t.userEmail} · {t.method}{t.reference ? ` · ID trx: ${t.reference}` : ""}{t.note ? ` · catatan: ${t.note}` : ""}</small>
+          {/* ══ DASHBOARD ══ */}
+          {activeNav === "Dashboard" && (
+            <>
+              <div className="cx-stat-grid">
+                {[
+                  { label: "Total Produk", value: totalProducts, delta: `${listings.length} listing`, up: true },
+                  { label: "Terjual",      value: totalSold,     delta: "dari total listing", up: totalSold > 0 },
+                  { label: "Revenue",      value: formatPrice(revenue), delta: "akumulasi terjual", up: revenue > 0 },
+                  { label: "Stok Rendah",  value: lowStock,      delta: "perlu restock", up: false },
+                ].map(({ label, value, delta, up }) => (
+                  <div key={label} className="cx-stat-card">
+                    <div className="cx-stat-label">{label}</div>
+                    <div className="cx-stat-value">{value}</div>
+                    <div className={`cx-stat-delta ${up ? "up" : "down"}`}>
+                      {up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                      <span style={{ marginLeft: 2 }}>{delta}</span>
+                    </div>
                   </div>
-                  <span className="cx-topup-date">{formatDate(t.createdAt)}</span>
-                  {t.status === "pending"
-                    ? <div style={{ display: "flex", gap: 6 }}>
-                        <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => reviewTopup(t.id, "approve")}><Check size={11} /> Setujui</button>
-                        <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => reviewTopup(t.id, "reject")}><X size={11} /> Tolak</button>
-                      </div>
-                    : <span className={`cx-topup-badge ${t.status === "approved" ? "ok" : "bad"}`}>
-                        {t.status === "approved" ? <BadgeCheck size={11} /> : <X size={11} />}
-                        {t.status === "approved" ? " Disetujui" : " Ditolak"}
-                      </span>}
-                </div>
-              ))}
-          </div>
+                ))}
+              </div>
 
-          {/* Manajemen User */}
-          <div className="cx-panel" style={{ marginBottom: 18 }}>
+              <div className="cx-quick-grid">
+                {[
+                  { label: "Permintaan Top Up", nav: "Top Up", icon: Wallet, info: `${pendingTopups} menunggu` },
+                  { label: "Pesanan Masuk", nav: "Pesanan", icon: ShoppingBag, info: `${orders.length} transaksi` },
+                  { label: "Pengguna", nav: "Pengguna", icon: User, info: `${users.length} akun` },
+                  { label: "Produk", nav: "Produk", icon: Package, info: `${listings.length} listing` },
+                ].map(({ label, nav, icon: QIcon, info }) => (
+                  <button key={nav} className="cx-quick-card" onClick={() => setActiveNav(nav)}>
+                    <span className="cx-quick-icon"><QIcon size={15} /></span>
+                    <span className="cx-quick-copy">
+                      <strong>{label}</strong>
+                      <small>{info}</small>
+                    </span>
+                    <ArrowRight size={13} color="var(--faint)" />
+                  </button>
+                ))}
+              </div>
+
+              <div className="cx-panel" style={{ marginTop: 18 }}>
+                <div className="cx-panel-header">
+                  <h3>Aktivitas Terbaru</h3>
+                  <span className="cx-panel-sub">produk & transaksi terakhir</span>
+                </div>
+                {recentActivity.length === 0
+                  ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada aktivitas.</div>
+                  : recentActivity.map((a, i) => (
+                    <div key={a.key} className="cx-activity-item">
+                      <div className="cx-activity-icon" style={{ color: ACCENT_COLORS[i % ACCENT_COLORS.length] }}>
+                        <a.Icon size={14} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="cx-activity-title" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div>
+                        <div className="cx-activity-desc">{a.desc}</div>
+                      </div>
+                      <span className="cx-activity-time">{a.time}</span>
+                    </div>
+                  ))
+                }
+              </div>
+            </>
+          )}
+
+          {/* ══ PRODUK ══ */}
+          {activeNav === "Produk" && (
+            <div className="cx-panel">
+              <div className="cx-panel-header">
+                <h3>Produk</h3>
+                <span className="cx-panel-sub">{filtered.length} dari {listings.length}</span>
+                <button className="cx-icon-btn" style={{ marginLeft: "auto" }} onClick={loadListings} aria-label="Muat ulang produk">
+                  <RefreshCw size={13} className={loading ? "cx-spin" : ""} />
+                </button>
+                <button className="cx-icon-btn" onClick={() => openForm()} aria-label="Tambah produk"><Plus size={13} /></button>
+              </div>
+              {loading
+                ? <div style={{ padding: "20px 14px", color: "var(--muted)", fontSize: 11 }}>Memuat produk...</div>
+                : <>
+                  <div className="cx-table-head">
+                    <span>PRODUK</span><span>HARGA</span><span>STOK</span><span>STATUS</span><span />
+                  </div>
+                  {filtered.length === 0
+                    ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11, textAlign: "center" }}>Tidak ada produk ditemukan.</div>
+                    : filtered.map((l) => (
+                      <div key={l.id} className="cx-table-row">
+                        <div className="cx-product-name">
+                          <strong>{l.title}</strong>
+                          <small style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            <ProviderIcon type={l.loginType} size={13} />
+                            {l.loginType}
+                          </small>
+                        </div>
+                        <span className="cx-mono" data-label="Harga">{(() => {
+                          const prices = (l.accounts || []).map((a) => Number(a.price) || Number(l.price) || 0);
+                          const min = prices.length ? Math.min(...prices) : Number(l.price) || 0;
+                          const max = prices.length ? Math.max(...prices) : min;
+                          return min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
+                        })()}</span>
+                        <span className="cx-mono" data-label="Stok" style={{ color: Number(l.stock) === 0 ? "var(--red)" : Number(l.stock) <= 3 ? "var(--amber)" : "var(--ink2)" }}>{l.stock} akun</span>
+                        <span className={`cx-status ${l.status === "available" ? "cx-status-ok" : Number(l.stock) <= 3 ? "cx-status-low" : "cx-status-out"}`}>
+                          {l.status === "available" ? "Aktif" : "Habis"}
+                        </span>
+                        <div className="cx-row-actions">
+                          <button className="cx-row-btn" onClick={() => openForm(l)} aria-label="Edit"><Pencil size={11} /> <span>Edit</span></button>
+                          <button className="cx-row-btn danger" onClick={() => deleteListing(l.id)} aria-label="Hapus"><Trash2 size={11} /> <span>Hapus</span></button>
+                        </div>
+                      </div>
+                    ))
+                  }
+                </>
+              }
+            </div>
+          )}
+
+          {/* ══ PESANAN ══ */}
+          {activeNav === "Pesanan" && (
+            <div className="cx-panel">
+              <div className="cx-panel-header">
+                <h3>Pesanan Masuk</h3>
+                <span className="cx-panel-sub">{filteredOrders.length} dari {orders.length} transaksi</span>
+                <button className="cx-icon-btn" style={{ marginLeft: "auto" }} onClick={loadOrders} aria-label="Muat ulang pesanan">
+                  <RefreshCw size={13} className={ordersLoading ? "cx-spin" : ""} />
+                </button>
+              </div>
+              {ordersLoading && !orders.length
+                ? <div style={{ padding: "20px 14px", color: "var(--muted)", fontSize: 11 }}>Memuat pesanan...</div>
+                : filteredOrders.length === 0
+                  ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada pesanan masuk.</div>
+                  : filteredOrders.map((o) => (
+                    <div key={o.id} className="cx-order-card">
+                      <div className="cx-order-card-head">
+                        <div className="cx-avatar">{String(o.buyer.name || "U").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <strong>{o.buyer.name}</strong>
+                          <small>{o.buyer.email}{o.buyer.phone ? ` · ${o.buyer.phone}` : ""}</small>
+                        </div>
+                        <div className="cx-order-total">
+                          <strong className="cx-mono">{formatPrice(o.total)}</strong>
+                          <small>{o.itemCount} akun</small>
+                        </div>
+                      </div>
+                      <div className="cx-order-meta">
+                        <span className="cx-mono">#{String(o.id).slice(0, 8)}</span>
+                        <span>{formatDate(o.createdAt)}</span>
+                        <span className={`cx-status ${o.status === "paid" ? "cx-status-ok" : "cx-status-low"}`}>{o.status === "paid" ? "Lunas" : "Refund"}</span>
+                        <span>Saldo pembeli: {formatPrice(o.buyer.balance)}</span>
+                      </div>
+                      <div className="cx-order-items">
+                        {(o.items || []).map((it, i) => (
+                          <div key={i} className="cx-order-item">
+                            <ProviderIcon type={it.loginType} size={13} />
+                            <span className="cx-order-item-title">{it.title}</span>
+                            <span className="cx-order-item-sub">{(it.accounts || []).length} akun · {(it.accounts || []).map((a) => a.email).join(", ")}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="cx-order-actions">
+                        <button className="cx-row-btn" onClick={() => { setUserQuery(o.buyer.email); setActiveNav("Pengguna"); }}><User size={11} /> <span>Lihat akun</span></button>
+                        <button className="cx-row-btn danger" onClick={() => deleteAdminOrder(o.id)}><Trash2 size={11} /> <span>Hapus</span></button>
+                      </div>
+                    </div>
+                  ))
+              }
+            </div>
+          )}
+
+          {/* ══ TOP UP ══ */}
+          {activeNav === "Top Up" && (
+            <div className="cx-panel">
+              <div className="cx-panel-header">
+                <h3>Permintaan Top Up</h3>
+                <span className="cx-panel-sub">{pendingTopups} menunggu · {topups.length - pendingTopups} selesai</span>
+                <button className="cx-btn cx-btn-ghost cx-btn-sm" style={{ marginLeft: "auto" }} onClick={clearTopupHistory} disabled={topups.length - pendingTopups === 0}>
+                  <Trash2 size={11} /> Bersihkan riwayat
+                </button>
+                <button className="cx-icon-btn" onClick={refreshAll} aria-label="Muat ulang"><RefreshCw size={13} className={refreshing ? "cx-spin" : ""} /></button>
+              </div>
+              {topups.length === 0
+                ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada permintaan top up.</div>
+                : topups.map((t) => (
+                  <div key={t.id} className="cx-topup-row">
+                    <div>
+                      <strong>{formatPrice(t.amount)}</strong>
+                      <small>{t.userName} · {t.userEmail} · {t.method}{t.reference ? ` · ID trx: ${t.reference}` : ""}{t.note ? ` · catatan: ${t.note}` : ""}</small>
+                    </div>
+                    <span className="cx-topup-date">{formatDate(t.createdAt)}</span>
+                    {t.status === "pending"
+                      ? <div style={{ display: "flex", gap: 6 }}>
+                          <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => reviewTopup(t.id, "approve")}><Check size={11} /> Setujui</button>
+                          <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => reviewTopup(t.id, "reject")}><X size={11} /> Tolak</button>
+                        </div>
+                      : <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <span className={`cx-topup-badge ${t.status === "approved" ? "ok" : "bad"}`}>
+                            {t.status === "approved" ? <BadgeCheck size={11} /> : <X size={11} />}
+                            {t.status === "approved" ? " Disetujui" : " Ditolak"}
+                          </span>
+                          <button className="cx-row-btn danger" onClick={() => deleteTopup(t.id)} aria-label="Hapus permintaan"><Trash2 size={11} /></button>
+                        </div>}
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {/* ══ PENGGUNA ══ */}
+          {activeNav === "Pengguna" && (
+          <div className="cx-panel">
             <div className="cx-panel-header">
               <h3>Pengguna</h3>
               <span className="cx-panel-sub">{filteredUsers.length} dari {users.length} akun</span>
@@ -1662,87 +2005,47 @@ function AdminPage({ onBack, onNotice }) {
               </div>
             )}
           </div>
+          )}
 
-          {/* Two-col: Activity + Inventory */}
-          <div className="cx-two-col">
-            {/* Activity */}
-            <div className="cx-panel">
-              <div className="cx-panel-header">
-                <h3>Aktivitas Terbaru</h3>
-                <span style={{ marginLeft: "auto", color: "var(--indigo2)", fontSize: 10, cursor: "pointer" }}>Lihat semua</span>
+          {/* ══ PENGATURAN ══ */}
+          {activeNav === "Pengaturan" && (
+            <div className="cx-two-col">
+              <div className="cx-panel">
+                <div className="cx-panel-header"><h3>Sesi Admin</h3></div>
+                <div className="cx-setting-row">
+                  <div><strong>Status sesi</strong><small>Sesi admin aktif di perangkat ini.</small></div>
+                  <span className="cx-status cx-status-ok">Aktif</span>
+                </div>
+                <div className="cx-setting-row">
+                  <div><strong>Keluar dari panel</strong><small>Akhiri sesi admin sekarang.</small></div>
+                  <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={logout}><LogOut size={11} /> Keluar</button>
+                </div>
+                <div className="cx-setting-row">
+                  <div><strong>Kembali ke store</strong><small>Buka tampilan pembeli.</small></div>
+                  <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={onBack}><ArrowRight size={11} /> Store</button>
+                </div>
               </div>
-              {listings.slice(0, 5).length === 0
-                ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada aktivitas.</div>
-                : listings.slice(0, 5).map((l) => (
-                  <div key={l.id} className="cx-activity-item">
-                    <div className="cx-activity-icon" style={{ color: ACCENT_COLORS[listings.indexOf(l) % ACCENT_COLORS.length] }}>
-                      <ProviderIcon type={l.loginType} size={14} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="cx-activity-title" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.title}</div>
-                      <div className="cx-activity-desc">{l.loginType} · Stok: {l.stock}</div>
-                    </div>
-                    <span className="cx-activity-time">{l.status === "sold" ? "Terjual" : "Tersedia"}</span>
-                  </div>
-                ))
-              }
-            </div>
-
-            {/* Inventory Table */}
-            <div className="cx-panel">
-              <div className="cx-panel-header">
-                <h3>Produk</h3>
-                <span className="cx-panel-sub">{filtered.length} dari {listings.length}</span>
-                <button className="cx-icon-btn" style={{ marginLeft: "auto" }} onClick={() => openForm()} aria-label="Tambah produk">
-                  <Plus size={13} />
-                </button>
+              <div className="cx-panel">
+                <div className="cx-panel-header"><h3>Data & Pemeliharaan</h3></div>
+                <div className="cx-setting-row">
+                  <div><strong>Muat ulang semua data</strong><small>Produk, pengguna, top up, dan pesanan.</small></div>
+                  <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={refreshAll} disabled={refreshing}>
+                    <RefreshCw size={11} className={refreshing ? "cx-spin" : ""} /> Refresh
+                  </button>
+                </div>
+                <div className="cx-setting-row">
+                  <div><strong>Bersihkan riwayat top up</strong><small>Hapus permintaan yang sudah disetujui/ditolak.</small></div>
+                  <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={clearTopupHistory} disabled={topups.length - pendingTopups === 0}>
+                    <Trash2 size={11} /> Bersihkan
+                  </button>
+                </div>
+                <div className="cx-setting-row">
+                  <div><strong>Assisten AI</strong><small>{aiCfg && aiCfg.enabled && aiCfg.hasKey ? "Terhubung dan aktif" : "Belum dikonfigurasi"}</small></div>
+                  <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => setActiveNav("Assisten")}><Sparkles size={11} /> Atur</button>
+                </div>
               </div>
-
-              {loading
-                ? <div style={{ padding: "20px 14px", color: "var(--muted)", fontSize: 11 }}>Memuat produk...</div>
-                : <>
-                  <div className="cx-table-head">
-                    <span>PRODUK</span>
-                    <span>HARGA</span>
-                    <span>STOK</span>
-                    <span>STATUS</span>
-                    <span />
-                  </div>
-                  {filtered.length === 0
-                    ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11, textAlign: "center" }}>Tidak ada produk ditemukan.</div>
-                    : filtered.map((l) => {
-                      const statusClass = l.status === "available" ? "cx-status-ok" : "cx-status-out";
-                      return (
-                        <div key={l.id} className="cx-table-row">
-                          <div className="cx-product-name">
-                            <strong>{l.title}</strong>
-                            <small style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                              <ProviderIcon type={l.loginType} size={13} />
-                              {l.loginType}
-                            </small>
-                          </div>
-                          <span className="cx-mono">{(() => {
-                            const prices = (l.accounts || []).map((a) => Number(a.price) || Number(l.price) || 0);
-                            const min = prices.length ? Math.min(...prices) : Number(l.price) || 0;
-                            const max = prices.length ? Math.max(...prices) : min;
-                            return min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
-                          })()}</span>
-                          <span className="cx-mono" style={{ color: Number(l.stock) === 0 ? "var(--red)" : Number(l.stock) <= 3 ? "var(--amber)" : "var(--ink2)" }}>{l.stock}</span>
-                          <span className={`cx-status ${l.status === "available" ? "cx-status-ok" : Number(l.stock) <= 3 ? "cx-status-low" : "cx-status-out"}`}>
-                            {l.status === "available" ? "Aktif" : "Habis"}
-                          </span>
-                          <div className="cx-row-actions">
-                            <button className="cx-row-btn" onClick={() => openForm(l)} aria-label="Edit"><Pencil size={11} /></button>
-                            <button className="cx-row-btn danger" onClick={() => deleteListing(l.id)} aria-label="Hapus"><Trash2 size={11} /></button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  }
-                </>
-              }
             </div>
-          </div>
+          )}
           </>
           )}
         </div>
@@ -2250,7 +2553,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
         method: "POST",
         body: JSON.stringify({ amount: amountNumber, method: methodLabel, reference: trxId.trim(), note: fullNote(), proof }),
       });
-      setAmount(""); setTrxId(""); setNote(""); setOtherApp(""); setApp(QRIS_APPS[0].id);
+      setAmount(""); setTrxId(""); setNote(""); setApp(QRIS_APPS[0].id);
       setProof(""); setProofName("");
       setStep("form"); setAgreed(false);
       onNotice("Bukti transfer terkirim otomatis ke admin, menunggu verifikasi");
