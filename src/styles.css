@@ -1322,3 +1322,126 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-help-quick { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .cx-help-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ═══════════════════════════════════════════════════
+   v2.2 FIX: modal beli mobile, keranjang, pesanan modern
+════════════════════════════════════════════════════ */
+
+/* ── Modal beli: footer total + CTA selalu terlihat ── */
+.cx-buy-foot {
+  border-top: 1px solid var(--b1);
+  padding-top: 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .cx-modal-backdrop { padding: 0; align-items: flex-end; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)); }
+  .cx-buy-modal {
+    width: 100%;
+    max-height: 100%;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+  }
+  .cx-buy-modal .cx-buy-body {
+    flex: 1; min-height: 0; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 16px 0;
+  }
+  .cx-buy-foot {
+    position: sticky; bottom: 0;
+    margin: 12px -16px 0;
+    padding: 12px 16px 14px;
+    background: color-mix(in oklab, var(--s1) 94%, #000);
+    backdrop-filter: blur(12px);
+    flex-direction: column; align-items: stretch; gap: 10px;
+  }
+  .cx-buy-foot .cx-buy-price { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .cx-buy-foot .cx-buy-price small { margin: 0; font-size: 11px; }
+  .cx-buy-foot .cx-buy-price strong { font-size: 20px; }
+  .cx-buy-foot .cx-btn { width: 100%; height: 50px; border-radius: 999px; font-size: 14px; font-weight: 700; }
+  .cx-cred-preview-lg { max-height: none; }
+
+  /* ── Keranjang: tombol bayar tidak tertutup tab bar ── */
+  /* backdrop berhenti tepat di atas tab bar supaya navigasi tetap terlihat */
+  .cx-drawer-backdrop { align-items: flex-end; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)); }
+  .cx-cart-drawer {
+    width: 100%; height: 100%; max-height: 100%;
+    padding-bottom: 0;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+  }
+  .cx-cart-summary {
+    position: sticky; bottom: 0;
+    margin: auto -16px 0;
+    padding: 14px 16px 16px;
+    background: color-mix(in oklab, var(--s1) 94%, #000);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--b1);
+  }
+  .cx-cart-summary .cx-btn { height: 50px; border-radius: 999px; font-weight: 700; }
+}
+
+/* ── Pesanan: tampilan modern ── */
+.cx-orders-page { padding: 20px 0 40px; text-align: left; }
+.cx-orders-hero {
+  position: relative; overflow: hidden;
+  border: 1px solid var(--b1); border-radius: var(--r-lg, 22px);
+  padding: 20px; margin: 12px 0 18px;
+  background:
+    radial-gradient(120% 120% at 100% 0%, rgba(168,85,247,.18), transparent 60%),
+    radial-gradient(100% 120% at 0% 100%, rgba(99,102,241,.14), transparent 60%),
+    var(--s1);
+}
+.cx-orders-kicker { font: 700 10px ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--indigo2); }
+.cx-orders-hero h1 { margin: 8px 0 4px; font: 700 26px Inter, system-ui, sans-serif; letter-spacing: -.03em; }
+.cx-orders-hero p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.cx-orders-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+.cx-orders-stats > div {
+  background: color-mix(in oklab, var(--s2, var(--s1)) 80%, #000);
+  border: 1px solid var(--b1); border-radius: var(--r-sm, 12px); padding: 10px;
+}
+.cx-orders-stats small { display: block; color: var(--muted); font-size: 10px; margin-bottom: 4px; }
+.cx-orders-stats strong { font: 700 14px Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+
+.cx-orders-skeleton { display: grid; gap: 12px; }
+.cx-orders-skeleton span {
+  display: block; height: 92px; border-radius: var(--r-md, 16px);
+  background: linear-gradient(90deg, var(--s1), color-mix(in oklab, var(--s1) 70%, #fff 6%), var(--s1));
+  background-size: 200% 100%; animation: cx-shimmer 1.3s linear infinite;
+}
+@keyframes cx-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+.cx-order-card {
+  border: 1px solid var(--b1); border-radius: var(--r-lg, 20px);
+  padding: 16px; margin-bottom: 14px;
+  background: var(--s1);
+  box-shadow: var(--shadow-soft, 0 10px 30px rgba(0,0,0,.28));
+}
+.cx-order-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--b1); }
+.cx-order-card-id { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cx-order-icon {
+  width: 38px; height: 38px; flex: none; display: grid; place-items: center; border-radius: 12px;
+  background: var(--grad-primary, linear-gradient(135deg,#a855f7,#6366f1)); color: #fff;
+}
+.cx-order-card-head strong { display: block; font: 700 16px Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.cx-order-card-head small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.cx-order-status {
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
+  height: 26px; padding: 0 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  border: 1px solid var(--b1); background: var(--s2, transparent);
+}
+.cx-order-status.is-paid { color: #34d399; border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.12); }
+
+.cx-order-item { border: 1px solid var(--b1); border-radius: var(--r-md, 16px); padding: 12px; background: color-mix(in oklab, var(--s1) 88%, #000); }
+.cx-order-item-head { font-weight: 600; }
+.cx-order-cred { border-top: 1px dashed var(--b1); }
+.cx-order-cred-row code { background: color-mix(in oklab, var(--s1) 70%, #000); padding: 4px 8px; border-radius: 8px; }
+
+@media (max-width: 720px) {
+  .cx-orders-hero { padding: 18px 16px; border-radius: var(--r-lg, 22px); }
+  .cx-orders-hero h1 { font-size: 23px; }
+  .cx-orders-stats { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .cx-orders-stats strong { font-size: 12.5px; }
+  .cx-order-card { padding: 14px; border-radius: var(--r-lg, 20px); }
+}
