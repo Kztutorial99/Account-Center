@@ -1013,6 +1013,13 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
           {[["store","Store"],["orders","Pesanan"],["help","Bantuan"]].map(([page, label]) => (
             <button key={page} className={activePage === page ? "active" : ""} onClick={() => navigate(page)}>{label}</button>
           ))}
+          <button
+            className="cx-custom-email-nav"
+            title="Cek dan buat request email/username custom"
+            onClick={() => { window.location.href = "/custom-email.html"; }}
+          >
+            Custom Email
+          </button>
         </nav>
         <div className="cx-topbar-actions">
           <NotificationBell navigate={navigate} activePage={activePage} />
@@ -1080,19 +1087,26 @@ function MobileTabBar({ activePage, navigate, cart, onCartOpen, cartOpen }) {
     { key: "store",  label: "Store",    Icon: Package },
     { key: "orders", label: "Pesanan",  Icon: BadgeCheck },
     { key: "cart",   label: "Keranjang",Icon: ShoppingBag },
+    { key: "custom-email", label: "Email", Icon: Mail, href: "/custom-email.html" },
     { key: "help",   label: "Bantuan",  Icon: CircleHelp },
     { key: "account",label: "Akun",     Icon: User },
   ];
   return (
     <nav className="cx-tabbar" aria-label="Navigasi utama">
-      {items.map(({ key, label, Icon }) => {
-        const active = key === "cart" ? !!cartOpen : (activePage === key && !cartOpen);
+      {items.map(({ key, label, Icon, href }) => {
+        const active = href
+          ? (typeof window !== "undefined" && window.location.pathname === href)
+          : key === "cart" ? !!cartOpen : (activePage === key && !cartOpen);
         return (
           <button
             key={key}
             className={`cx-tabbar-item${active ? " is-active" : ""}`}
             aria-current={active ? "page" : undefined}
-            onClick={() => (key === "cart" ? onCartOpen() : navigate(key))}
+            onClick={() => {
+              if (href) { window.location.href = href; return; }
+              if (key === "cart") { onCartOpen(); return; }
+              navigate(key);
+            }}
           >
             <span className="cx-tabbar-icon">
               <Icon size={19} strokeWidth={active ? 2.4 : 1.9} />
@@ -1922,6 +1936,7 @@ function AdminPage({ onBack, onNotice }) {
     { label: "Pesanan",     shortcut: "⌘O", icon: ShoppingBag,    dot: orders.length > 0 },
     { label: "Pengguna",    shortcut: "⌘U", icon: User,           dot: users.some((u) => u.status !== "active") },
     { label: "Top Up",      shortcut: "⌘T", icon: Wallet,         dot: topups.some((t) => t.status === "pending") },
+    { label: "Custom Email",shortcut: "⌘E", icon: Mail,           dot: orders.some((o) => o.customEmail) },
     { label: "Assisten",    shortcut: "⌘I", icon: Sparkles,       dot: !(aiCfg && aiCfg.enabled && aiCfg.hasKey) },
     { label: "Pengaturan",  shortcut: "⌘,", icon: Settings },
   ];
@@ -2396,6 +2411,50 @@ function AdminPage({ onBack, onNotice }) {
               }
             </div>
           )}
+
+          {/* ══ CUSTOM EMAIL ══ */}
+          {activeNav === "Custom Email" && (() => {
+            const customOrders = orders.filter((o) => o.customEmail);
+            return (
+              <div className="cx-panel cx-panel-plain">
+                <div className="cx-panel-header">
+                  <h3>Permintaan Custom Email</h3>
+                  <span className="cx-panel-sub">{customOrders.length} permintaan dari pembeli</span>
+                </div>
+                {ordersLoading && !orders.length
+                  ? <RowSkeleton rows={3} />
+                  : customOrders.length === 0
+                    ? <div className="cx-panel-empty"><Mail size={20} /><p>Belum ada permintaan email khusus.</p></div>
+                    : customOrders.map((o) => (
+                      <div key={o.id} className="cx-order-card">
+                        <div className="cx-buyer-order-head">
+                          <span className="cx-mono">#{String(o.id).slice(0, 8)}</span>
+                          <span>{formatDate(o.createdAt)}</span>
+                          <span className={`cx-status ${o.status === "paid" ? "cx-status-ok" : "cx-status-low"}`}>{o.status === "paid" ? "Lunas" : "Refund"}</span>
+                          <strong className="cx-mono" style={{ marginLeft: "auto" }}>{formatPrice(o.total)}</strong>
+                        </div>
+                        <div className="cx-custom-email-tag"><Mail size={11} /> Email diminta: <strong>{o.customEmail}</strong></div>
+                        <div className="cx-order-meta">
+                          <span>{o.userName || o.buyerName || "Pembeli"}{o.userEmail ? ` · ${o.userEmail}` : ""}</span>
+                          <span>{(o.items || []).reduce((n, it) => n + ((it.accounts || []).length), 0)} akun</span>
+                        </div>
+                        <div className="cx-order-items">
+                          {(o.items || []).map((it, i) => (
+                            <div key={i} className="cx-order-item">
+                              <ProviderIcon type={it.loginType} size={13} />
+                              <span className="cx-order-item-title">{it.title}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="cx-order-actions">
+                          <button className="cx-row-btn" onClick={() => goNav("Pesanan")}><ShoppingBag size={11} /> <span>Buka di Pesanan</span></button>
+                        </div>
+                      </div>
+                    ))
+                }
+              </div>
+            );
+          })()}
 
           {/* ══ TOP UP ══ */}
           {activeNav === "Top Up" && (
