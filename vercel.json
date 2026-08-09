@@ -20,6 +20,10 @@
       "destination": "/api/topup?resource=notifications"
     },
     {
+      "source": "/custom-email",
+      "destination": "/"
+    },
+    {
       "source": "/admin",
       "destination": "/"
     },
