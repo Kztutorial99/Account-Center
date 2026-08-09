@@ -58,23 +58,79 @@ async function ensureCustomEmailTable(sql) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+  await sql`ALTER TABLE codexa_custom_emails ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending'`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS codexa_custom_emails_unique ON codexa_custom_emails (lower(requested))`;
 }
 
-// "Nama Ku 99" → "namaku99". Boleh username polos atau email lengkap.
+const CUSTOM_EMAIL_STATUS = ["pending", "processing", "done", "rejected"];
+
+// "Nama Ku 99" → "namaku99@gmail.com". Username polos dianggap Gmail.
 function normalizeCustomEmail(value) {
-  const raw = String(value == null ? "" : value).trim().toLowerCase().slice(0, 80);
-  if (!raw) return { ok: true, value: "" };
+  const raw = String(value == null ? "" : value).trim().toLowerCase().replace(/\s+/g, "").slice(0, 80);
+  if (!raw) return { ok: true, value: "", local: "", domain: "" };
+  let local = raw;
+  let domain = "gmail.com";
   if (raw.includes("@")) {
-    if (!/^[a-z0-9._%+-]{3,}@[a-z0-9.-]+\.[a-z]{2,}$/.test(raw)) {
-      return { ok: false, error: "Format email tidak valid" };
-    }
-    return { ok: true, value: raw };
+    const parts = raw.split("@");
+    if (parts.length !== 2) return { ok: false, error: "Format email tidak valid" };
+    local = parts[0];
+    domain = parts[1];
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return { ok: false, error: "Domain email tidak valid" };
   }
-  if (!/^[a-z0-9._-]{3,40}$/.test(raw)) {
-    return { ok: false, error: "Gunakan 3-40 karakter: huruf, angka, titik, garis bawah, atau strip" };
+  if (!/^[a-z0-9._%+-]{3,64}$/.test(local)) {
+    return { ok: false, error: "Gunakan 3-64 karakter: huruf, angka, titik, garis bawah, atau strip" };
   }
-  return { ok: true, value: raw };
+  return { ok: true, value: `${local}@${domain}`, local, domain };
+}
+
+const GOOGLE_DOMAINS = ["gmail.com", "googlemail.com"];
+
+// Aturan resmi Google untuk username Gmail baru.
+function gmailPolicyError(local) {
+  if (local.length < 6 || local.length > 30) return "Username Gmail harus 6-30 karakter";
+  if (!/^[a-z0-9.]+$/.test(local)) return "Gmail hanya menerima huruf, angka, dan titik";
+  if (local.startsWith(".") || local.endsWith(".")) return "Tidak boleh diawali atau diakhiri titik";
+  if (local.includes("..")) return "Tidak boleh ada dua titik berurutan";
+  if (!/[a-z]/.test(local)) return "Harus mengandung minimal satu huruf";
+  return "";
+}
+
+// Gmail mengabaikan titik: john.doe == johndoe (alias yang sama).
+function canonicalOf(local, domain) {
+  const isGoogle = GOOGLE_DOMAINS.includes(domain);
+  const base = isGoogle ? local.replace(/\./g, "") : local;
+  return `${base}@${isGoogle ? "gmail.com" : domain}`;
+}
+
+async function fetchWithTimeout(url, options, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms || 6000);
+  try { return await fetch(url, { ...(options || {}), signal: controller.signal }); }
+  finally { clearTimeout(timer); }
+}
+
+// Sinyal "sudah dipakai publik": alamat yang terdaftar di Gravatar pasti
+// sudah dimiliki orang lain (dipakai untuk profil publik/WordPress/dll).
+async function gravatarUsed(email) {
+  const hash = crypto.createHash("md5").update(email.trim().toLowerCase()).digest("hex");
+  try {
+    const res = await fetchWithTimeout(`https://en.gravatar.com/${hash}.json`, {
+      headers: { "user-agent": "CodeXa-EmailCheck/1.0" },
+    }, 6000);
+    return res.status === 200;
+  } catch (_) { return null; }
+}
+
+// Domain harus punya MX supaya email benar-benar bisa dibuat/dikirimi surat.
+async function domainHasMx(domain) {
+  try {
+    const res = await fetchWithTimeout(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=MX`, {
+      headers: { accept: "application/dns-json" },
+    }, 6000);
+    if (!res.ok) return null;
+    const body = await res.json();
+    return Array.isArray(body.Answer) && body.Answer.some((a) => a.type === 15);
+  } catch (_) { return null; }
 }
 
 async function isCustomEmailTaken(sql, value) {
@@ -82,7 +138,56 @@ async function isCustomEmailTaken(sql, value) {
   return Boolean(row);
 }
 
+/* Cek lengkap: dipakai pembeli CodeXa lain, aturan Gmail, jejak publik
+   (Gravatar), dan MX domain. Google tidak lagi membuka API ketersediaan
+   username publik, jadi hasil "tersedia" = tidak ada sinyal terpakai. */
+async function inspectCustomEmail(sql, parsed) {
+  const { value, local, domain } = parsed;
+  const canonical = canonicalOf(local, domain);
+  const signals = [];
+
+  await ensureCustomEmailTable(sql);
+  const takenHere = (await isCustomEmailTaken(sql, value)) || (value !== canonical && await isCustomEmailTaken(sql, canonical));
+  if (takenHere) {
+    return { available: false, state: "taken", normalized: value, canonical, reason: "Sudah dipesan pembeli CodeXa lain, pilih nama lain", signals: ["Sudah dipesan di CodeXa"] };
+  }
+  signals.push("Belum dipesan di CodeXa");
+
+  if (GOOGLE_DOMAINS.includes(domain)) {
+    const policy = gmailPolicyError(local);
+    if (policy) {
+      return { available: false, state: "invalid", normalized: value, canonical, reason: `${policy} (aturan Gmail)`, signals };
+    }
+    signals.push("Lolos aturan penamaan Gmail");
+  } else {
+    const mx = await domainHasMx(domain);
+    if (mx === false) {
+      return { available: false, state: "invalid", normalized: value, canonical, reason: `Domain ${domain} tidak menerima email (tidak ada MX)`, signals };
+    }
+    if (mx) signals.push(`Domain ${domain} punya server email aktif`);
+  }
+
+  const used = await gravatarUsed(canonical);
+  if (used) {
+    return { available: false, state: "taken", normalized: value, canonical, reason: "Alamat ini sudah dipakai orang lain (terdaftar di profil publik Gravatar)", signals: [...signals, "Terdaftar di Gravatar → sudah dimiliki orang"] };
+  }
+  signals.push(used === null ? "Cek jejak publik tidak bisa dijangkau" : "Tidak ada jejak pemakaian publik");
+  if (GOOGLE_DOMAINS.includes(domain)) {
+    signals.push("Titik diabaikan Gmail, dicek sebagai " + canonical);
+  }
+
+  return {
+    available: true,
+    state: "available",
+    normalized: value,
+    canonical,
+    reason: `${value} kemungkinan besar masih bebas dipakai`,
+    signals,
+  };
+}
+
 const CUSTOM_EMAIL_FEE = 5000;
+
 const MAX_ITEMS = 50;
 const MAX_PICKS_PER_ITEM = 100;
 
@@ -127,19 +232,21 @@ async function handleAdmin(sql, request, response) {
     let customByOrder = new Map();
     try {
       await ensureCustomEmailTable(sql);
-      const custom = await sql`SELECT order_id AS "orderId", requested FROM codexa_custom_emails WHERE order_id IS NOT NULL`;
-      customByOrder = new Map(custom.map((c) => [c.orderId, c.requested]));
+      const custom = await sql`SELECT order_id AS "orderId", requested, status FROM codexa_custom_emails WHERE order_id IS NOT NULL`;
+      customByOrder = new Map(custom.map((c) => [c.orderId, c]));
     } catch (_) { customByOrder = new Map(); }
     const orders = rows.map((row) => {
       let items = [];
       try { items = (decryptCredentials(row.payloadBlob) || {}).items || []; } catch (_) { items = []; }
+      const custom = customByOrder.get(row.id);
       return {
         id: row.id,
         total: Number(row.total) || 0,
         itemCount: row.itemCount,
         status: row.status,
         createdAt: row.createdAt,
-        customEmail: customByOrder.get(row.id) || "",
+        customEmail: (custom && custom.requested) || "",
+        customEmailStatus: (custom && custom.status) || "",
         buyer: {
           id: row.userId, name: row.userName, email: row.userEmail,
           phone: row.userPhone || "", balance: Number(row.userBalance) || 0,
@@ -153,6 +260,34 @@ async function handleAdmin(sql, request, response) {
     });
     return response.status(200).json({ orders });
   }
+  if (request.method === "PATCH") {
+    // Update status permintaan custom email dari panel admin.
+    const body = bodyOf(request) || {};
+    const orderId = String(body.orderId || "").trim().slice(0, 60);
+    const status = String(body.status || "").trim();
+    if (!orderId || !CUSTOM_EMAIL_STATUS.includes(status)) {
+      return response.status(400).json({ error: "orderId dan status valid wajib diisi" });
+    }
+    await ensureCustomEmailTable(sql);
+    const [row] = await sql`
+      UPDATE codexa_custom_emails SET status = ${status} WHERE order_id = ${orderId}
+      RETURNING order_id AS "orderId", requested, status
+    `;
+    if (!row) return response.status(404).json({ error: "Permintaan custom email tidak ditemukan" });
+    try {
+      const [owner] = await sql`SELECT user_id AS "userId" FROM codexa_custom_emails WHERE order_id = ${orderId} LIMIT 1`;
+      if (owner) {
+        await createNotification(sql, {
+          userId: owner.userId,
+          type: "custom_email",
+          title: "Status custom email diperbarui",
+          body: `Permintaan ${row.requested} sekarang berstatus ${status}.`,
+          link: "orders",
+        });
+      }
+    } catch (_) {}
+    return response.status(200).json({ custom: row });
+  }
   if (request.method === "DELETE") {
     const id = String((bodyOf(request) || {}).id || "").trim().slice(0, 60);
     if (!id) return response.status(400).json({ error: "id pesanan wajib diisi" });
@@ -160,9 +295,10 @@ async function handleAdmin(sql, request, response) {
     if (!row) return response.status(404).json({ error: "Pesanan tidak ditemukan" });
     return response.status(200).json({ deleted: row.id });
   }
-  response.setHeader("Allow", "GET, DELETE");
+  response.setHeader("Allow", "GET, PATCH, DELETE");
   return response.status(405).json({ error: "Method not allowed" });
 }
+
 
 module.exports = async function handler(request, response) {
   try {
@@ -185,15 +321,11 @@ module.exports = async function handler(request, response) {
         return response.status(405).json({ error: "Method not allowed" });
       }
       const check = normalizeCustomEmail((request.query && request.query.value) || "");
-      if (!check.ok) return response.status(200).json({ available: false, normalized: "", reason: check.error });
-      if (!check.value) return response.status(200).json({ available: false, normalized: "", reason: "Isi dulu nama yang diinginkan" });
-      await ensureCustomEmailTable(sql);
-      const taken = await isCustomEmailTaken(sql, check.value);
-      return response.status(200).json({
-        available: !taken,
-        normalized: check.value,
-        reason: taken ? "Sudah dipakai pembeli lain, coba nama lain" : "",
-      });
+      if (!check.ok) return response.status(200).json({ available: false, state: "invalid", normalized: "", reason: check.error, signals: [] });
+      if (!check.value) return response.status(200).json({ available: false, state: "idle", normalized: "", reason: "Isi dulu nama yang diinginkan", signals: [] });
+      const result = await inspectCustomEmail(sql, check);
+      return response.status(200).json(result);
+
     }
 
     if (request.method === "GET") {
@@ -201,19 +333,29 @@ module.exports = async function handler(request, response) {
         SELECT id, total, item_count AS "itemCount", status, payload_blob AS "payloadBlob", created_at AS "createdAt"
         FROM codexa_orders WHERE user_id = ${user.id} ORDER BY created_at DESC LIMIT 50
       `;
+      let mine = new Map();
+      try {
+        await ensureCustomEmailTable(sql);
+        const custom = await sql`SELECT order_id AS "orderId", requested, status FROM codexa_custom_emails WHERE user_id = ${user.id} AND order_id IS NOT NULL`;
+        mine = new Map(custom.map((c) => [c.orderId, c]));
+      } catch (_) { mine = new Map(); }
       const orders = rows.map((row) => {
         let items = [];
         try { items = decryptCredentials(row.payloadBlob).items || []; } catch (_) { items = []; }
+        const custom = mine.get(row.id);
         return {
           id: row.id,
           total: Number(row.total) || 0,
           itemCount: row.itemCount,
           status: row.status,
           createdAt: row.createdAt,
+          customEmail: (custom && custom.requested) || "",
+          customEmailStatus: (custom && custom.status) || "",
           items,
         };
       });
       return response.status(200).json({ orders, balance: user.balance });
+
     }
 
     if (request.method === "DELETE") {
@@ -231,17 +373,21 @@ module.exports = async function handler(request, response) {
 
     const payload = bodyOf(request) || {};
     const items = normalizeItems(payload);
-    if (!items.length) return response.status(400).json({ error: "Keranjang kosong atau belum ada akun yang dipilih" });
 
     const customCheck = normalizeCustomEmail(payload.customEmail);
     if (!customCheck.ok) return response.status(400).json({ error: customCheck.error });
     const customEmail = customCheck.value;
-    if (customEmail) {
-      await ensureCustomEmailTable(sql);
-      if (await isCustomEmailTaken(sql, customEmail)) {
-        return response.status(409).json({ error: `${customEmail} sudah dipakai pembeli lain, pilih nama lain` });
-      }
+
+    // Custom email boleh dibeli sendiri tanpa akun di keranjang.
+    if (!items.length && !customEmail) {
+      return response.status(400).json({ error: "Keranjang kosong atau belum ada akun yang dipilih" });
     }
+
+    if (customEmail) {
+      const inspection = await inspectCustomEmail(sql, customCheck);
+      if (!inspection.available) return response.status(409).json({ error: inspection.reason });
+    }
+
 
     // Ambil listing yang dibeli, validasi ketersediaan & hitung total
     const purchases = [];
@@ -364,8 +510,8 @@ module.exports = async function handler(request, response) {
     if (customEmail) {
       try {
         await sql`
-          INSERT INTO codexa_custom_emails (id, user_id, order_id, requested)
-          VALUES (${crypto.randomUUID()}, ${user.id}, ${order.id}, ${customEmail})
+          INSERT INTO codexa_custom_emails (id, user_id, order_id, requested, status)
+          VALUES (${crypto.randomUUID()}, ${user.id}, ${order.id}, ${customEmail}, 'pending')
           ON CONFLICT DO NOTHING
         `;
       } catch (error) {
@@ -377,12 +523,14 @@ module.exports = async function handler(request, response) {
       userId: user.id,
       type: "order_paid",
       title: "Pembelian berhasil",
-      body: `${itemCount} akun senilai Rp${total.toLocaleString("id-ID")} sudah dibayar. Detail login bisa dilihat di halaman Pesanan.`,
+      body: itemCount
+        ? `${itemCount} akun senilai Rp${total.toLocaleString("id-ID")} sudah dibayar. Detail login bisa dilihat di halaman Pesanan.`
+        : `Permintaan custom email ${customEmail} senilai Rp${total.toLocaleString("id-ID")} sudah dibayar dan sedang diproses admin.`,
       link: "orders",
     });
 
     return response.status(201).json({
-      order: { ...order, total: Number(order.total) || 0, items: orderItems, customEmail },
+      order: { ...order, total: Number(order.total) || 0, items: orderItems, customEmail, customEmailStatus: customEmail ? "pending" : "" },
       balance: Number(debited.balance) || 0,
     });
   } catch (error) {
