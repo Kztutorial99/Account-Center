@@ -14,6 +14,7 @@ import "./styles.css";
 const formatPrice = (v) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(v) || 0);
 const formatDate  = (v) => v ? new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(v)) : "-";
 const CUSTOM_EMAIL_FEE = 5000;
+const CUSTOM_EMAIL_STATUS_LABEL = { pending: "Menunggu", processing: "Diproses", done: "Selesai", rejected: "Ditolak" };
 const LOGIN_TYPES  = ["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"];
 const emptyListing = { title: "", description: "", loginType: "Google", price: "", status: "available", accounts: [{ email: "", password: "", price: "" }], deliveryDetails: "" };
 const accountPriceOf = (account, product) => {
@@ -215,25 +216,29 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkout, setCheckout] = useState({ loading: false, error: "", order: null });
   const [customEmail, setCustomEmail] = useState("");
-  const [emailCheck, setEmailCheck] = useState({ state: "idle", message: "" });
+  const [emailCheck, setEmailCheck] = useState({ state: "idle", message: "", signals: [] });
   const noticeTimer = useRef(null);
 
-  /* Cek ketersediaan email/username kustom (debounce 500ms) supaya pembeli
-     tahu lebih dulu apakah nama yang diminta masih bisa dipakai. */
+  /* Cek ketersediaan email/username kustom (debounce 500ms): dicek ke database
+     CodeXa sekaligus jejak pemakaian publik (Gravatar/MX) supaya nama yang
+     dipesan tidak nabrak akun milik orang lain. */
   useEffect(() => {
     const value = customEmail.trim();
-    if (!value) { setEmailCheck({ state: "idle", message: "" }); return undefined; }
-    if (value.length < 3) { setEmailCheck({ state: "invalid", message: "Minimal 3 karakter" }); return undefined; }
-    setEmailCheck({ state: "checking", message: "Mengecek ketersediaan..." });
+    if (!value) { setEmailCheck({ state: "idle", message: "", signals: [] }); return undefined; }
+    if (value.length < 3) { setEmailCheck({ state: "invalid", message: "Minimal 3 karakter", signals: [] }); return undefined; }
+    setEmailCheck({ state: "checking", message: "Mengecek ketersediaan...", signals: [] });
     const timer = window.setTimeout(() => {
       jsonRequest(`/api/orders?resource=check-email&value=${encodeURIComponent(value)}`)
-        .then((p) => setEmailCheck(p.available
-          ? { state: "available", message: `${p.normalized} tersedia dan bisa dipakai` }
-          : { state: "taken", message: p.reason || "Sudah dipakai pembeli lain, coba nama lain" }))
-        .catch((e) => setEmailCheck({ state: "invalid", message: e.message }));
+        .then((p) => setEmailCheck({
+          state: p.available ? "available" : (p.state === "invalid" ? "invalid" : "taken"),
+          message: p.reason || (p.available ? `${p.normalized} tersedia` : "Sudah dipakai, coba nama lain"),
+          signals: Array.isArray(p.signals) ? p.signals : [],
+        }))
+        .catch((e) => setEmailCheck({ state: "invalid", message: e.message, signals: [] }));
     }, 500);
     return () => window.clearTimeout(timer);
   }, [customEmail]);
+
 
 
   const loadSession = () =>
@@ -309,31 +314,39 @@ function App() {
   const customFee = customEmail.trim() ? CUSTOM_EMAIL_FEE : 0;
   const cartTotal = itemsTotal + customFee;
   const doCheckout = async () => {
-    if (!cart.length || checkout.loading) return;
+    if (checkout.loading) return;
+    const wantCustom = customEmail.trim();
     const items = cart.map((item) => ({
       id: item.id,
       accounts: (item.selectedAccounts || []).map((a) => a.index),
     })).filter((item) => item.accounts.length);
-    if (!items.length) { setCheckout({ loading: false, error: "Belum ada akun yang dipilih", order: null }); return; }
+    // Custom email boleh dibeli sendirian tanpa akun di keranjang.
+    if (!items.length && !wantCustom) {
+      setCheckout({ loading: false, error: "Keranjang masih kosong", order: null });
+      return;
+    }
     setCheckout({ loading: true, error: "", order: null });
     try {
       const result = await jsonRequest("/api/orders", {
         method: "POST",
-        body: JSON.stringify({ items, customEmail: customEmail.trim() }),
+        body: JSON.stringify({ items, customEmail: wantCustom }),
       });
       setCart([]);
       setCustomEmail("");
-      setEmailCheck({ state: "idle", message: "" });
+      setEmailCheck({ state: "idle", message: "", signals: [] });
       setCartOpen(false);
       setCheckout({ loading: false, error: "", order: result.order });
       loadSession();
       loadCatalog();
       window.dispatchEvent(new Event("codexa:notify"));
-      showNotice("Pembayaran berhasil, detail akun sudah terbuka");
+      showNotice(wantCustom && !items.length
+        ? "Permintaan custom email berhasil dibayar"
+        : "Pembayaran berhasil, detail akun sudah terbuka");
     } catch (error) {
       setCheckout({ loading: false, error: error.message, order: null });
     }
   };
+
 
 
   /* ── admin page ── */
@@ -444,11 +457,11 @@ function App() {
             <div className="cx-drawer-header">
               <div>
                 <h2>Keranjang</h2>
-                <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 11 }}>{cart.length} item</p>
+                <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 11 }}>{cart.length + (customFee ? 1 : 0)} item</p>
               </div>
               <button className="cx-icon-btn" onClick={() => setCartOpen(false)}><X size={14} /></button>
             </div>
-            {cart.length === 0
+            {cart.length === 0 && !customFee
               ? <div className="cx-empty" style={{ paddingTop: 24 }}><Package size={24} /><h3>Keranjang kosong</h3><p>Tambahkan akun dari katalog.</p></div>
               : <div style={{ flex: 1, overflowY: "auto" }}>
                   {cart.map((item, i) => (
@@ -463,9 +476,20 @@ function App() {
                       <button className="cx-icon-btn" onClick={() => removeFromCart(i)}><X size={12} /></button>
                     </div>
                   ))}
+                  {customFee > 0 && (
+                    <div className="cx-cart-item">
+                      <div className="cx-cart-thumb cx-cart-thumb-icon"><Mail size={20} /></div>
+                      <div className="cx-cart-item-copy">
+                        <strong>Custom Email</strong>
+                        <small>{customEmail.trim()} · {formatPrice(CUSTOM_EMAIL_FEE)}</small>
+                      </div>
+                      <button className="cx-icon-btn" onClick={() => setCustomEmail("")}><X size={12} /></button>
+                    </div>
+                  )}
                 </div>
             }
-            {cart.length > 0 && (
+            {(cart.length > 0 || customFee > 0) && (
+
               <div className="cx-cart-summary">
                 <div><span>Subtotal ({cart.reduce((a, c) => a + (Number(c.qty) || 1), 0)} akun)</span><strong>{formatPrice(itemsTotal)}</strong></div>
                 {customFee > 0 && (
@@ -493,14 +517,20 @@ function App() {
                   <small className={`cx-custom-email-msg is-${emailCheck.state}`}>
                     {emailCheck.message || "Kosongkan kalau kamu tidak butuh nama akun tertentu."}
                   </small>
+                  {emailCheck.signals && emailCheck.signals.length > 0 && (
+                    <ul className="cx-custom-email-signals">
+                      {emailCheck.signals.map((s, i) => <li key={i}>{s}</li>)}
+                    </ul>
+                  )}
                 </div>
                 <p className="cx-checkout-note"><ShieldCheck size={11} /> Saldo dipotong otomatis, detail akun langsung terbuka</p>
                 {checkout.error && <p className="cx-field-error" style={{ margin: "0 0 8px" }}>{checkout.error}</p>}
                 <button
                   className="cx-btn cx-btn-primary cx-btn-full"
-                  disabled={checkout.loading || emailCheck.state === "checking" || emailCheck.state === "taken"}
+                  disabled={checkout.loading || emailCheck.state === "checking" || emailCheck.state === "taken" || emailCheck.state === "invalid"}
                   onClick={doCheckout}
                 >
+
                   {checkout.loading ? <><Spinner size={13} /> Memproses pembayaran...</> : <>Bayar {formatPrice(cartTotal)} <ArrowRight size={13} /></>}
                 </button>
                 {auth.user && cartTotal > auth.user.balance && (
@@ -592,7 +622,8 @@ function App() {
         setValue={setCustomEmail}
         check={emailCheck}
         onBack={() => navigate("store")}
-        onUse={() => { showNotice("Nama disimpan, lanjut checkout di keranjang"); navigate("store"); }}
+        onUse={() => { showNotice("Custom email masuk keranjang"); navigate("store"); setCartOpen(true); }}
+
       />
       <StoreFooter navigate={navigate} />
       {tabbar}
@@ -838,7 +869,16 @@ function OrdersPage({ onBack, onNotice, navigate }) {
               </button>
             </div>
           </div>
+          {order.customEmail && (
+            <div className="cx-custom-email-tag">
+              <Mail size={11} /> Custom email: <strong>{order.customEmail}</strong>
+              <span className={`cx-status cx-cemail-${order.customEmailStatus || "pending"}`} style={{ marginLeft: 8 }}>
+                {CUSTOM_EMAIL_STATUS_LABEL[order.customEmailStatus || "pending"]}
+              </span>
+            </div>
+          )}
           <OrderItems items={order.items} onNotice={onNotice} />
+
         </article>
       ))}
       {confirmDialog}
@@ -1131,13 +1171,22 @@ function CustomEmailPage({ value, setValue, check, onBack, onUse }) {
             <small className={`cx-custom-email-msg is-${check.state}`}>
               {check.message || "Masukkan minimal 3 karakter untuk mengecek ketersediaan."}
             </small>
+            {check.signals && check.signals.length > 0 && (
+              <ul className="cx-custom-email-signals">
+                {check.signals.map((s, i) => <li key={i}>{s}</li>)}
+              </ul>
+            )}
+            <p style={{ color: "var(--muted)", fontSize: 11, margin: 0 }}>
+              Pengecekan mencakup: daftar pesanan CodeXa, aturan penamaan Gmail (6-30 karakter, titik diabaikan), jejak pemakaian publik, dan keaktifan domain email.
+            </p>
             <button
               className="cx-btn cx-btn-primary"
               disabled={check.state !== "available"}
               onClick={onUse}
             >
-              <BadgeCheck size={13} /> Pakai nama ini
+              <ShoppingBag size={13} /> Masukkan ke keranjang · {formatPrice(CUSTOM_EMAIL_FEE)}
             </button>
+
           </div>
         </div>
       </div>
@@ -1769,6 +1818,21 @@ function AdminPage({ onBack, onNotice }) {
       } catch (e) { setApiError(e.message); }
     });
   };
+
+  // Ubah status pengerjaan permintaan custom email (pending → processing → done/rejected).
+  const setCustomEmailStatus = async (orderId, status) => {
+    await runAction(`cemail-${orderId}`, async () => {
+      try {
+        await jsonRequest("/api/orders?scope=admin&resource=custom-email", {
+          method: "PATCH",
+          body: JSON.stringify({ orderId, status }),
+        });
+        setOrders((list) => list.map((o) => (o.id === orderId ? { ...o, customEmailStatus: status } : o)));
+        onNotice("Status custom email diperbarui");
+      } catch (e) { setApiError(e.message); }
+    });
+  };
+
 
   const deleteTopup = async (id) => {
     const ok = await confirm({
@@ -2493,7 +2557,12 @@ function AdminPage({ onBack, onNotice }) {
                           <span className={`cx-status ${o.status === "paid" ? "cx-status-ok" : "cx-status-low"}`}>{o.status === "paid" ? "Lunas" : "Refund"}</span>
                           <strong className="cx-mono" style={{ marginLeft: "auto" }}>{formatPrice(o.total)}</strong>
                         </div>
-                        <div className="cx-custom-email-tag"><Mail size={11} /> Email diminta: <strong>{o.customEmail}</strong> · biaya {formatPrice(CUSTOM_EMAIL_FEE)}</div>
+                        <div className="cx-custom-email-tag">
+                          <Mail size={11} /> Email diminta: <strong>{o.customEmail}</strong> · biaya {formatPrice(CUSTOM_EMAIL_FEE)}
+                          <span className={`cx-status cx-cemail-${o.customEmailStatus || "pending"}`} style={{ marginLeft: 8 }}>
+                            {CUSTOM_EMAIL_STATUS_LABEL[o.customEmailStatus || "pending"]}
+                          </span>
+                        </div>
                         <div className="cx-order-meta">
                           <span>{o.userName || o.buyerName || "Pembeli"}{o.userEmail ? ` · ${o.userEmail}` : ""}</span>
                           <span>{(o.items || []).reduce((n, it) => n + ((it.accounts || []).length), 0)} akun</span>
@@ -2507,8 +2576,19 @@ function AdminPage({ onBack, onNotice }) {
                           ))}
                         </div>
                         <div className="cx-order-actions">
+                          {Object.keys(CUSTOM_EMAIL_STATUS_LABEL).map((s) => (
+                            <button
+                              key={s}
+                              className={`cx-row-btn${(o.customEmailStatus || "pending") === s ? " is-active" : ""}`}
+                              disabled={isPending(`cemail-${o.id}`) || (o.customEmailStatus || "pending") === s}
+                              onClick={() => setCustomEmailStatus(o.id, s)}
+                            >
+                              <span>{CUSTOM_EMAIL_STATUS_LABEL[s]}</span>
+                            </button>
+                          ))}
                           <button className="cx-row-btn" onClick={() => goNav("Pesanan")}><ShoppingBag size={11} /> <span>Buka di Pesanan</span></button>
                         </div>
+
                       </div>
                     ))
                 }
