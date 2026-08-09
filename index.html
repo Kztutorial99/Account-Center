@@ -31,27 +31,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <script>
-      // Tambahkan shortcut Custom Email ke navigasi store tanpa mengubah state React.
-      // MutationObserver menjaga shortcut tetap ada ketika React menggambar ulang topbar.
-      (() => {
-        const addCustomEmailLink = () => {
-          const nav = document.querySelector('.cx-nav');
-          if (!nav || nav.querySelector('.cx-custom-email-nav')) return;
-          const link = document.createElement('button');
-          link.type = 'button';
-          link.className = 'cx-custom-email-nav';
-          link.textContent = 'Custom Email';
-          link.title = 'Cek dan buat request email/username custom';
-          link.addEventListener('click', () => { window.location.href = '/custom-email.html'; });
-          nav.appendChild(link);
-        };
-        const observer = new MutationObserver(addCustomEmailLink);
-        observer.observe(document.getElementById('root'), { childList: true, subtree: true });
-        window.addEventListener('load', addCustomEmailLink);
-        setTimeout(addCustomEmailLink, 250);
-        setTimeout(addCustomEmailLink, 1000);
-      })();
-    </script>
   </body>
 </html>
