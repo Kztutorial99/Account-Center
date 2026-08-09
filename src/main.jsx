@@ -13,6 +13,7 @@ import "./styles.css";
 /* ─── helpers ─── */
 const formatPrice = (v) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(v) || 0);
 const formatDate  = (v) => v ? new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(v)) : "-";
+const CUSTOM_EMAIL_FEE = 5000;
 const LOGIN_TYPES  = ["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"];
 const emptyListing = { title: "", description: "", loginType: "Google", price: "", status: "available", accounts: [{ email: "", password: "", price: "" }], deliveryDetails: "" };
 const accountPriceOf = (account, product) => {
@@ -304,7 +305,9 @@ function App() {
   const removeFromCart = (i) => setCart((c) => c.filter((_, idx) => idx !== i));
 
   /* ── checkout: bayar pakai saldo, akun langsung dikirim ── */
-  const cartTotal = cart.reduce((a, c) => a + (Number(c.price) || 0), 0);
+  const itemsTotal = cart.reduce((a, c) => a + (Number(c.price) || 0), 0);
+  const customFee = customEmail.trim() ? CUSTOM_EMAIL_FEE : 0;
+  const cartTotal = itemsTotal + customFee;
   const doCheckout = async () => {
     if (!cart.length || checkout.loading) return;
     const items = cart.map((item) => ({
@@ -464,11 +467,15 @@ function App() {
             }
             {cart.length > 0 && (
               <div className="cx-cart-summary">
-                <div><span>Subtotal ({cart.reduce((a, c) => a + (Number(c.qty) || 1), 0)} akun)</span><strong>{formatPrice(cartTotal)}</strong></div>
+                <div><span>Subtotal ({cart.reduce((a, c) => a + (Number(c.qty) || 1), 0)} akun)</span><strong>{formatPrice(itemsTotal)}</strong></div>
+                {customFee > 0 && (
+                  <div><span>Custom email (1x)</span><strong>{formatPrice(customFee)}</strong></div>
+                )}
+                <div><span>Total</span><strong>{formatPrice(cartTotal)}</strong></div>
                 <div><span>Saldo kamu</span><strong>{formatPrice(auth.user ? auth.user.balance : 0)}</strong></div>
                 <div className="cx-custom-email">
                   <label htmlFor="cx-custom-email-input">
-                    <Mail size={11} /> Email / username khusus <span>opsional</span>
+                    <Mail size={11} /> Email / username khusus <span>opsional · +{formatPrice(CUSTOM_EMAIL_FEE)}</span>
                   </label>
                   <div className={`cx-input-wrap cx-custom-email-input is-${emailCheck.state}`}>
                     <input
@@ -1105,11 +1112,11 @@ function CustomEmailPage({ value, setValue, check, onBack, onUse }) {
         <div className="cx-panel" style={{ marginTop: 14 }}>
           <div className="cx-panel-header">
             <h3><Mail size={14} /> Custom Email</h3>
-            <span className="cx-panel-sub">Cek dulu nama email/username yang kamu mau</span>
+            <span className="cx-panel-sub">Cek dulu nama email/username yang kamu mau · biaya {formatPrice(CUSTOM_EMAIL_FEE)} per custom email</span>
           </div>
           <div style={{ padding: 14, display: "grid", gap: 10 }}>
             <p style={{ color: "var(--muted)", fontSize: 12, margin: 0 }}>
-              Kalau tersedia, nama ini otomatis dipakai sebagai permintaan email khusus saat kamu checkout di keranjang.
+              Kalau tersedia, nama ini otomatis dipakai sebagai permintaan email khusus saat kamu checkout di keranjang. Biaya tambahan {formatPrice(CUSTOM_EMAIL_FEE)} per satu custom email.
             </p>
             <div className={`cx-input-wrap cx-custom-email-input is-${check.state}`}>
               <Mail size={13} />
@@ -2472,7 +2479,7 @@ function AdminPage({ onBack, onNotice }) {
               <div className="cx-panel cx-panel-plain">
                 <div className="cx-panel-header">
                   <h3>Permintaan Custom Email</h3>
-                  <span className="cx-panel-sub">{customOrders.length} permintaan dari pembeli</span>
+                  <span className="cx-panel-sub">{customOrders.length} permintaan dari pembeli · biaya {formatPrice(CUSTOM_EMAIL_FEE)} / permintaan</span>
                 </div>
                 {ordersLoading && !orders.length
                   ? <RowSkeleton rows={3} />
@@ -2486,7 +2493,7 @@ function AdminPage({ onBack, onNotice }) {
                           <span className={`cx-status ${o.status === "paid" ? "cx-status-ok" : "cx-status-low"}`}>{o.status === "paid" ? "Lunas" : "Refund"}</span>
                           <strong className="cx-mono" style={{ marginLeft: "auto" }}>{formatPrice(o.total)}</strong>
                         </div>
-                        <div className="cx-custom-email-tag"><Mail size={11} /> Email diminta: <strong>{o.customEmail}</strong></div>
+                        <div className="cx-custom-email-tag"><Mail size={11} /> Email diminta: <strong>{o.customEmail}</strong> · biaya {formatPrice(CUSTOM_EMAIL_FEE)}</div>
                         <div className="cx-order-meta">
                           <span>{o.userName || o.buyerName || "Pembeli"}{o.userEmail ? ` · ${o.userEmail}` : ""}</span>
                           <span>{(o.items || []).reduce((n, it) => n + ((it.accounts || []).length), 0)} akun</span>
