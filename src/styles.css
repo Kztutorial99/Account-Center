@@ -1219,3 +1219,21 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-product-buy { width: auto; padding: 0 16px; height: 38px; border-radius: 999px; gap: 8px; font-size: 12.5px; font-weight: 600; background: var(--grad-primary); color: #fff; }
   .cx-product-buy span { display: inline; }
 }
+
+/* ── FINE-TUNING v2.1: tipografi bersih + CTA penuh ───────── */
+@media (max-width: 720px) {
+  .cx-product-bottom { grid-template-columns: 1fr; justify-items: stretch; }
+  .cx-product-buy { width: 100% !important; height: 50px !important; }
+  .cx-product-price { font-family: Inter, system-ui, sans-serif !important; font-variant-numeric: tabular-nums; }
+  .cx-cred-head { font-size: 11px; letter-spacing: .02em; text-transform: none; color: var(--muted); }
+  .cx-cred-row { justify-content: flex-start; }
+  .cx-cred-row span { font-size: 10px; letter-spacing: .02em; text-transform: none; width: 62px; }
+  .cx-cred-price { font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  .cx-product-type { font-size: 11px; letter-spacing: .06em; }
+  .cx-kicker { font-size: 10.5px; letter-spacing: .12em; }
+  .cx-footer-inner { padding-bottom: 4px; }
+  .cx-footer-links button { min-height: 40px; font-size: 12.5px; display: inline-flex; align-items: center; }
+  .cx-footer p { font-size: 11.5px; }
+  .cx-section-sub { font-size: 12.5px; }
+  .cx-search input { letter-spacing: 0; }
+}
