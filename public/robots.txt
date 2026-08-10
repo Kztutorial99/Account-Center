@@ -8,7 +8,10 @@ Disallow: /orders
 
 User-agent: Googlebot
 Allow: /
-
-Host: https://accounter.my.id
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+Disallow: /account
+Disallow: /orders
 
 Sitemap: https://accounter.my.id/sitemap.xml
