@@ -464,6 +464,27 @@ function RowSkeleton({ rows = 4 }) {
   );
 }
 
+/* ─── Splash saat sesi sedang diperiksa ─── */
+function SessionSplash({ title = "Menyiapkan Account Center", subtitle = "Memeriksa sesi kamu, sebentar ya..." }) {
+  return (
+    <div className="cx-splash" role="status" aria-live="polite" aria-busy="true">
+      <div className="cx-splash-aurora" aria-hidden="true"><span /><span /><span /></div>
+      <div className="cx-splash-card">
+        <div className="cx-splash-mark">
+          <span className="cx-splash-ring" aria-hidden="true" />
+          <span className="cx-splash-core">&lt;/&gt;</span>
+        </div>
+        <div className="cx-splash-copy">
+          <strong>{title}</strong>
+          <small>{subtitle}</small>
+        </div>
+        <div className="cx-splash-bar" aria-hidden="true" />
+        <div className="cx-splash-dots" aria-hidden="true"><i /><i /><i /></div>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════
    APP ROOT
 ════════════════════════════════════════════════════ */
@@ -766,9 +787,7 @@ function App() {
   }
 
   /* ── auth gate: wajib login sebelum akses Account Center ── */
-  if (auth.loading) return (
-    <div className="cx-login-wrap"><div style={{ color: "var(--muted)", fontSize: 12 }}>Memeriksa sesi...</div></div>
-  );
+  if (auth.loading) return <SessionSplash />;
   if (!auth.user) return (
     <AuthPage onAuthenticated={(user) => { setAuth({ user, loading: false }); navigate("store"); }} />
   );
@@ -2656,9 +2675,7 @@ function AdminPage({ onBack, onNotice }) {
 
   /* login screen */
   if (authenticated === null) return (
-    <div className="cx-login-wrap">
-      <div style={{ textAlign: "center", color: "var(--muted)", fontSize: 12 }}>Memeriksa sesi...</div>
-    </div>
+    <SessionSplash title="Menyiapkan Admin Panel" subtitle="Memeriksa sesi admin, sebentar ya..." />
   );
 
   if (!authenticated) return (
