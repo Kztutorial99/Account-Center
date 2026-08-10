@@ -1941,3 +1941,116 @@ html { scroll-behavior: smooth; }
   .cx-ce-result-actions{margin-left:0}
   .cx-ce-admin-field input,.cx-ce-admin-field textarea{font-size:13px}
 }
+
+/* ══════════════════════════════════════════════════
+   UPDATE: custom email manual, promo store, template
+   produk, kartu pesanan admin ringkas, notifikasi
+══════════════════════════════════════════════════ */
+
+/* Konfirmasi manual custom email */
+.cx-ce-confirm {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 11px; line-height: 1.45; color: var(--ink2);
+  background: var(--bg2, rgba(255,255,255,.03));
+  border: 1px solid var(--b2); border-radius: 8px;
+  padding: 9px 10px; margin: 8px 0; cursor: pointer;
+}
+.cx-ce-confirm input { width: 15px; height: 15px; margin: 1px 0 0; accent-color: var(--indigo2, #6c83da); flex: 0 0 auto; }
+.cx-ce-manual-hint {
+  display: flex; gap: 7px; align-items: flex-start;
+  font-size: 10.5px; line-height: 1.45; color: var(--muted);
+  border: 1px dashed var(--b2); border-radius: 8px; padding: 8px 9px; margin-top: 8px;
+}
+.cx-custom-email-msg.is-manual { color: var(--green); }
+
+/* Panel terkunci (slot penuh) — input disembunyikan total */
+.cx-ce-panel-locked { padding: 0; }
+.cx-ce-locked-card { display: flex; gap: 11px; align-items: flex-start; padding: 14px; }
+.cx-ce-locked-icon {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px;
+  display: grid; place-items: center; color: var(--amber, #eab308);
+  background: rgba(234,179,8,.12); border: 1px solid rgba(234,179,8,.25);
+}
+.cx-ce-locked-card strong { display: block; font-size: 12.5px; margin-bottom: 3px; }
+.cx-ce-locked-card p { margin: 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
+
+/* Promo custom email di dashboard store */
+.cx-ce-promo-wrap { margin-top: 26px; }
+.cx-ce-promo {
+  display: grid; grid-template-columns: 1.25fr .85fr; gap: 20px;
+  border: 1px solid var(--b2); border-radius: 16px; padding: 22px;
+  background:
+    radial-gradient(120% 130% at 100% 0%, rgba(108,131,218,.16), transparent 60%),
+    var(--panel, rgba(255,255,255,.02));
+}
+.cx-ce-promo-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700;
+  color: var(--indigo2, #8b9cf0); background: rgba(108,131,218,.12);
+  border: 1px solid rgba(108,131,218,.28); border-radius: 999px; padding: 4px 9px;
+}
+.cx-ce-promo-copy h2 { margin: 12px 0 6px; font-size: 21px; line-height: 1.2; letter-spacing: -.02em; }
+.cx-ce-promo-copy p { margin: 0 0 12px; font-size: 12px; line-height: 1.6; color: var(--muted); }
+.cx-ce-promo-points { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 6px; }
+.cx-ce-promo-points li { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink2); }
+.cx-ce-promo-points svg { color: var(--green); flex: 0 0 auto; }
+.cx-ce-promo-visual { display: grid; gap: 10px; align-content: center; }
+.cx-ce-promo-card {
+  border: 1px solid var(--b2); border-radius: 12px; padding: 13px;
+  background: var(--bg2, rgba(255,255,255,.03)); display: grid; gap: 4px;
+}
+.cx-ce-promo-card.is-alt { transform: translateX(10px); }
+.cx-ce-promo-card-icon { color: var(--indigo2, #8b9cf0); }
+.cx-ce-promo-card strong { font-size: 12.5px; word-break: break-all; }
+.cx-ce-promo-card small { font-size: 10.5px; color: var(--muted); }
+
+/* Template produk di form admin */
+.cx-tpl-bar { border: 1px solid var(--b2); border-radius: 11px; padding: 12px; margin-bottom: 14px; background: var(--bg2, rgba(255,255,255,.02)); }
+.cx-tpl-bar-head strong { display: flex; align-items: center; gap: 6px; font-size: 11.5px; margin-bottom: 4px; }
+.cx-tpl-bar-head small { display: block; font-size: 10.5px; line-height: 1.5; color: var(--muted); }
+.cx-tpl-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cx-tpl-btn {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  font-size: 11px; font-weight: 600; color: var(--ink2);
+  border: 1px solid var(--b2); border-radius: 9px; padding: 7px 11px;
+  background: transparent; transition: background .15s, border-color .15s, transform .12s;
+}
+.cx-tpl-btn:hover { border-color: var(--indigo2, #6c83da); background: rgba(108,131,218,.1); }
+.cx-tpl-btn:active { transform: scale(.97); }
+
+/* Notifikasi: efek sentuhan saat diklik */
+.cx-notif-item { transition: background .14s ease, transform .12s ease; -webkit-tap-highlight-color: transparent; }
+.cx-notif-item:active,
+.cx-notif-item.is-pressed { background: rgba(108,131,218,.16); transform: scale(.985); }
+.cx-notif-item.is-pressed .cx-notif-copy strong { color: var(--indigo2, #8b9cf0); }
+.cx-admin-menu-item { transition: background .14s ease, transform .12s ease; }
+.cx-admin-menu-item:active { background: rgba(108,131,218,.14); transform: scale(.985); }
+
+/* Kartu pesanan admin lebih ringkas */
+.cx-buyer-card { padding: 12px; border-radius: 12px; }
+.cx-buyer-card .cx-order-card-head { gap: 9px; padding-bottom: 9px; }
+.cx-buyer-card .cx-buyer-ident strong { font-size: 12.5px; }
+.cx-buyer-card .cx-buyer-ident small { font-size: 10.5px; word-break: break-all; }
+.cx-buyer-card .cx-order-meta { font-size: 10.5px; gap: 10px; flex-wrap: wrap; }
+.cx-buyer-order { padding: 9px 10px; border-radius: 9px; }
+.cx-buyer-order-head { gap: 7px; flex-wrap: wrap; font-size: 10.5px; }
+.cx-buyer-card .cx-order-item { padding: 6px 0; }
+.cx-buyer-card .cx-order-item-sub { font-size: 10px; word-break: break-all; }
+.cx-buyer-card .cx-order-actions { flex-wrap: wrap; gap: 7px; padding-top: 9px; }
+
+@media (max-width: 640px) {
+  .cx-ce-promo { grid-template-columns: 1fr; padding: 16px; border-radius: 14px; gap: 14px; }
+  .cx-ce-promo-copy h2 { font-size: 18px; }
+  .cx-ce-promo-card.is-alt { transform: none; }
+  .cx-ce-promo-copy .cx-btn { width: 100%; justify-content: center; }
+  .cx-hero-ce-btn { flex: 1 1 100%; justify-content: center; }
+  .cx-tpl-btn { flex: 1 1 calc(50% - 8px); justify-content: center; }
+  .cx-buyer-card { padding: 11px; }
+  .cx-buyer-card .cx-order-card-head { flex-wrap: wrap; }
+  .cx-buyer-card .cx-order-total { margin-left: auto; text-align: right; }
+  .cx-buyer-card .cx-order-total strong { font-size: 12.5px; }
+  .cx-buyer-order-head .cx-row-btn { margin-left: auto; }
+  .cx-buyer-card .cx-order-actions .cx-row-btn { flex: 1 1 calc(50% - 7px); justify-content: center; }
+  .cx-ce-locked-card { padding: 12px; }
+  .cx-notif-item { padding: 11px 12px; }
+}
