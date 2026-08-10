@@ -1,6 +1,14 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /admin/
 Disallow: /api/
+Disallow: /account
+Disallow: /orders
 
-Sitemap: https://codexa-store.vercel.app/sitemap.xml
+User-agent: Googlebot
+Allow: /
+
+Host: https://accounter.my.id
+
+Sitemap: https://accounter.my.id/sitemap.xml

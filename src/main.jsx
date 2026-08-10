@@ -9,6 +9,7 @@ import {
   User, Wallet, Mail, Phone, Clock, Sparkles, Send,
 } from "lucide-react";
 import "./styles.css";
+import { applySeo, applyProductSchema } from "./seo.js";
 
 /* ─── helpers ─── */
 const formatPrice = (v) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(v) || 0);
@@ -621,6 +622,10 @@ function App() {
     if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
     if (document.body) document.body.scrollTop = 0;
   };
+  // SEO: judul/meta/canonical mengikuti halaman aktif (SPA).
+  useEffect(() => { applySeo(activePage); }, [activePage]);
+  useEffect(() => { applyProductSchema(data.products); }, [data.products]);
+
   useEffect(() => {
     scrollTop();
     const t = window.setTimeout(scrollTop, 60);
