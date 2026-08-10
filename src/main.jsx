@@ -22,6 +22,109 @@ const customEmailsOf = (order) => {
   return [];
 };
 const LOGIN_TYPES  = ["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"];
+/* Template produk siap pakai: admin cukup ganti harga, email & password. */
+const PRODUCT_TEMPLATES = [
+  {
+    key: "google",
+    label: "Google / Gmail",
+    icon: "Google",
+    data: {
+      title: "Akun Google (Gmail) Fresh — Siap Pakai",
+      loginType: "Google",
+      description: [
+        "Akun Google / Gmail baru siap pakai, sudah aktif dan bisa langsung login.",
+        "",
+        "Termasuk:",
+        "- 1 akun Gmail aktif (email + password)",
+        "- Bisa dipakai untuk Play Store, YouTube, Drive, Docs, dan login pihak ketiga",
+        "- Belum terpakai di layanan lain (fresh)",
+        "",
+        "Catatan penting:",
+        "- Wajib ganti password segera setelah pembelian.",
+        "- Login pertama disarankan lewat browser di HP/PC yang biasa kamu pakai.",
+        "- Garansi login 1x24 jam sejak pembelian.",
+      ].join("\n"),
+      deliveryDetails: [
+        "CARA MENGAMANKAN AKUN (lakukan segera setelah beli):",
+        "1. Buka myaccount.google.com lalu login dengan email & password di atas.",
+        "2. Keamanan > Sandi: ganti password jadi milikmu sendiri (min. 10 karakter, kombinasi huruf, angka, simbol).",
+        "3. Keamanan > Verifikasi 2 Langkah: aktifkan dengan nomor HP / Google Authenticator milikmu.",
+        "4. Keamanan > Email & nomor pemulihan: ganti ke email dan nomor HP kamu.",
+        "5. Keamanan > Perangkat kamu: klik 'Keluar' pada semua perangkat yang tidak kamu kenal.",
+        "6. Keamanan > Aplikasi pihak ketiga: cabut akses aplikasi yang tidak kamu pakai.",
+        "",
+        "CATATAN:",
+        "- Jangan bagikan password ke siapa pun, termasuk yang mengaku admin.",
+        "- Simpan password di tempat aman (password manager / catatan terkunci).",
+        "- Kalau ada kendala login, hubungi admin lewat menu Bantuan / Assisten maksimal 1x24 jam.",
+      ].join("\n"),
+      status: "available",
+    },
+  },
+  {
+    key: "facebook",
+    label: "Facebook",
+    icon: "Facebook",
+    data: {
+      title: "Akun Facebook Aktif — Siap Pakai",
+      loginType: "Facebook",
+      description: [
+        "Akun Facebook aktif siap pakai, sudah terverifikasi dan bisa langsung login.",
+        "",
+        "Termasuk:",
+        "- 1 akun Facebook (email/nomor + password)",
+        "- Bisa dipakai untuk marketplace, grup, dan login pihak ketiga",
+        "",
+        "Catatan penting:",
+        "- Wajib ganti password setelah pembelian.",
+        "- Hindari login dari banyak perangkat sekaligus di hari pertama.",
+        "- Garansi login 1x24 jam sejak pembelian.",
+      ].join("\n"),
+      deliveryDetails: [
+        "CARA MENGAMANKAN AKUN:",
+        "1. Login di facebook.com, buka Pengaturan & Privasi > Pusat Akun.",
+        "2. Ganti password jadi milikmu sendiri.",
+        "3. Aktifkan Autentikasi Dua Faktor (2FA) dengan nomor HP / aplikasi authenticator.",
+        "4. Ganti email & nomor pemulihan ke milikmu.",
+        "5. Cek 'Tempat Kamu Login' dan keluarkan perangkat asing.",
+        "",
+        "CATATAN: jangan langsung ganti nama/foto profil dalam 24 jam pertama agar akun tidak dicurigai sistem.",
+      ].join("\n"),
+      status: "available",
+    },
+  },
+  {
+    key: "email",
+    label: "Email / Password umum",
+    icon: "Email/password",
+    data: {
+      title: "Akun Premium — Login Email & Password",
+      loginType: "Email/password",
+      description: [
+        "Akun premium siap pakai dengan login email & password.",
+        "",
+        "Termasuk:",
+        "- 1 akun aktif (email + password)",
+        "- Masa aktif sesuai keterangan pada judul produk",
+        "",
+        "Catatan penting:",
+        "- Jangan ganti email utama akun.",
+        "- Garansi login 1x24 jam sejak pembelian.",
+      ].join("\n"),
+      deliveryDetails: [
+        "CARA MENGAMANKAN AKUN:",
+        "1. Login memakai email & password di atas.",
+        "2. Ganti password pada menu Pengaturan / Profil.",
+        "3. Aktifkan verifikasi 2 langkah bila layanan menyediakannya.",
+        "4. Keluarkan perangkat lain dari daftar sesi aktif.",
+        "",
+        "CATATAN: simpan kredensial dengan aman dan jangan dibagikan ke orang lain.",
+      ].join("\n"),
+      status: "available",
+    },
+  },
+];
+
 const emptyListing = { title: "", description: "", loginType: "Google", price: "", status: "available", accounts: [{ email: "", password: "", price: "" }], deliveryDetails: "" };
 const accountPriceOf = (account, product) => {
   const n = Number(account && account.price);
@@ -224,29 +327,22 @@ function App() {
   const [customEmails, setCustomEmails] = useState([]);
   const [emailDraft, setEmailDraft] = useState("");
   const [emailCheck, setEmailCheck] = useState({ state: "idle", message: "", signals: [] });
+  const [emailConfirmed, setEmailConfirmed] = useState(false);
   const [customStatus, setCustomStatus] = useState({ max: CUSTOM_EMAIL_MAX, open: [], canOrder: true, loading: true });
   const noticeTimer = useRef(null);
 
-  /* Cek ketersediaan email/username kustom (debounce 1200ms): untuk Gmail,
-     server mengecek langsung ke pendaftaran Google lewat actor Apify — tiap
-     cek adalah run berbayar, jadi debounce sengaja lebih panjang. */
+  /* Custom email: TIDAK ada verifikasi otomatis lagi. User cek sendiri nama
+     yang diinginkan di Google, lalu centang konfirmasi manual. */
   useEffect(() => {
     const value = emailDraft.trim();
-    if (!value) { setEmailCheck({ state: "idle", message: "", signals: [] }); return undefined; }
-    if (value.length < 3) { setEmailCheck({ state: "invalid", message: "Minimal 3 karakter", signals: [] }); return undefined; }
-    setEmailCheck({ state: "checking", message: "Mengecek langsung ke Gmail...", signals: [] });
-    const timer = window.setTimeout(() => {
-      jsonRequest(`/api/orders?resource=check-email&value=${encodeURIComponent(value)}`)
-        .then((p) => setEmailCheck({
-          state: p.state === "invalid" ? "invalid"
-            : p.state === "unknown" ? "unknown"
-            : p.available ? "available" : "taken",
-          message: p.reason || (p.available ? `${p.normalized} bisa dicoba` : "Sudah dipakai, coba nama lain"),
-          signals: Array.isArray(p.signals) ? p.signals : [],
-        }))
-        .catch((e) => setEmailCheck({ state: "invalid", message: e.message, signals: [] }));
-    }, 1200);
-    return () => window.clearTimeout(timer);
+    setEmailConfirmed(false);
+    if (!value) { setEmailCheck({ state: "idle", message: "", signals: [] }); return; }
+    if (value.length < 3) { setEmailCheck({ state: "invalid", message: "Minimal 3 karakter", signals: [] }); return; }
+    if (!/^[a-zA-Z0-9._%+-]+(@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})?$/.test(value)) {
+      setEmailCheck({ state: "invalid", message: "Hanya huruf, angka, titik, - dan _ (boleh diakhiri @gmail.com)", signals: [] });
+      return;
+    }
+    setEmailCheck({ state: "manual", message: "Cek sendiri ketersediaannya di Google, lalu centang konfirmasi.", signals: [] });
   }, [emailDraft]);
 
 
@@ -304,6 +400,19 @@ function App() {
     return q ? data.products.filter((p) => `${p.title} ${p.description} ${p.loginType}`.toLowerCase().includes(q)) : data.products;
   }, [data.products, search]);
 
+  // Pindah halaman selalu mulai dari paling atas (window + container scroll).
+  const scrollTop = () => {
+    if (typeof window === "undefined") return;
+    window.scrollTo(0, 0);
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+  };
+  useEffect(() => {
+    scrollTop();
+    const t = window.setTimeout(scrollTop, 60);
+    return () => window.clearTimeout(t);
+  }, [activePage]);
+
   const navigate = (page) => {
     window.history.pushState({}, "", page === "store" ? "/" : `/${page}`);
     setActivePage(page);
@@ -311,7 +420,7 @@ function App() {
     setCartOpen(false);
     setBuyItem(null);
     setMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollTop();
   };
   // Timer lama dibersihkan dulu supaya notice baru tidak ikut terhapus.
   const showNotice = (msg) => {
@@ -344,7 +453,7 @@ function App() {
   const cartTotal = itemsTotal + customFee;
   const customQuotaLeft = Math.max(0, (customStatus.max || CUSTOM_EMAIL_MAX) - customEmails.length);
   const customBlocked = !customStatus.canOrder;
-  const canAddCustom = (emailCheck.state === "available" || emailCheck.state === "unknown")
+  const canAddCustom = emailCheck.state === "manual" && emailConfirmed
     && !customBlocked && customQuotaLeft > 0;
 
   const addCustomEmail = () => {
@@ -358,6 +467,7 @@ function App() {
     if (customEmails.some((v) => v.toLowerCase() === value)) { showNotice("Nama itu sudah ada di daftar"); return; }
     setCustomEmails((list) => [...list, value]);
     setEmailDraft("");
+    setEmailConfirmed(false);
     setEmailCheck({ state: "idle", message: "", signals: [] });
     showNotice("Custom email masuk keranjang");
   };
@@ -540,42 +650,55 @@ function App() {
                     </div>
                   ))}
 
-                  <div className={`cx-ce-box${customBlocked || customQuotaLeft === 0 ? " is-locked" : ""}`}>
-                    <div className="cx-ce-box-head">
-                      <span><Mail size={12} /> Custom email</span>
-                      <span className="cx-ce-quota">{customEmails.length}/{customStatus.max || CUSTOM_EMAIL_MAX}</span>
-                    </div>
-                    {customBlocked ? (
+                  {customBlocked ? (
+                    <div className="cx-ce-box is-locked">
+                      <div className="cx-ce-box-head">
+                        <span><LockKeyhole size={12} /> Custom email terkunci</span>
+                      </div>
                       <p className="cx-ce-locked">
-                        <LockKeyhole size={11} /> Permintaan sebelumnya belum selesai ({customStatus.open.map((r) => r.requested).join(", ")}). Kamu bisa pesan lagi setelah admin menandai selesai.
+                        Permintaan sebelumnya belum selesai ({customStatus.open.map((r) => r.requested).join(", ")}). Kamu bisa pesan lagi setelah admin menandai selesai.
                       </p>
-                    ) : customQuotaLeft === 0 ? (
-                      <p className="cx-ce-locked"><LockKeyhole size={11} /> Slot penuh — sudah {customStatus.max || CUSTOM_EMAIL_MAX} nama · batas 1 tugas tercapai.</p>
-                    ) : (
-                      <>
-                        <div className={`cx-input-wrap cx-custom-email-input is-${emailCheck.state}`}>
-                          <input
-                            id="cx-custom-email-input"
-                            value={emailDraft}
-                            onChange={(e) => setEmailDraft(e.target.value)}
-                            placeholder="mis. namaku99"
-                            maxLength={80}
-                            autoComplete="off"
-                          />
-                          {emailCheck.state === "checking" && <Spinner />}
-                          {emailCheck.state === "available" && <Check size={12} color="var(--green)" />}
-                          {emailCheck.state === "unknown" && <ShieldCheck size={12} color="#eab308" />}
-                          {(emailCheck.state === "taken" || emailCheck.state === "invalid") && <X size={12} color="var(--red)" />}
-                        </div>
-                        <small className={`cx-custom-email-msg is-${emailCheck.state}`}>
-                          {emailCheck.message || `Opsional · +${formatPrice(CUSTOM_EMAIL_FEE)} per nama, sisa ${customQuotaLeft} slot.`}
-                        </small>
-                        <button className="cx-btn cx-btn-ghost cx-btn-sm cx-btn-full" disabled={!canAddCustom} onClick={addCustomEmail}>
-                          <Plus size={12} /> Tambah ke keranjang
-                        </button>
-                      </>
-                    )}
-                  </div>
+                    </div>
+                  ) : customQuotaLeft === 0 ? (
+                    <div className="cx-ce-box is-locked">
+                      <div className="cx-ce-box-head">
+                        <span><LockKeyhole size={12} /> Slot penuh</span>
+                        <span className="cx-ce-quota">{customEmails.length}/{customStatus.max || CUSTOM_EMAIL_MAX}</span>
+                      </div>
+                      <p className="cx-ce-locked">Batas {customStatus.max || CUSTOM_EMAIL_MAX} nama per tugas tercapai. Selesaikan tugas ini dulu.</p>
+                    </div>
+                  ) : (
+                    <div className="cx-ce-box">
+                      <div className="cx-ce-box-head">
+                        <span><Mail size={12} /> Custom email</span>
+                        <span className="cx-ce-quota">{customEmails.length}/{customStatus.max || CUSTOM_EMAIL_MAX}</span>
+                      </div>
+                      <div className={`cx-input-wrap cx-custom-email-input is-${emailCheck.state}`}>
+                        <input
+                          id="cx-custom-email-input"
+                          value={emailDraft}
+                          onChange={(e) => setEmailDraft(e.target.value)}
+                          placeholder="mis. namaku99"
+                          maxLength={80}
+                          autoComplete="off"
+                        />
+                        {emailCheck.state === "manual" && <Check size={12} color="var(--green)" />}
+                        {emailCheck.state === "invalid" && <X size={12} color="var(--red)" />}
+                      </div>
+                      <small className={`cx-custom-email-msg is-${emailCheck.state}`}>
+                        {emailCheck.message || `+${formatPrice(CUSTOM_EMAIL_FEE)} per nama · sisa ${customQuotaLeft} slot.`}
+                      </small>
+                      {emailCheck.state === "manual" && (
+                        <label className="cx-ce-confirm">
+                          <input type="checkbox" checked={emailConfirmed} onChange={(e) => setEmailConfirmed(e.target.checked)} />
+                          <span>Saya sudah cek sendiri, nama ini belum dipakai.</span>
+                        </label>
+                      )}
+                      <button className="cx-btn cx-btn-ghost cx-btn-sm cx-btn-full" disabled={!canAddCustom} onClick={addCustomEmail}>
+                        <Plus size={12} /> Tambah ke keranjang
+                      </button>
+                    </div>
+                  )}
               </>
             </div>
             {(cart.length > 0 || customFee > 0) && (
@@ -687,6 +810,8 @@ function App() {
         draft={emailDraft}
         setDraft={setEmailDraft}
         check={emailCheck}
+        confirmed={emailConfirmed}
+        setConfirmed={setEmailConfirmed}
         list={customEmails}
         status={customStatus}
         quotaLeft={customQuotaLeft}
@@ -730,6 +855,9 @@ function App() {
             <button className="cx-btn cx-btn-primary" onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}>
               Lihat katalog <ArrowRight size={13} />
             </button>
+            <button className="cx-btn cx-btn-secondary cx-hero-ce-btn" onClick={() => navigate("custom-email")}>
+              <Mail size={13} /> Custom Email
+            </button>
             <button className="cx-btn cx-btn-ghost" onClick={() => navigate("help")}>
               Cara beli
             </button>
@@ -754,6 +882,37 @@ function App() {
                 <div><strong>{title}</strong>{desc}</div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Custom email spotlight */}
+      <section className="cx-container cx-ce-promo-wrap">
+        <div className="cx-ce-promo">
+          <div className="cx-ce-promo-copy">
+            <span className="cx-ce-promo-badge"><Sparkles size={11} /> Paling dicari</span>
+            <h2>Mau email dengan nama kamu sendiri?</h2>
+            <p>Pesan nama Gmail/username custom — maksimal {CUSTOM_EMAIL_MAX} nama per tugas, {formatPrice(CUSTOM_EMAIL_FEE)} per nama. Admin yang buatkan akunnya, password langsung dikirim ke menu Pesanan.</p>
+            <ul className="cx-ce-promo-points">
+              <li><Check size={12} /> Nama sesuai permintaan kamu</li>
+              <li><Check size={12} /> Password & catatan aman dari admin</li>
+              <li><Check size={12} /> Progres bisa dipantau realtime</li>
+            </ul>
+            <button className="cx-btn cx-btn-primary" onClick={() => navigate("custom-email")}>
+              <Mail size={13} /> Pesan Custom Email <ArrowRight size={13} />
+            </button>
+          </div>
+          <div className="cx-ce-promo-visual" aria-hidden="true">
+            <div className="cx-ce-promo-card">
+              <span className="cx-ce-promo-card-icon"><Mail size={16} /></span>
+              <strong>namakamu99@gmail.com</strong>
+              <small>Siap dibuat · {formatPrice(CUSTOM_EMAIL_FEE)}</small>
+            </div>
+            <div className="cx-ce-promo-card is-alt">
+              <span className="cx-ce-promo-card-icon"><LockKeyhole size={16} /></span>
+              <strong>Password aman</strong>
+              <small>Dikirim setelah akun jadi</small>
+            </div>
           </div>
         </div>
       </section>
@@ -1023,6 +1182,7 @@ function NotificationBell({ navigate, activePage }) {
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [pressed, setPressed] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -1067,6 +1227,8 @@ function NotificationBell({ navigate, activePage }) {
   };
 
   const openItem = async (n) => {
+    // Feedback sentuhan: item yang ditekan langsung ditandai aktif.
+    setPressed(n.id);
     if (!n.read) {
       try { await jsonRequest("/api/notifications", { method: "PATCH", body: JSON.stringify({ id: n.id }) }); } catch (_) {}
       setItems((list) => list.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
@@ -1075,6 +1237,7 @@ function NotificationBell({ navigate, activePage }) {
     // Isi pesan dibuka penuh dulu lewat overlay, bukan langsung pindah halaman.
     setOpen(false);
     setDetail(n);
+    window.setTimeout(() => setPressed(""), 260);
   };
 
   const clearAll = async () => {
@@ -1108,7 +1271,15 @@ function NotificationBell({ navigate, activePage }) {
                 const tone = NOTIF_TONE[n.type] || { icon: Bell, color: "var(--muted)" };
                 const ToneIcon = tone.icon;
                 return (
-                  <button key={n.id} className={`cx-notif-item${n.read ? "" : " is-unread"}`} onClick={() => openItem(n)}>
+                  <button
+                    key={n.id}
+                    type="button"
+                    className={`cx-notif-item${n.read ? "" : " is-unread"}${pressed === n.id ? " is-pressed" : ""}`}
+                    onPointerDown={() => setPressed(n.id)}
+                    onPointerUp={() => window.setTimeout(() => setPressed((v) => (v === n.id ? "" : v)), 160)}
+                    onPointerLeave={() => setPressed((v) => (v === n.id ? "" : v))}
+                    onClick={() => openItem(n)}
+                  >
                     <span className="cx-notif-icon" style={{ color: tone.color }}><ToneIcon size={14} /></span>
                     <span className="cx-notif-copy">
                       <strong>{n.title}</strong>
@@ -1246,7 +1417,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
   );
 }
 
-function CustomEmailPage({ draft, setDraft, check, list, status, quotaLeft, canAdd, blocked, onAdd, onRemove, onBack, onCheckout }) {
+function CustomEmailPage({ draft, setDraft, check, confirmed, setConfirmed, list, status, quotaLeft, canAdd, blocked, onAdd, onRemove, onBack, onCheckout }) {
   const max = status.max || CUSTOM_EMAIL_MAX;
   // Slot penuh atau tugas lama belum selesai → input & tombol dikunci.
   const locked = blocked || quotaLeft === 0;
@@ -1287,57 +1458,57 @@ function CustomEmailPage({ draft, setDraft, check, list, status, quotaLeft, canA
           </div>
         )}
 
+        {locked ? (
+          <div className="cx-panel cx-ce-panel cx-ce-panel-locked">
+            <div className="cx-ce-locked-card">
+              <span className="cx-ce-locked-icon"><LockKeyhole size={18} /></span>
+              <div>
+                <strong>{blocked ? "Pesanan baru terkunci" : `Slot penuh (${max}/${max})`}</strong>
+                <p>{blocked
+                  ? "Selesaikan dulu permintaan custom email sebelumnya. Form input disembunyikan sampai admin menandai selesai."
+                  : `Batas ${max} nama per tugas sudah tercapai, jadi form input disembunyikan. Lanjut bayar dulu daftar di bawah.`}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className="cx-panel cx-ce-panel">
           <div className="cx-panel-header">
             <h3><Plus size={14} /> Tambah nama</h3>
-            <span className={`cx-panel-sub${locked ? " is-locked" : ""}`}>
-              {locked ? <><LockKeyhole size={11} /> Terkunci</> : `Sisa ${quotaLeft} slot`}
-            </span>
+            <span className="cx-panel-sub">Sisa {quotaLeft} slot</span>
           </div>
           <div className="cx-ce-panel-body">
-            {locked && (
-              <div className="cx-ce-lockbar">
-                <LockKeyhole size={13} />
-                <span>{blocked
-                  ? "Terkunci: permintaan sebelumnya belum selesai."
-                  : `Terkunci: slot ${max} nama untuk tugas ini sudah penuh.`}</span>
-              </div>
-            )}
-            <div className={`cx-input-wrap cx-custom-email-input is-${check.state}${locked ? " is-locked" : ""}`}>
-              {locked ? <LockKeyhole size={13} /> : <Mail size={13} />}
+            <div className={`cx-input-wrap cx-custom-email-input is-${check.state}`}>
+              <Mail size={13} />
               <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="namaku99 atau namaku99@gmail.com"
                 maxLength={80}
                 autoComplete="off"
-                disabled={locked}
-                readOnly={locked}
                 onKeyDown={(e) => { if (e.key === "Enter" && canAdd) onAdd(); }}
               />
-              {check.state === "checking" && <Spinner />}
-              {check.state === "available" && <Check size={13} color="var(--green)" />}
-              {check.state === "unknown" && <ShieldCheck size={13} color="#eab308" />}
-              {(check.state === "taken" || check.state === "invalid") && <X size={13} color="var(--red)" />}
+              {check.state === "manual" && <Check size={13} color="var(--green)" />}
+              {check.state === "invalid" && <X size={13} color="var(--red)" />}
             </div>
             <small className={`cx-custom-email-msg is-${check.state}`}>
-              {blocked
-                ? "Pemesanan dikunci sampai permintaan sebelumnya selesai."
-                : quotaLeft === 0
-                  ? `Batas ${max} nama per tugas sudah tercapai.`
-                  : check.message || "Minimal 3 karakter untuk cek ketersediaan."}
+              {check.message || "Minimal 3 karakter. Ketersediaan dicek manual olehmu."}
             </small>
-            {check.signals && check.signals.length > 0 && (
-              <ul className="cx-custom-email-signals">
-                {check.signals.map((sg, i) => <li key={i}>{sg}</li>)}
-              </ul>
+            <div className="cx-ce-manual-hint">
+              <ShieldCheck size={12} />
+              <span>Cek dulu nama ini di halaman pendaftaran Google. Kalau masih bisa dipakai, centang konfirmasi di bawah.</span>
+            </div>
+            {check.state === "manual" && (
+              <label className="cx-ce-confirm">
+                <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
+                <span>Saya sudah cek sendiri, nama <strong>{draft.trim()}</strong> belum dipakai.</span>
+              </label>
             )}
-            <button className={`cx-btn cx-btn-primary cx-btn-full${locked ? " is-locked" : ""}`} disabled={locked || !canAdd} onClick={onAdd}>
-              {locked ? <LockKeyhole size={13} /> : <Plus size={13} />}
-              {locked ? " Slot terkunci" : ` Tambah ke daftar · ${formatPrice(CUSTOM_EMAIL_FEE)}`}
+            <button className="cx-btn cx-btn-primary cx-btn-full" disabled={!canAdd} onClick={onAdd}>
+              <Plus size={13} /> Tambah ke daftar · {formatPrice(CUSTOM_EMAIL_FEE)}
             </button>
           </div>
         </div>
+        )}
 
         <div className="cx-panel cx-ce-panel">
           <div className="cx-panel-header">
@@ -1371,7 +1542,7 @@ function CustomEmailPage({ draft, setDraft, check, list, status, quotaLeft, canA
         </div>
 
         <p className="cx-ce-note">
-          Pengecekan mencakup daftar pesanan CodeXa, aturan penamaan Gmail (6-30 karakter, titik diabaikan), nama umum/dicadangkan, jejak pemakaian publik, dan keaktifan domain. Google tidak membuka data ketersediaan username, jadi hasil Gmail bisa "belum bisa dipastikan" dan final saat akun dibuat.
+          Ketersediaan nama dicek manual oleh kamu di halaman pendaftaran Google. Setelah dibayar, admin yang membuat akunnya dan mengirimkan password serta catatan lewat menu Pesanan Saya.
         </p>
       </div>
     </main>
@@ -1786,6 +1957,7 @@ function AdminPage({ onBack, onNotice }) {
   const [refreshing, setRefreshing]       = useState(false);
   const [headerMenu, setHeaderMenu]       = useState("");
   const [ceDraft, setCeDraft]             = useState({});
+  const [openBuyers, setOpenBuyers]       = useState({});
   const [confirm, confirmDialog]          = useConfirmDialog();
   const [isPending, runAction]            = usePendingActions();
   const [dismissedAlerts, setDismissedAlerts] = useState(() => {
@@ -2102,6 +2274,11 @@ function AdminPage({ onBack, onNotice }) {
   };
 
   const updateForm = (key, val) => setForm((f) => ({ ...f, [key]: val }));
+  /* Template hanya mengisi teks & tipe login; harga dan data akun tetap milik admin. */
+  const applyTemplate = (tpl) => {
+    setForm((f) => ({ ...f, ...tpl.data }));
+    onNotice(`Template ${tpl.label} diterapkan`);
+  };
 
   const updateAccount = (index, key, val) =>
     setForm((f) => ({ ...f, accounts: (f.accounts || []).map((a, i) => (i === index ? { ...a, [key]: val } : a)) }));
@@ -2694,8 +2871,12 @@ function AdminPage({ onBack, onNotice }) {
                 ? <RowSkeleton rows={3} />
                 : groupedOrders.length === 0
                   ? <div className="cx-panel-empty"><ShoppingBag size={20} /><p>Belum ada pesanan masuk.</p></div>
-                  : groupedOrders.map((g) => (
-                    <div key={g.buyer.id || g.buyer.email} className="cx-order-card cx-buyer-card">
+                  : groupedOrders.map((g) => {
+                    const bkey = g.buyer.id || g.buyer.email;
+                    const expanded = !!openBuyers[bkey];
+                    const shownOrders = expanded ? g.orders : g.orders.slice(0, 1);
+                    return (
+                    <div key={bkey} className="cx-order-card cx-buyer-card">
                       <div className="cx-order-card-head">
                         <div className="cx-avatar">{String(g.buyer.name || "U").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</div>
                         <div className="cx-buyer-ident">
@@ -2712,7 +2893,7 @@ function AdminPage({ onBack, onNotice }) {
                         <span>Terakhir: {formatDate(g.orders[0].createdAt)}</span>
                       </div>
                       <div className="cx-buyer-orders">
-                        {g.orders.map((o) => (
+                        {shownOrders.map((o) => (
                           <div key={o.id} className="cx-buyer-order">
                             <div className="cx-buyer-order-head">
                               <span className="cx-mono">#{String(o.id).slice(0, 8)}</span>
@@ -2746,10 +2927,17 @@ function AdminPage({ onBack, onNotice }) {
                         ))}
                       </div>
                       <div className="cx-order-actions">
+                        {g.orders.length > 1 && (
+                          <button className="cx-row-btn" onClick={() => setOpenBuyers((m) => ({ ...m, [bkey]: !expanded }))}>
+                            <ChevronDown size={11} style={{ transform: expanded ? "rotate(180deg)" : "none" }} />
+                            <span>{expanded ? "Sembunyikan" : `Lihat ${g.orders.length - 1} transaksi lain`}</span>
+                          </button>
+                        )}
                         <button className="cx-row-btn" onClick={() => { setUserQuery(g.buyer.email); setActiveNav("Pengguna"); }}><User size={11} /> <span>Lihat akun</span></button>
                       </div>
                     </div>
-                  ))
+                    );
+                  })
               }
             </div>
           )}
@@ -3110,6 +3298,25 @@ function AdminPage({ onBack, onNotice }) {
               <button className="cx-icon-btn" onClick={() => setForm(null)}><X size={14} /></button>
             </div>
             <div className="cx-modal-body">
+              <div className="cx-tpl-bar">
+                <div className="cx-tpl-bar-head">
+                  <strong><Sparkles size={12} /> Template produk</strong>
+                  <small>Isi otomatis judul, deskripsi, catatan & cara mengamankan akun — harga/email/password tinggal diganti.</small>
+                </div>
+                <div className="cx-tpl-list">
+                  {PRODUCT_TEMPLATES.map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      className="cx-tpl-btn"
+                      onClick={() => applyTemplate(t)}
+                    >
+                      <ProviderIcon type={t.icon} size={16} />
+                      <span>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="cx-form-grid">
                 <div className="cx-full-span">
                   <Field label="Judul Produk">
