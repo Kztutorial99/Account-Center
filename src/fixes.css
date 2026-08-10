@@ -225,3 +225,42 @@
   transition: background .18s ease, color .18s ease;
 }
 .cx-back-link:hover { background: color-mix(in srgb, var(--ink, #fff) 7%, transparent); color: inherit; }
+
+/* ═══ Mobile polish (Agustus 2026) ═══════════════════════════ */
+
+/* Keranjang: catatan & pintasan ke menu Custom Email */
+.cx-cart-ce-note {
+  display: flex; align-items: center; gap: 6px; margin: 0;
+  font-size: 10.5px; line-height: 1.5; color: var(--muted);
+}
+.cx-cart-ce-note svg { flex: 0 0 auto; }
+.cx-cart-ce-link { justify-content: center; }
+
+/* FAB assisten tidak menutupi tombol bayar saat drawer keranjang terbuka */
+body.cx-drawer-open .cx-ai-fab { display: none !important; }
+
+@media (max-width: 640px) {
+  /* item keranjang: proporsi lebih pas, tombol hapus sejajar atas */
+  .cx-cart-item { align-items: flex-start; gap: 9px; padding: 10px; border-radius: 12px; }
+  .cx-cart-item > .cx-icon-btn { margin-top: 1px; flex: 0 0 auto; width: 28px; height: 28px; }
+  .cx-cart-thumb-icon { flex: 0 0 auto; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; }
+  .cx-cart-thumb-icon svg { width: 18px; height: 18px; }
+  .cx-cart-item-copy strong { font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
+  .cx-cart-item-copy small { font-size: 10.5px; }
+
+  /* chip akun terpilih: lebih ringkas supaya tidak memenuhi layar */
+  .cx-cart-picks { gap: 5px; }
+  .cx-cart-pick { padding: 3px 5px 3px 7px; border-radius: 8px; max-width: 100%; }
+  .cx-cart-pick code { font-size: 10px; }
+  .cx-cart-pick-x { width: 18px; height: 18px; }
+
+  /* ringkasan: angka & tombol proporsional, tidak terlalu besar */
+  .cx-cart-summary strong { font-size: 14px; }
+  .cx-cart-summary .cx-btn { height: 46px; font-size: 13.5px; }
+  .cx-balance-warn { padding: 10px 11px; border-radius: 12px; }
+  .cx-balance-warn p { font-size: 10.5px; line-height: 1.5; margin: 5px 0 8px; }
+  .cx-balance-warn-head strong { font-size: 12px; }
+
+  /* tombol cek ketersediaan: teks tidak terpotong */
+  .cx-ce-verify-btn { min-height: 42px; white-space: normal; line-height: 1.3; font-size: 12px; }
+}

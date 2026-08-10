@@ -339,7 +339,7 @@ function CustomEmailChecker({ draft, setDraft, check, onVerify, onAdd, canAdd, q
           : <><ShieldCheck size={12} /> {retry ? "Coba lagi" : "Cek ketersediaan"}</>}
       </button>
 
-      {state !== "idle" && state !== "ready" && (
+      {state !== "idle" && state !== "ready" && state !== "checking" && (
         <div className={`cx-ce-status is-${state}`}>
           <span className="cx-ce-status-badge">
             {state === "available" && <Check size={11} />}
@@ -478,6 +478,12 @@ function App() {
   const [notice, setNotice]   = useState("");
   const [cart, setCart]       = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
+  // FAB assisten disembunyikan saat drawer keranjang terbuka (mobile)
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.classList.toggle("cx-drawer-open", cartOpen);
+    return () => document.body.classList.remove("cx-drawer-open");
+  }, [cartOpen]);
   const [aiOpen, setAiOpen] = useState(false);
   const [buyItem, setBuyItem]   = useState(null);
   const [buySel, setBuySel]     = useState([]);
@@ -890,41 +896,18 @@ function App() {
                     </div>
                   ))}
 
-                  {customBlocked ? (
-                    <div className="cx-ce-box is-locked">
-                      <div className="cx-ce-box-head">
-                        <span><LockKeyhole size={12} /> Custom email terkunci</span>
-                      </div>
-                      <p className="cx-ce-locked">
-                        Permintaan sebelumnya belum selesai ({customStatus.open.map((r) => r.requested).join(", ")}). Kamu bisa pesan lagi setelah admin menandai selesai.
-                      </p>
-                    </div>
-                  ) : customQuotaLeft === 0 ? (
-                    <div className="cx-ce-box is-locked">
-                      <div className="cx-ce-box-head">
-                        <span><LockKeyhole size={12} /> Slot penuh</span>
-                        <span className="cx-ce-quota">{customEmails.length}/{customStatus.max || CUSTOM_EMAIL_MAX}</span>
-                      </div>
-                      <p className="cx-ce-locked">Batas {customStatus.max || CUSTOM_EMAIL_MAX} nama per tugas tercapai. Selesaikan tugas ini dulu.</p>
-                    </div>
-                  ) : (
-                    <div className="cx-ce-box">
-                      <div className="cx-ce-box-head">
-                        <span><Mail size={12} /> Custom email</span>
-                        <span className="cx-ce-quota">{customEmails.length}/{customStatus.max || CUSTOM_EMAIL_MAX}</span>
-                      </div>
-                      <CustomEmailChecker
-                        inputId="cx-custom-email-input"
-                        draft={emailDraft}
-                        setDraft={setEmailDraft}
-                        check={emailCheck}
-                        onVerify={verifyCustomEmail}
-                        onAdd={addCustomEmail}
-                        canAdd={canAddCustom}
-                        quotaLeft={customQuotaLeft}
-                      />
-                    </div>
+                  {customEmails.length > 0 && (
+                    <p className="cx-cart-ce-note">
+                      <Mail size={11} /> Nama custom email ditambahkan dari menu <strong>Custom Email</strong>.
+                    </p>
                   )}
+                  <button
+                    type="button"
+                    className="cx-btn cx-btn-secondary cx-btn-sm cx-btn-full cx-cart-ce-link"
+                    onClick={() => { setCartOpen(false); navigate("custom-email"); }}
+                  >
+                    <Mail size={12} /> Pesan custom email <ArrowRight size={12} />
+                  </button>
               </>
             </div>
             {(cart.length > 0 || customFee > 0) && (
@@ -1220,58 +1203,6 @@ function App() {
         </div>
       </section>
 
-      {/* Produk tersedia — preview katalog di bagian akhir halaman Store,
-          urutannya: hero → custom email → keunggulan → produk tersedia. */}
-      <section className="cx-section cx-store-products">
-        <div className="cx-container">
-          <div className="cx-section-head">
-            <div>
-              <span className="cx-kicker">PRODUK TERSEDIA</span>
-              <h2>Akun yang siap dibeli sekarang</h2>
-              <p className="cx-section-sub">
-                {data.loading
-                  ? "Memuat stok dari database..."
-                  : `${data.products.length} produk · ${totalAccounts} akun siap kirim otomatis.`}
-              </p>
-            </div>
-            <button className="cx-btn cx-btn-secondary" onClick={() => navigate("katalog")}>
-              Lihat semua <ArrowRight size={13} />
-            </button>
-          </div>
-
-          {data.loading && <div className="cx-orders-skeleton"><span /><span /><span /></div>}
-
-          {!data.loading && data.error && (
-            <div className="cx-empty">
-              <CircleHelp size={24} />
-              <h3>Stok belum bisa dimuat</h3>
-              <p>{data.error}</p>
-              <button className="cx-btn cx-btn-secondary" onClick={loadCatalog}><RefreshCw size={13} /> Coba lagi</button>
-            </div>
-          )}
-
-          {!data.loading && !data.error && data.products.length === 0 && (
-            <div className="cx-empty">
-              <Package size={24} />
-              <h3>Belum ada akun tersedia</h3>
-              <p>Belum ada listing nyata di database. Halaman ini tidak menampilkan akun contoh.</p>
-            </div>
-          )}
-
-          {!data.loading && !data.error && data.products.length > 0 && (
-            <div className="cx-grid">
-              {data.products.slice(0, 4).map((p, i) => (
-                <ProductCard
-                  key={p.id || i}
-                  product={p}
-                  colorIdx={i}
-                  onBuy={(sel) => { setBuyItem(p); setBuySel(Array.isArray(sel) ? sel : []); }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
 
       <StoreFooter navigate={navigate} />
       {tabbar}
