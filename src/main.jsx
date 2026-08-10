@@ -505,10 +505,15 @@ function App() {
   }, [emailDraft]);
 
   /* Verifikasi ketersediaan lewat backend (/api/orders?resource=check-email),
-     yang memanggil actor Apify + cache. Token Apify tetap di server. */
+     yang memanggil actor Apify + cache. Token Apify tetap di server.
+     verifySeq: hasil request lama diabaikan kalau user sudah mengubah nama,
+     supaya status "Tersedia" tidak pernah menempel di nama yang berbeda. */
+  const verifySeq = useRef(0);
   const verifyCustomEmail = async () => {
     const value = emailDraft.trim();
     if (!value || emailCheck.state === "checking") return;
+    const seq = ++verifySeq.current;
+    const isStale = () => verifySeq.current !== seq;
     setEmailCheck({ state: "checking", message: "Mengecek ketersediaan ke Google...", signals: [] });
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 60000);
@@ -518,6 +523,7 @@ function App() {
         signal: controller.signal,
       });
       const payload = await res.json().catch(() => ({}));
+      if (isStale()) return;
       if (!res.ok) throw new Error(payload.error || `Gagal mengecek (${res.status})`);
       const signals = Array.isArray(payload.signals) ? payload.signals : [];
       const normalized = payload.normalized || value;
@@ -531,6 +537,7 @@ function App() {
         setEmailCheck({ state: "taken", message: payload.reason || "Nama sudah dipakai, coba nama lain", signals });
       }
     } catch (error) {
+      if (isStale()) return;
       const aborted = error && error.name === "AbortError";
       setEmailCheck({
         state: "error",
@@ -543,6 +550,7 @@ function App() {
       window.clearTimeout(timer);
     }
   };
+
 
 
 
@@ -1212,10 +1220,63 @@ function App() {
         </div>
       </section>
 
+      {/* Produk tersedia — preview katalog di bagian akhir halaman Store,
+          urutannya: hero → custom email → keunggulan → produk tersedia. */}
+      <section className="cx-section cx-store-products">
+        <div className="cx-container">
+          <div className="cx-section-head">
+            <div>
+              <span className="cx-kicker">PRODUK TERSEDIA</span>
+              <h2>Akun yang siap dibeli sekarang</h2>
+              <p className="cx-section-sub">
+                {data.loading
+                  ? "Memuat stok dari database..."
+                  : `${data.products.length} produk · ${totalAccounts} akun siap kirim otomatis.`}
+              </p>
+            </div>
+            <button className="cx-btn cx-btn-secondary" onClick={() => navigate("katalog")}>
+              Lihat semua <ArrowRight size={13} />
+            </button>
+          </div>
+
+          {data.loading && <div className="cx-orders-skeleton"><span /><span /><span /></div>}
+
+          {!data.loading && data.error && (
+            <div className="cx-empty">
+              <CircleHelp size={24} />
+              <h3>Stok belum bisa dimuat</h3>
+              <p>{data.error}</p>
+              <button className="cx-btn cx-btn-secondary" onClick={loadCatalog}><RefreshCw size={13} /> Coba lagi</button>
+            </div>
+          )}
+
+          {!data.loading && !data.error && data.products.length === 0 && (
+            <div className="cx-empty">
+              <Package size={24} />
+              <h3>Belum ada akun tersedia</h3>
+              <p>Belum ada listing nyata di database. Halaman ini tidak menampilkan akun contoh.</p>
+            </div>
+          )}
+
+          {!data.loading && !data.error && data.products.length > 0 && (
+            <div className="cx-grid">
+              {data.products.slice(0, 4).map((p, i) => (
+                <ProductCard
+                  key={p.id || i}
+                  product={p}
+                  colorIdx={i}
+                  onBuy={(sel) => { setBuyItem(p); setBuySel(Array.isArray(sel) ? sel : []); }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       <StoreFooter navigate={navigate} />
       {tabbar}
       {overlays}
+
     </div>
   );
 }

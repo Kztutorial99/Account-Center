@@ -738,13 +738,44 @@ module.exports = async function handler(request, response) {
       });
     }
 
-    // Akun sudah dikunci untuk pembeli ini, baru potong saldo.
+    /* Nama custom email dikunci SEBELUM saldo dipotong. Unique index
+       lower(requested) yang jadi kuncinya: kalau nama direbut orang lain di
+       antara pengecekan dan pembayaran, insert gagal dan pembeli tidak
+       kehilangan saldo. (Sebelumnya insert dijalankan setelah saldo dipotong
+       dengan ON CONFLICT DO NOTHING, jadi user bisa terbayar tanpa
+       permintaan custom email tercatat sama sekali.) */
+    const reserved = [];
+    const releaseReserved = async () => {
+      for (const r of reserved) {
+        try { await sql`DELETE FROM codexa_custom_emails WHERE id = ${r.id}`; } catch (_) {}
+      }
+    };
+    for (const requested of customEmails) {
+      const reserveId = crypto.randomUUID();
+      const [reservedRow] = await sql`
+        INSERT INTO codexa_custom_emails (id, user_id, order_id, requested, status)
+        VALUES (${reserveId}, ${user.id}, NULL, ${requested}, 'pending')
+        ON CONFLICT DO NOTHING
+        RETURNING id
+      `;
+      if (!reservedRow) {
+        await releaseReserved();
+        await rollbackClaims();
+        return response.status(409).json({
+          error: `${requested} baru saja dipesan pembeli lain, pilih nama lain`,
+        });
+      }
+      reserved.push({ id: reserveId, requested });
+    }
+
+    // Akun & nama sudah dikunci untuk pembeli ini, baru potong saldo.
     const [debited] = await sql`
       UPDATE codexa_users SET balance = balance - ${total}
       WHERE id = ${user.id} AND balance >= ${total}
       RETURNING balance
     `;
     if (!debited) {
+      await releaseReserved();
       await rollbackClaims();
       return response.status(402).json({ error: "Saldo tidak cukup", needTopup: true });
     }
@@ -759,26 +790,24 @@ module.exports = async function handler(request, response) {
         RETURNING id, total, item_count AS "itemCount", status, created_at AS "createdAt"
       `;
     } catch (error) {
-      // Pesanan gagal dicatat → kembalikan saldo dan akun supaya user tidak dirugikan.
+      // Pesanan gagal dicatat → kembalikan saldo, nama, dan akun.
       await sql`UPDATE codexa_users SET balance = balance + ${total} WHERE id = ${user.id}`;
+      await releaseReserved();
       await rollbackClaims();
       throw error;
     }
 
+    // Nama yang sudah dikunci ditempelkan ke pesanan yang baru dibuat.
     const customRecords = [];
-    for (const requested of customEmails) {
-      const id = crypto.randomUUID();
+    for (const r of reserved) {
       try {
-        await sql`
-          INSERT INTO codexa_custom_emails (id, user_id, order_id, requested, status)
-          VALUES (${id}, ${user.id}, ${order.id}, ${requested}, 'pending')
-          ON CONFLICT DO NOTHING
-        `;
-        customRecords.push({ id, requested, status: "pending" });
+        await sql`UPDATE codexa_custom_emails SET order_id = ${order.id} WHERE id = ${r.id}`;
       } catch (error) {
-        console.error("Custom email reserve failure", error && error.message);
+        console.error("Custom email attach failure", error && error.message);
       }
+      customRecords.push({ id: r.id, requested: r.requested, status: "pending" });
     }
+
 
     await createNotification(sql, {
       userId: user.id,

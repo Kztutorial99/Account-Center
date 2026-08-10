@@ -67,6 +67,14 @@
     {
       "source": "/disclaimer",
       "destination": "/"
+    },
+    {
+      "source": "/katalog",
+      "destination": "/"
+    },
+    {
+      "source": "/((?!api/|assets/)[^.]*)",
+      "destination": "/"
     }
   ]
 }
