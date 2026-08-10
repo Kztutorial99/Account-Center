@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const {
   db, ensureTables, hashPassword, verifyPassword,
-  setSession, clearSession, currentUser, bodyOf, text,
+  setSession, clearSession, sessionUserId, currentUser, bodyOf, text,
   clientIp, rateLimit, resetRateLimit,
 } = require("./_users");
 
@@ -17,13 +17,44 @@ module.exports = async function handler(request, response) {
       return response.status(200).json({ user });
     }
 
+    /* Update profil sendiri: nama, nomor WhatsApp, dan foto profil. */
+    if (request.method === "PATCH" || request.method === "PUT") {
+      const uid = sessionUserId(request);
+      if (!uid) return response.status(401).json({ error: "Silakan masuk dulu" });
+      const body = bodyOf(request);
+      const name = text(body.name, 80);
+      const phone = text(body.phone, 30);
+      const avatarRaw = typeof body.avatar === "string" ? body.avatar.trim() : "";
+      if (name.length < 2) return response.status(400).json({ error: "Nama minimal 2 karakter" });
+      if (phone && !/^[0-9+()\s-]{6,25}$/.test(phone)) {
+        return response.status(400).json({ error: "Nomor WhatsApp tidak valid" });
+      }
+      if (avatarRaw && !/^data:image\/(png|jpeg|webp);base64,/.test(avatarRaw)) {
+        return response.status(400).json({ error: "Foto profil harus berupa gambar" });
+      }
+      if (avatarRaw.length > 400000) return response.status(413).json({ error: "Foto profil terlalu besar" });
+      const avatar = body.avatar === null ? "" : avatarRaw;
+      const rows = body.avatar === undefined
+        ? await sql`
+            UPDATE codexa_users SET name = ${name}, phone = ${phone} WHERE id = ${uid}
+            RETURNING id, name, email, phone, balance, role, avatar, created_at AS "createdAt"`
+        : await sql`
+            UPDATE codexa_users SET name = ${name}, phone = ${phone}, avatar = ${avatar} WHERE id = ${uid}
+            RETURNING id, name, email, phone, balance, role, avatar, created_at AS "createdAt"`;
+      if (!rows.length) return response.status(404).json({ error: "Akun tidak ditemukan" });
+      const row = rows[0];
+      return response.status(200).json({
+        user: { ...row, balance: Number(row.balance) || 0, role: row.role === "admin" ? "admin" : "user" },
+      });
+    }
+
     if (request.method === "DELETE") {
       clearSession(response);
       return response.status(200).json({ ok: true });
     }
 
     if (request.method !== "POST") {
-      response.setHeader("Allow", "GET, POST, DELETE");
+      response.setHeader("Allow", "GET, POST, PATCH, DELETE");
       return response.status(405).json({ error: "Method not allowed" });
     }
 
@@ -57,7 +88,7 @@ module.exports = async function handler(request, response) {
       const rows = await sql`
         INSERT INTO codexa_users (id, name, email, phone, password_hash, balance)
         VALUES (${id}, ${name}, ${email}, ${phone}, ${hashPassword(password)}, 0)
-        RETURNING id, name, email, phone, balance, role, created_at AS "createdAt"
+        RETURNING id, name, email, phone, balance, role, avatar, created_at AS "createdAt"
       `;
       await resetRateLimit(sql, throttleKey);
       setSession(response, id);
@@ -67,7 +98,7 @@ module.exports = async function handler(request, response) {
     }
 
     const rows = await sql`
-      SELECT id, name, email, phone, balance, status, role, password_hash AS "passwordHash", created_at AS "createdAt"
+      SELECT id, name, email, phone, balance, status, role, avatar, password_hash AS "passwordHash", created_at AS "createdAt"
       FROM codexa_users WHERE email = ${email} LIMIT 1
     `;
     const row = rows[0];
@@ -81,7 +112,7 @@ module.exports = async function handler(request, response) {
     setSession(response, row.id);
     return response.status(200).json({
       user: {
-        id: row.id, name: row.name, email: row.email, phone: row.phone,
+        id: row.id, name: row.name, email: row.email, phone: row.phone, avatar: row.avatar || "",
         balance: Number(row.balance) || 0, createdAt: row.createdAt,
         role: row.role === "admin" ? "admin" : "user",
       },

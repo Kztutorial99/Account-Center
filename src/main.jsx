@@ -988,19 +988,24 @@ function App() {
 
       {checkout.order && (
         <div className="cx-modal-backdrop" onClick={() => setCheckout({ loading: false, error: "", order: null })}>
-          <div className="cx-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
-            <div className="cx-buy-body">
-              <div className="cx-drawer-header" style={{ padding: 0, border: "none" }}>
-                <div>
-                  <h2 style={{ margin: 0 }}>Pembayaran berhasil</h2>
-                  <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 11 }}>
-                    {formatPrice(checkout.order.total)} · {checkout.order.itemCount} akun
-                  </p>
-                </div>
-                <button className="cx-icon-btn" onClick={() => setCheckout({ loading: false, error: "", order: null })}><X size={14} /></button>
+          <div className="cx-modal cx-success-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cx-success-head">
+              <span className="cx-success-icon"><Check size={16} /></span>
+              <div className="cx-success-title">
+                <h2>Pembayaran berhasil</h2>
+                <p>Detail login sudah terbuka di bawah.</p>
+              </div>
+              <button className="cx-icon-btn" aria-label="Tutup" onClick={() => setCheckout({ loading: false, error: "", order: null })}><X size={14} /></button>
+            </div>
+            <div className="cx-success-body">
+              <div className="cx-success-meta">
+                <div><span>Total dibayar</span><strong>{formatPrice(checkout.order.total)}</strong></div>
+                <div><span>Jumlah akun</span><strong>{checkout.order.itemCount} akun</strong></div>
               </div>
               <OrderItems items={checkout.order.items} onNotice={showNotice} />
-              <button className="cx-btn cx-btn-ghost cx-btn-full" style={{ marginTop: 12 }} onClick={() => { setCheckout({ loading: false, error: "", order: null }); navigate("orders"); }}>
+            </div>
+            <div className="cx-success-foot">
+              <button className="cx-btn cx-btn-primary cx-btn-full" onClick={() => { setCheckout({ loading: false, error: "", order: null }); navigate("orders"); }}>
                 <Package size={13} /> Lihat pesanan saya
               </button>
             </div>
@@ -1025,7 +1030,7 @@ function App() {
   if (activePage === "account") return (
     <div className="cx-app">
       {topbar}
-      <ProfilePage user={auth.user} onBack={() => navigate("store")} onTopup={() => navigate("topup")} />
+      <ProfilePage user={auth.user} onBack={() => navigate("store")} onTopup={() => navigate("topup")} onSaved={(u) => setAuth({ user: u, loading: false })} onNotice={showNotice} />
       <StoreFooter navigate={navigate} />
       {tabbar}
       {overlays}
@@ -1092,7 +1097,7 @@ function App() {
       {topbar}
       <div className="cx-container" style={{ paddingTop: 18 }}>
         <button className="cx-back-link" onClick={() => navigate("store")}>
-          <ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali ke store
+          <ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali
         </button>
       </div>
       <main className="cx-container" id="catalog" style={{ paddingTop: 20, paddingBottom: 64 }}>
@@ -1169,9 +1174,6 @@ function App() {
           <div className="cx-hero-actions">
             <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
               Lihat katalog <ArrowRight size={13} />
-            </button>
-            <button className="cx-btn cx-btn-secondary cx-hero-ce-btn" onClick={() => navigate("custom-email")}>
-              <Mail size={13} /> Custom Email
             </button>
             <button className="cx-btn cx-btn-ghost" onClick={() => navigate("help")}>
               Cara beli
@@ -1597,13 +1599,12 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
     return () => { document.removeEventListener("pointerdown", onDown, true); window.removeEventListener("keydown", onKey); };
   }, [menuOpen, setMenuOpen]);
 
-  const initials = String(user && user.name || "CX").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "CX";
   return (
     <header className="cx-topbar">
       <div className="cx-container cx-topbar-inner">
         <button className="cx-brand" onClick={() => navigate("store")}>
           <span className="cx-brand-mark">&lt;/&gt;</span>
-          <span>Code<span className="cx-brand-dot">Xa</span></span>
+          <span>Account<span className="cx-brand-dot">Center</span></span>
         </button>
         <nav className="cx-nav">
           {[["store","Store"],["katalog","Katalog"],["orders","Pesanan"],["help","Bantuan"]].map(([page, label]) => (
@@ -1626,7 +1627,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
           </button>
           <div className="cx-account-menu" ref={accountRef}>
             <button className="cx-account-trigger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Akun saya">
-              <div className="cx-avatar">{initials}</div>
+              <UserAvatar user={user} />
               <div className="cx-account-trigger-copy">
                 <strong>{user ? user.name : "Akun"}</strong>
                 <small>{formatPrice(user ? user.balance : 0)}</small>
@@ -1638,7 +1639,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
                 <div className="cx-account-overlay" onClick={() => setMenuOpen(false)} />
                 <div className="cx-account-dropdown">
                   <div className="cx-account-head">
-                    <div className="cx-avatar cx-avatar-lg">{initials}</div>
+                    <UserAvatar user={user} className="cx-avatar-lg" />
                     <div>
                       <strong>
                         {user && user.name}
@@ -1683,7 +1684,7 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
     <main className="cx-page cx-custom-page">
       <div className="cx-container cx-ce-wrap">
         <button className="cx-back-link" onClick={onBack}>
-          <ArrowRight size={12} style={{ transform: "rotate(180deg)" }} /> Kembali ke Store
+          <ArrowRight size={12} style={{ transform: "rotate(180deg)" }} /> Kembali
         </button>
 
         <header className="cx-ce-hero">
@@ -2087,7 +2088,7 @@ function StoreFooter({ navigate }) {
       <div className="cx-container cx-footer-inner">
         <button className="cx-brand" onClick={() => navigate("store")} style={{ fontSize: 13 }}>
           <span className="cx-brand-mark" style={{ width: 20, height: 20, fontSize: 10 }}>&lt;/&gt;</span>
-          Code<span className="cx-brand-dot">Xa</span>
+          Account<span className="cx-brand-dot">Center</span>
         </button>
         <p>Stok dan katalog terhubung ke Neon Database.</p>
         <div className="cx-footer-links">
@@ -2699,7 +2700,7 @@ function AdminPage({ onBack, onNotice }) {
           </button>
         </form>
         <button className="cx-back-link" style={{ marginTop: 20 }} onClick={onBack}>
-          <ArrowRight size={12} style={{ transform: "rotate(180deg)" }} /> Kembali ke Store
+          <ArrowRight size={12} style={{ transform: "rotate(180deg)" }} /> Kembali
         </button>
       </div>
     </div>
@@ -3839,24 +3840,155 @@ function useTopupData(user) {
 }
 
 /* ─── Halaman Profil (tanpa form top up) ─── */
-function ProfilePage({ user, onBack, onTopup }) {
+/* Kompres foto profil di browser jadi kotak 256px supaya ringan disimpan. */
+function compressAvatar(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) { reject(new Error("File harus berupa gambar (JPG/PNG).")); return; }
+    if (file.size > 8 * 1024 * 1024) { reject(new Error("Ukuran gambar maksimal 8MB.")); return; }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Gagal membaca file."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Gambar tidak bisa dibaca."));
+      img.onload = () => {
+        const size = 256;
+        const canvas = document.createElement("canvas");
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        const side = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function initialsOf(name) {
+  return String(name || "AC").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "AC";
+}
+
+/* Avatar: pakai foto profil user kalau ada, kalau tidak inisial nama. */
+function UserAvatar({ user, className = "" }) {
+  const cls = `cx-avatar ${className}`.trim();
+  const src = user && user.avatar;
+  if (src) return <span className={`${cls} has-photo`}><img src={src} alt="" /></span>;
+  return <div className={cls}>{initialsOf(user && user.name)}</div>;
+}
+
+function ProfilePage({ user, onBack, onTopup, onSaved, onNotice }) {
   const [state] = useTopupData(user);
-  const initials = String(user.name || "CX").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   const pendingTotal = Number(state.pendingTotal) || 0;
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ name: user.name || "", phone: user.phone || "" });
+  const [avatar, setAvatar] = useState(user.avatar || "");
+  const [avatarTouched, setAvatarTouched] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const fileRef = useRef(null);
+
+  const startEdit = () => {
+    setForm({ name: user.name || "", phone: user.phone || "" });
+    setAvatar(user.avatar || "");
+    setAvatarTouched(false);
+    setError("");
+    setEditing(true);
+  };
+
+  const pickAvatar = async (file) => {
+    if (!file) return;
+    try {
+      const data = await compressAvatar(file);
+      setAvatar(data);
+      setAvatarTouched(true);
+      setError("");
+    } catch (e) { setError(e.message); }
+  };
+
+  const save = async () => {
+    if (form.name.trim().length < 2) { setError("Nama minimal 2 karakter"); return; }
+    setBusy(true); setError("");
+    try {
+      const payload = { name: form.name.trim(), phone: form.phone.trim() };
+      if (avatarTouched) payload.avatar = avatar || null;
+      const res = await jsonRequest("/api/auth", { method: "PATCH", body: JSON.stringify(payload) });
+      setEditing(false);
+      if (onSaved) onSaved(res.user);
+      if (onNotice) onNotice("Profil berhasil diperbarui");
+    } catch (e) { setError(e.message); }
+    finally { setBusy(false); }
+  };
 
   return (
     <div className="cx-container cx-account-page">
-      <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali ke store</button>
+      <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
 
       <div className="cx-account-grid">
         <div className="cx-panel cx-profile-card">
           <div className="cx-profile-head">
-            <div className="cx-avatar cx-avatar-xl">{initials}</div>
-            <div>
-              <h2>{user.name}</h2>
+            <UserAvatar user={editing ? { name: form.name, avatar } : user} className="cx-avatar-xl" />
+            <div className="cx-profile-head-copy">
+              <h2>{editing ? (form.name || "Nama kamu") : user.name}</h2>
               <p>Member Account Center sejak {formatDate(user.createdAt)}</p>
             </div>
+            {!editing && (
+              <button className="cx-btn cx-btn-secondary cx-btn-sm cx-profile-edit-btn" onClick={startEdit}>
+                <User size={12} /> Edit profil
+              </button>
+            )}
           </div>
+
+          {editing && (
+            <div className="cx-profile-form">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => { pickAvatar(e.target.files && e.target.files[0]); e.target.value = ""; }}
+              />
+              <div className="cx-profile-photo-row">
+                <button type="button" className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => fileRef.current && fileRef.current.click()}>
+                  <Mail size={12} /> {avatar ? "Ganti foto" : "Unggah foto"}
+                </button>
+                {avatar && (
+                  <button type="button" className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => { setAvatar(""); setAvatarTouched(true); }}>
+                    <X size={12} /> Hapus foto
+                  </button>
+                )}
+              </div>
+              <label className="cx-field">
+                <span>Nama tampilan</span>
+                <input
+                  value={form.name}
+                  maxLength={80}
+                  placeholder="Nama kamu"
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </label>
+              <label className="cx-field">
+                <span>Nomor WhatsApp</span>
+                <input
+                  value={form.phone}
+                  maxLength={25}
+                  inputMode="tel"
+                  placeholder="08xxxxxxxxxx"
+                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                />
+              </label>
+              {error && <p className="cx-field-error" style={{ margin: 0 }}>{error}</p>}
+              <div className="cx-profile-form-actions">
+                <button className="cx-btn cx-btn-primary cx-btn-sm" disabled={busy} onClick={save}>
+                  {busy ? <><Spinner size={12} /> Menyimpan...</> : <><Check size={12} /> Simpan perubahan</>}
+                </button>
+                <button className="cx-btn cx-btn-ghost cx-btn-sm" disabled={busy} onClick={() => { setEditing(false); setError(""); }}>
+                  Batal
+                </button>
+              </div>
+            </div>
+          )}
+
           <ul className="cx-profile-list">
             <li><Mail size={13} /><span>Email</span><strong>{user.email}</strong></li>
             <li><Phone size={13} /><span>WhatsApp</span><strong>{user.phone || "-"}</strong></li>
@@ -4021,7 +4153,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
 
   return (
     <div className="cx-container cx-account-page">
-      <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali ke store</button>
+      <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
 
       <div className="cx-account-grid">
         <div className="cx-panel">
