@@ -122,3 +122,106 @@
   .cx-custom-card { padding: 18px; border-radius: 14px; }
   .cx-custom-actions { flex-direction: column; }
 }
+
+/* ══ Kartu akun & ceklis bulat (v3) ══════════════════ */
+.cx-cred-preview {
+  border: 1px solid var(--b1);
+  border-radius: 14px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--bg2, #101014) 60%, transparent);
+}
+.cx-cred-list { display: grid; gap: 8px; }
+.cx-cred-head {
+  font-size: 11px; font-weight: 600; letter-spacing: .01em;
+  color: var(--muted); margin-bottom: 8px;
+}
+.cx-cred-item.cx-cred-pick {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--b1);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ink, #fff) 4%, transparent);
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.cx-cred-item.cx-cred-pick:active { transform: scale(.995); }
+.cx-cred-item.cx-cred-pick.is-picked {
+  border-color: color-mix(in srgb, var(--acc, #6ea8fe) 55%, transparent);
+  background: color-mix(in srgb, var(--acc, #6ea8fe) 12%, transparent);
+}
+.cx-cred-item.cx-cred-pick .cx-cred-check {
+  position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0;
+}
+.cx-cred-tick {
+  width: 22px; height: 22px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--b2, rgba(255,255,255,.22));
+  background: transparent;
+  color: transparent;
+  transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+}
+.cx-cred-item.is-picked .cx-cred-tick {
+  background: var(--acc, #6ea8fe);
+  border-color: var(--acc, #6ea8fe);
+  color: var(--on-acc, #0b0b0f);
+  transform: scale(1.04);
+}
+.cx-cred-no { font-size: 10px; color: var(--faint); font-family: ui-monospace, monospace; }
+.cx-cred-pair { min-width: 0; display: grid; gap: 2px; }
+.cx-cred-row { display: flex; gap: 6px; align-items: center; min-width: 0; font-size: 11px; }
+.cx-cred-row span { color: var(--faint); flex: none; }
+.cx-cred-row code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-cred-price { font-size: 11px; font-weight: 700; white-space: nowrap; }
+.cx-cred-more {
+  margin-top: 10px; width: 100%;
+  padding: 9px 12px; border-radius: 999px;
+  border: 1px solid var(--b1);
+  background: transparent; color: var(--ink2, inherit);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: background .18s ease, border-color .18s ease;
+}
+.cx-cred-more:hover { background: color-mix(in srgb, var(--ink, #fff) 7%, transparent); }
+
+/* keranjang: hapus akun satuan */
+.cx-cart-picks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.cx-cart-pick {
+  display: inline-flex; align-items: center; gap: 6px;
+  max-width: 100%;
+  padding: 4px 4px 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--b1);
+  background: color-mix(in srgb, var(--ink, #fff) 5%, transparent);
+  font-size: 10px;
+}
+.cx-cart-pick code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-cart-pick-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 999px;
+  border: none; cursor: pointer;
+  background: color-mix(in srgb, var(--ink, #fff) 10%, transparent);
+  color: inherit;
+}
+.cx-cart-pick-x:hover { background: color-mix(in srgb, #ef4444 55%, transparent); color: #fff; }
+
+@media (max-width: 640px) {
+  .cx-cred-item.cx-cred-pick {
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    row-gap: 4px;
+  }
+  .cx-cred-no { display: none; }
+  .cx-cred-price { font-size: 12px; }
+}
+
+/* tombol kembali di halaman katalog */
+.cx-back-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 999px;
+  border: 1px solid var(--b1); background: transparent;
+  color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: background .18s ease, color .18s ease;
+}
+.cx-back-link:hover { background: color-mix(in srgb, var(--ink, #fff) 7%, transparent); color: inherit; }
