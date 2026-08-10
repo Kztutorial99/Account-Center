@@ -2054,3 +2054,90 @@ html { scroll-behavior: smooth; }
   .cx-ce-locked-card { padding: 12px; }
   .cx-notif-item { padding: 11px 12px; }
 }
+
+/* ══ DESKRIPSI PRODUK TERSTRUKTUR ═════════════ */
+.cx-desc { position: relative; }
+.cx-desc-body { display: flex; flex-direction: column; gap: 10px; }
+.cx-desc.is-collapsed .cx-desc-body {
+  max-height: 96px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+}
+.cx-desc.is-compact.is-collapsed .cx-desc-body { max-height: 56px; }
+.cx-desc-sec { display: flex; flex-direction: column; gap: 5px; }
+.cx-desc-title {
+  display: flex; align-items: center; gap: 6px; margin: 0;
+  font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--indigo3);
+}
+.cx-desc-title svg { flex: 0 0 auto; opacity: .85; }
+.cx-desc-p { margin: 0; color: var(--muted); font-size: 11.5px; line-height: 1.6; }
+.cx-desc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.cx-desc-list li {
+  display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 7px;
+  align-items: start; color: var(--ink2); font-size: 11.5px; line-height: 1.55;
+}
+.cx-desc-list li svg { margin-top: 3px; color: var(--green); flex: 0 0 auto; }
+.cx-desc-list li span { min-width: 0; overflow-wrap: anywhere; }
+.cx-desc .cx-expand-btn { margin-top: 8px; }
+.cx-desc-modal { margin-bottom: 16px; }
+.cx-desc-modal .cx-desc-p, .cx-desc-modal .cx-desc-list li { font-size: 12px; }
+.cx-admin-product-desc .cx-desc-p, .cx-admin-product-desc .cx-desc-list li { font-size: 11px; }
+
+/* ══ VERIFIKASI CUSTOM EMAIL (Apify) ══════════ */
+.cx-ce-verify { display: flex; flex-direction: column; gap: 8px; }
+.cx-ce-verify .cx-input-wrap { width: 100%; }
+.cx-ce-verify .cx-input-wrap input { min-width: 0; }
+.cx-custom-email-input.is-available { border-color: var(--green); }
+.cx-custom-email-input.is-taken,
+.cx-custom-email-input.is-invalid { border-color: var(--red); }
+.cx-custom-email-input.is-checking { border-color: var(--indigo2); }
+.cx-ce-verify-btn { justify-content: center; }
+.cx-ce-status {
+  display: flex; flex-direction: column; gap: 5px;
+  border: 1px solid var(--b2); background: var(--s1);
+  border-radius: 8px; padding: 9px 10px;
+}
+.cx-ce-status p { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--ink2); overflow-wrap: anywhere; }
+.cx-ce-status-badge {
+  display: inline-flex; align-items: center; gap: 5px; align-self: flex-start;
+  font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  border-radius: 999px; padding: 3px 9px; background: var(--s3); color: var(--ink2);
+}
+.cx-ce-status.is-available { border-color: color-mix(in srgb, var(--green) 45%, var(--b2)); }
+.cx-ce-status.is-available .cx-ce-status-badge { background: color-mix(in srgb, var(--green) 18%, var(--s1)); color: var(--green); }
+.cx-ce-status.is-taken, .cx-ce-status.is-invalid { border-color: color-mix(in srgb, var(--red) 45%, var(--b2)); }
+.cx-ce-status.is-taken .cx-ce-status-badge,
+.cx-ce-status.is-invalid .cx-ce-status-badge { background: color-mix(in srgb, var(--red) 18%, var(--s1)); color: var(--red); }
+.cx-ce-status.is-unknown .cx-ce-status-badge,
+.cx-ce-status.is-error .cx-ce-status-badge { background: color-mix(in srgb, var(--amber) 18%, var(--s1)); color: var(--amber); }
+.cx-ce-signals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.cx-ce-signals li {
+  display: grid; grid-template-columns: 11px minmax(0, 1fr); gap: 6px;
+  align-items: start; font-size: 10.5px; color: var(--faint); line-height: 1.5;
+}
+.cx-ce-signals li svg { margin-top: 3px; flex: 0 0 auto; }
+.cx-custom-email-msg.is-ready { color: var(--muted); font-size: 11px; }
+
+/* ══ PERINGATAN SALDO KURANG ══════════════════ */
+.cx-balance-warn {
+  border: 1px solid color-mix(in srgb, var(--amber) 40%, var(--b2));
+  background: color-mix(in srgb, var(--amber) 8%, var(--s1));
+  border-radius: 10px; padding: 11px; margin: 0 0 10px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.cx-balance-warn-head { display: flex; align-items: center; gap: 7px; color: var(--amber); font-size: 12.5px; }
+.cx-balance-warn-head svg { flex: 0 0 auto; }
+.cx-balance-warn p { margin: 0; font-size: 11.5px; line-height: 1.55; color: var(--ink2); }
+.cx-balance-warn p strong { color: var(--amber); }
+.cx-balance-warn-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px; }
+.cx-balance-warn-actions .cx-btn { justify-content: center; white-space: nowrap; }
+
+/* ══ MOBILE ═══════════════════════════════════ */
+@media (max-width: 640px) {
+  .cx-ce-promo-wrap { margin-top: 20px; }
+  .cx-desc.is-collapsed .cx-desc-body { max-height: 84px; }
+  .cx-balance-warn-actions { grid-template-columns: minmax(0, 1fr); }
+  .cx-ce-verify .cx-btn { width: 100%; }
+  .cx-benefits { gap: 8px; }
+}
