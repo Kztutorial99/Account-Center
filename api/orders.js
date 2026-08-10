@@ -122,7 +122,7 @@ async function gravatarUsed(email) {
   const hash = crypto.createHash("md5").update(email.trim().toLowerCase()).digest("hex");
   try {
     const res = await fetchWithTimeout(`https://en.gravatar.com/${hash}.json`, {
-      headers: { "user-agent": "CodeXa-EmailCheck/1.0" },
+      headers: { "user-agent": "AccountCenter-EmailCheck/1.0" },
     }, 6000);
     return res.status === 200;
   } catch (_) { return null; }
@@ -249,7 +249,7 @@ function gmailLikelyTaken(base) {
   return "";
 }
 
-/* Cek lengkap: dipakai pembeli CodeXa lain, aturan Gmail, heuristik nama
+/* Cek lengkap: dipakai pembeli Account Center lain, aturan Gmail, heuristik nama
    umum/dicadangkan, lalu cek definitif ke pendaftaran Gmail via actor Apify
    (dengan cache). Kalau actor tidak bisa dijangkau, fallback ke jejak publik
    (Gravatar) + status "belum bisa dipastikan". */
@@ -263,9 +263,9 @@ async function inspectCustomEmail(sql, parsed) {
   await ensureCustomEmailTable(sql);
   const takenHere = (await isCustomEmailTaken(sql, value)) || (value !== canonical && await isCustomEmailTaken(sql, canonical));
   if (takenHere) {
-    return { available: false, state: "taken", normalized: value, canonical, reason: "Sudah dipesan pembeli CodeXa lain, pilih nama lain", signals: ["Sudah dipesan di CodeXa"] };
+    return { available: false, state: "taken", normalized: value, canonical, reason: "Sudah dipesan pembeli Account Center lain, pilih nama lain", signals: ["Sudah dipesan di Account Center"] };
   }
-  signals.push("Belum dipesan di CodeXa");
+  signals.push("Belum dipesan di Account Center");
 
   if (isGoogle) {
     const policy = gmailPolicyError(local);

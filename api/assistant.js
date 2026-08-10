@@ -1,5 +1,5 @@
 /**
- * POST /api/assistant  — chat dengan Assisten CodeXa.
+ * POST /api/assistant  — chat dengan Assisten Account Center.
  *
  * Role ditentukan SERVER-SIDE:
  *   - cookie admin valid            → role "admin" (akses penuh)

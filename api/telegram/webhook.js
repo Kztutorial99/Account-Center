@@ -56,7 +56,7 @@ module.exports = async function handler(request, response) {
     if (from !== String(adminChatId())) {
       await callTelegram("sendMessage", {
         chat_id: from,
-        text: `🤖 <b>CodeXa Store Bot</b>\n\nBot ini khusus untuk admin toko.\nChat ID kamu: <code>${from}</code>`,
+        text: `🤖 <b>Account Center Bot</b>\n\nBot ini khusus untuk admin toko.\nChat ID kamu: <code>${from}</code>`,
         parse_mode: "HTML",
       });
       return response.status(200).json({ ok: true, ignored: true });

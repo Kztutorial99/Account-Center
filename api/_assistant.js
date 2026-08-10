@@ -1,5 +1,5 @@
 /**
- * Otak Assisten CodeXa.
+ * Otak Assisten Account Center.
  *
  * Prinsip keamanan:
  *  - Daftar tool yang dikirim ke model DITENTUKAN DI SERVER berdasarkan role
@@ -869,7 +869,7 @@ const adminTools = {
     schema: {
       name: "admin_notify_user",
       description:
-        "Kirim notifikasi IN-APP ke satu user CodeXa. Notifikasi ini yang muncul di lonceng notifikasi user. " +
+        "Kirim notifikasi IN-APP ke satu user Account Center. Notifikasi ini yang muncul di lonceng notifikasi user. " +
         "Pakai tool ini kalau admin minta 'kirim pesan/notifikasi ke user'. " +
         "Boleh pakai user_id, atau email user kalau id belum diketahui.",
       parameters: {
@@ -971,7 +971,7 @@ const adminTools = {
     schema: {
       name: "admin_run_query",
       description:
-        "Jalankan query SQL SELECT read-only ke database CodeXa untuk analisa bebas yang tidak tercakup tool lain. " +
+        "Jalankan query SQL SELECT read-only ke database Account Center untuk analisa bebas yang tidak tercakup tool lain. " +
         "Hanya SELECT satu statement. Kolom kredensial (credential_blob, password_hash) tidak boleh diambil.",
       parameters: {
         type: "object",
@@ -1003,7 +1003,7 @@ const adminTools = {
     schema: {
       name: "admin_db_overview",
       description:
-        "Peta database CodeXa: daftar semua tabel milik aplikasi beserta jumlah barisnya. " +
+        "Peta database Account Center: daftar semua tabel milik aplikasi beserta jumlah barisnya. " +
         "Pakai ini dulu sebelum menghapus/mengubah data supaya tahu tabel apa saja yang ada.",
       parameters: { type: "object", properties: {}, required: [] },
     },
@@ -1029,7 +1029,7 @@ const adminTools = {
   admin_table_schema: {
     schema: {
       name: "admin_table_schema",
-      description: "Struktur kolom satu tabel CodeXa (nama kolom, tipe, boleh null). Berguna sebelum menulis query manual.",
+      description: "Struktur kolom satu tabel Account Center (nama kolom, tipe, boleh null). Berguna sebelum menulis query manual.",
       parameters: {
         type: "object",
         properties: { table: { type: "string", description: "Nama tabel, harus diawali codexa_." } },
@@ -1141,7 +1141,7 @@ const adminTools = {
     schema: {
       name: "admin_purge_table",
       description:
-        "KOSONGKAN seluruh isi satu tabel CodeXa (semua barisnya dihapus). Sangat destruktif dan tidak bisa dibatalkan. " +
+        "KOSONGKAN seluruh isi satu tabel Account Center (semua barisnya dihapus). Sangat destruktif dan tidak bisa dibatalkan. " +
         "Wajib confirm=true. Tabel codexa_users tidak bisa dikosongkan lewat tool ini.",
       parameters: {
         type: "object",
@@ -1255,7 +1255,7 @@ function systemPrompt(ctx) {
   const now = `${waktuWib()} WIB`;
   if (ctx.role === "admin") {
     return [
-      "Kamu adalah Assisten Admin CodeXa, asisten operasional toko akun digital CodeXa.",
+      "Kamu adalah Assisten Admin Account Center, asisten operasional toko akun digital Account Center.",
       `Waktu sekarang: ${now}.`,
       "",
       "PEMANGGIL: ADMIN dengan akses penuh. Kamu boleh membaca dan mengubah data user, saldo, status akun, top up, dan produk.",
@@ -1298,7 +1298,7 @@ function systemPrompt(ctx) {
   }
 
   return [
-    "Kamu adalah Assisten CodeXa, asisten pelanggan toko akun digital CodeXa.",
+    "Kamu adalah Assisten Account Center, asisten pelanggan toko akun digital Account Center.",
     `Waktu sekarang: ${now}.`,
     "",
     `PEMANGGIL: user terdaftar bernama ${ctx.user.name} (${ctx.user.email}). Bukan admin.`,

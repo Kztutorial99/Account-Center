@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ CodeXa
+# ⚡ Account Center
 
 ### Modern Digital Store & Account Marketplace
 
@@ -10,20 +10,20 @@
 </p>
 
 <p>
-  <a href="https://codexa-store.vercel.app/"><strong>🌐 Live Demo</strong></a> ·
-  <a href="https://github.com/Kztutorial99/CodeXa/issues">🐛 Issues</a> ·
-  <a href="https://github.com/Kztutorial99/CodeXa">📦 Repository</a>
+  <a href="https://accounter.my.id/"><strong>🌐 Live Demo</strong></a> ·
+  <a href="https://github.com/Kztutorial99/Account-Center/issues">🐛 Issues</a> ·
+  <a href="https://github.com/Kztutorial99/Account-Center">📦 Repository</a>
 </p>
 
 <p>
-  <img src="https://img.shields.io/github/stars/Kztutorial99/CodeXa?style=for-the-badge&logo=github&label=Stars" alt="GitHub Stars" />
-  <img src="https://img.shields.io/github/forks/Kztutorial99/CodeXa?style=for-the-badge&logo=github&label=Forks" alt="GitHub Forks" />
-  <img src="https://img.shields.io/github/issues/Kztutorial99/CodeXa?style=for-the-badge&logo=github&label=Issues" alt="GitHub Issues" />
-  <img src="https://img.shields.io/github/last-commit/Kztutorial99/CodeXa?style=for-the-badge&logo=git&label=Updated" alt="Last Commit" />
+  <img src="https://img.shields.io/github/stars/Kztutorial99/Account-Center?style=for-the-badge&logo=github&label=Stars" alt="GitHub Stars" />
+  <img src="https://img.shields.io/github/forks/Kztutorial99/Account-Center?style=for-the-badge&logo=github&label=Forks" alt="GitHub Forks" />
+  <img src="https://img.shields.io/github/issues/Kztutorial99/Account-Center?style=for-the-badge&logo=github&label=Issues" alt="GitHub Issues" />
+  <img src="https://img.shields.io/github/last-commit/Kztutorial99/Account-Center?style=for-the-badge&logo=git&label=Updated" alt="Last Commit" />
 </p>
 
 <p>
-  <img src="https://img.shields.io/github/repo-size/Kztutorial99/CodeXa?style=flat-square&logo=github" alt="Repository Size" />
+  <img src="https://img.shields.io/github/repo-size/Kztutorial99/Account-Center?style=flat-square&logo=github" alt="Repository Size" />
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=white" alt="React" />
   <img src="https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
   <img src="https://img.shields.io/badge/Node.js-CommonJS-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js" />
@@ -37,29 +37,29 @@
 
 <div align="center">
 
-<a href="https://codexa-store.vercel.app/">
-  <img src="https://image.thum.io/get/width/1400/crop/900/https://codexa-store.vercel.app/" alt="CodeXa Store Preview" width="100%" />
+<a href="https://accounter.my.id/">
+  <img src="https://image.thum.io/get/width/1400/crop/900/https://accounter.my.id/" alt="Account Center Preview" width="100%" />
 </a>
 
 <br />
 
-**🌐 Open the live store:** [codexa-store.vercel.app](https://codexa-store.vercel.app/)
+**🌐 Open the live store:** [accounter.my.id](https://accounter.my.id/)
 
 </div>
 
-> 💡 The preview above is generated from the live CodeXa Store. Click it to open the application.
+> 💡 The preview above is generated from the live Account Center. Click it to open the application.
 
 ---
 
-## ✨ What is CodeXa?
+## ✨ What is Account Center?
 
-**CodeXa** is a modern web-based digital store built to provide a clean purchasing experience for customers while giving administrators a centralized dashboard to manage the entire store.
+**Account Center** is a modern web-based digital store built to provide a clean purchasing experience for customers while giving administrators a centralized dashboard to manage the entire store.
 
 The project is designed around three principles:
 
 > **⚡ Fast interactions · 🎨 Clean UI · 📱 Excellent mobile experience**
 
-Whether a customer is browsing products or an administrator is processing orders and top-up requests, CodeXa aims to keep every workflow simple, clear, and responsive.
+Whether a customer is browsing products or an administrator is processing orders and top-up requests, Account Center aims to keep every workflow simple, clear, and responsive.
 
 ---
 
@@ -134,7 +134,7 @@ This helps administrators create requested accounts without accidentally conflic
 
 ### 📱 Responsive UI
 
-CodeXa is built to work across:
+Account Center is built to work across:
 
 - 📱 Mobile phones
 - 📲 Tablets
@@ -147,7 +147,7 @@ Layouts, cards, navigation, dialogs, tables, and forms are designed to remain us
 
 Important actions should never leave the interface looking frozen or inactive.
 
-CodeXa uses UX patterns such as:
+Account Center uses UX patterns such as:
 
 - Loading states
 - Disabled buttons during requests
@@ -190,10 +190,10 @@ Lucide React
 
 ## 🏗️ Architecture
 
-CodeXa combines a React/Vite frontend with server-side API handlers for application data and administrative operations.
+Account Center combines a React/Vite frontend with server-side API handlers for application data and administrative operations.
 
 ```text
-CodeXa
+Account Center
 ├── Frontend
 │   ├── React
 │   ├── React DOM
@@ -217,11 +217,11 @@ CodeXa
 
 | Metric | Live Status |
 | --- | --- |
-| ⭐ Stars | ![Stars](https://img.shields.io/github/stars/Kztutorial99/CodeXa?style=flat-square) |
-| 🍴 Forks | ![Forks](https://img.shields.io/github/forks/Kztutorial99/CodeXa?style=flat-square) |
-| 🐛 Open Issues | ![Issues](https://img.shields.io/github/issues/Kztutorial99/CodeXa?style=flat-square) |
-| 💾 Repository Size | ![Size](https://img.shields.io/github/repo-size/Kztutorial99/CodeXa?style=flat-square) |
-| 🕒 Last Update | ![Commit](https://img.shields.io/github/last-commit/Kztutorial99/CodeXa?style=flat-square) |
+| ⭐ Stars | ![Stars](https://img.shields.io/github/stars/Kztutorial99/Account-Center?style=flat-square) |
+| 🍴 Forks | ![Forks](https://img.shields.io/github/forks/Kztutorial99/Account-Center?style=flat-square) |
+| 🐛 Open Issues | ![Issues](https://img.shields.io/github/issues/Kztutorial99/Account-Center?style=flat-square) |
+| 💾 Repository Size | ![Size](https://img.shields.io/github/repo-size/Kztutorial99/Account-Center?style=flat-square) |
+| 🕒 Last Update | ![Commit](https://img.shields.io/github/last-commit/Kztutorial99/Account-Center?style=flat-square) |
 | 🌿 Default Branch | `main` |
 | 🔓 Visibility | `Public` |
 
@@ -233,7 +233,7 @@ CodeXa
 
 ## 🎨 Design Philosophy
 
-CodeXa aims for a visual style that feels:
+Account Center aims for a visual style that feels:
 
 - Minimal
 - Modern
@@ -275,8 +275,8 @@ The interface should prioritize **clarity over unnecessary visual complexity** w
 ### Install
 
 ```bash
-git clone https://github.com/Kztutorial99/CodeXa.git
-cd CodeXa
+git clone https://github.com/Kztutorial99/Account-Center.git
+cd Account Center
 npm install
 ```
 
@@ -319,7 +319,7 @@ For larger changes, please open an issue first so the proposed direction can be 
 
 Found something broken?
 
-<a href="https://github.com/Kztutorial99/CodeXa/issues/new">🚨 Open a CodeXa Issue</a>
+<a href="https://github.com/Kztutorial99/Account-Center/issues/new">🚨 Open a Account Center Issue</a>
 
 Please include:
 
@@ -336,33 +336,33 @@ Please include:
 
 | Resource | Link |
 | --- | --- |
-| 🌐 Live Store | https://codexa-store.vercel.app/ |
-| 📦 GitHub Repository | https://github.com/Kztutorial99/CodeXa |
-| 🐛 Issues | https://github.com/Kztutorial99/CodeXa/issues |
-| ⭐ Star Project | https://github.com/Kztutorial99/CodeXa/stargazers |
+| 🌐 Live Store | https://accounter.my.id/ |
+| 📦 GitHub Repository | https://github.com/Kztutorial99/Account-Center |
+| 🐛 Issues | https://github.com/Kztutorial99/Account-Center/issues |
+| ⭐ Star Project | https://github.com/Kztutorial99/Account-Center/stargazers |
 
 ---
 
 ## 📄 License
 
-No explicit license file is currently included in the repository. Before redistributing or using CodeXa commercially, please check with the project owner regarding applicable permissions.
+No explicit license file is currently included in the repository. Before redistributing or using Account Center commercially, please check with the project owner regarding applicable permissions.
 
 ---
 
 <div align="center">
 
-## ⚡ CodeXa
+## ⚡ Account Center
 
 **Digital commerce, made simpler.**
 
 <br />
 
-<a href="https://codexa-store.vercel.app/">🌐 Visit CodeXa</a> ·
-<a href="https://github.com/Kztutorial99/CodeXa">⭐ Star on GitHub</a> ·
-<a href="https://github.com/Kztutorial99/CodeXa/issues">🐛 Report a Bug</a>
+<a href="https://accounter.my.id/">🌐 Visit Account Center</a> ·
+<a href="https://github.com/Kztutorial99/Account-Center">⭐ Star on GitHub</a> ·
+<a href="https://github.com/Kztutorial99/Account-Center/issues">🐛 Report a Bug</a>
 
 <br /><br />
 
-<sub>© 2026 CodeXa · Built by Kztutorial99</sub>
+<sub>© 2026 Account Center · Built by Kztutorial99</sub>
 
 </div>

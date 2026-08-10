@@ -1,6 +1,6 @@
 {
-  "name": "CodeXa Store",
-  "short_name": "CodeXa",
+  "name": "Account Center",
+  "short_name": "AccountCenter",
   "description": "Akun digital siap pakai atau dibuat sesuai namamu.",
   "start_url": "/",
   "scope": "/",

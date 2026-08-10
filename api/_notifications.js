@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 
 /**
- * Notifikasi in-app untuk user CodeXa.
+ * Notifikasi in-app untuk user Account Center.
  * Dipakai oleh: top up (diajukan / disetujui / ditolak) dan checkout akun.
  */
 
