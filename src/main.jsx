@@ -466,7 +466,7 @@ function RowSkeleton({ rows = 4 }) {
 /* ═══════════════════════════════════════════════════
    APP ROOT
 ════════════════════════════════════════════════════ */
-const PAGE_PATHS = ["admin", "orders", "help", "account", "topup", "custom-email", "terms", "privacy", "refund"];
+const PAGE_PATHS = ["admin", "katalog", "orders", "help", "account", "topup", "custom-email", "terms", "privacy", "refund", "disclaimer"];
 const pageFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
   return PAGE_PATHS.includes(slug) ? slug : "store";
@@ -613,6 +613,11 @@ function App() {
     return () => window.clearTimeout(t);
   }, [activePage]);
 
+  const totalAccounts = useMemo(
+    () => data.products.reduce((a, p) => a + (Number(p.stock) || (Array.isArray(p.accounts) ? p.accounts.length : 0)), 0),
+    [data.products],
+  );
+
   const navigate = (page) => {
     window.history.pushState({}, "", page === "store" ? "/" : `/${page}`);
     setActivePage(page);
@@ -678,29 +683,14 @@ function App() {
     showNotice("Custom email masuk keranjang");
   };
   const removeCustomEmail = (value) => setCustomEmails((list) => list.filter((v) => v !== value));
-  /* Kurangi 1 item terakhir dari keranjang supaya total muat dengan saldo. */
-  const reduceLastPurchase = () => {
-    if (customEmails.length) {
-      const last = customEmails[customEmails.length - 1];
-      setCustomEmails((list) => list.slice(0, -1));
-      showNotice(`Custom email "${last}" dihapus dari keranjang`);
-      return;
-    }
-    if (!cart.length) return;
-    setCart((c) => {
-      const next = [...c];
-      const last = { ...next[next.length - 1] };
-      const picks = [...(last.selectedAccounts || [])];
-      picks.pop();
-      if (!picks.length) { next.pop(); return next; }
-      next[next.length - 1] = {
-        ...last,
-        selectedAccounts: picks,
-        qty: picks.length,
-        price: sumSelected(last, picks.map((a) => a.index)) || Number(last.price) || 0,
-      };
-      return next;
-    });
+  /* Hapus satu akun tertentu dari keranjang lewat tombol X. */
+  const removeCartAccount = (i, accIndex) => {
+    setCart((c) => c.map((item, idx) => {
+      if (idx !== i) return item;
+      const list = (item.selectedAccounts || []).filter((a) => a.index !== accIndex);
+      if (!list.length) return null;
+      return { ...item, selectedAccounts: list, qty: list.length, price: sumSelected(item, list.map((a) => a.index)) || 0 };
+    }).filter(Boolean));
     showNotice("1 akun dihapus dari keranjang");
   };
   const doCheckout = async () => {
@@ -811,28 +801,14 @@ function App() {
                 <li><Check size={13} /><span>Garansi penggantian jika akun bermasalah</span></li>
               </ul>
               {Array.isArray(buyItem.accounts) && buyItem.accounts.length > 0 && (
-                <div className="cx-cred-preview cx-cred-preview-lg">
-                  <div className="cx-cred-head">Pilih akun yang mau dibeli ({buySel.length}/{buyItem.accounts.length} dipilih)</div>
-                  {buyItem.accounts.map((account) => {
-                    const checked = buySel.includes(account.index);
-                    return (
-                      <label className={`cx-cred-item cx-cred-pick${checked ? " is-picked" : ""}`} key={account.index}>
-                        <input
-                          type="checkbox"
-                          className="cx-cred-check"
-                          checked={checked}
-                          onChange={() => setBuySel((prev) => prev.includes(account.index) ? prev.filter((i) => i !== account.index) : [...prev, account.index])}
-                        />
-                        <span className="cx-cred-no">#{account.index}</span>
-                        <div className="cx-cred-pair">
-                          <div className="cx-cred-row"><span>Email</span><code>{account.maskedEmail || "—"}</code></div>
-                          <div className="cx-cred-row"><span>Password</span><code>{account.maskedPassword || "—"}</code></div>
-                        </div>
-                        <span className="cx-cred-price">{formatPrice(accountPriceOf(account, buyItem))}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                <AccountPicker
+                  product={buyItem}
+                  accounts={buyItem.accounts}
+                  selected={buySel}
+                  pageSize={5}
+                  size="lg"
+                  onToggle={(idx) => setBuySel((prev) => prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx])}
+                />
               )}
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
                 <label style={{ fontSize: 11, color: "var(--ink2)", fontWeight: 600 }}>Jumlah akun dipilih: {buySel.length}</label>
@@ -877,8 +853,22 @@ function App() {
                       <div className="cx-cart-item-copy">
                         <strong>{item.title}</strong>
                         <small>{item.qty ? `${item.qty} akun · ` : ""}{formatPrice(item.price)}</small>
+                        {(item.selectedAccounts || []).length > 0 && (
+                          <div className="cx-cart-picks">
+                            {item.selectedAccounts.map((a) => (
+                              <span className="cx-cart-pick" key={a.index}>
+                                <code>{a.maskedEmail || `Akun #${a.index}`}</code>
+                                <button
+                                  className="cx-cart-pick-x"
+                                  aria-label={`Hapus akun #${a.index}`}
+                                  onClick={() => removeCartAccount(i, a.index)}
+                                ><X size={11} /></button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <button className="cx-icon-btn" onClick={() => removeFromCart(i)}><X size={12} /></button>
+                      <button className="cx-icon-btn" aria-label="Hapus semua akun listing ini" onClick={() => removeFromCart(i)}><X size={12} /></button>
                     </div>
                   ))}
                   {customEmails.map((value) => (
@@ -957,9 +947,6 @@ function App() {
                       <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => { setCartOpen(false); navigate("topup"); }}>
                         <CreditCard size={12} /> Top up {formatPrice(shortfall)}
                       </button>
-                      <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={reduceLastPurchase}>
-                        <Trash2 size={12} /> Kurangi pembelian
-                      </button>
                     </div>
                   </div>
                 )}
@@ -1010,7 +997,7 @@ function App() {
     </>
   );
 
-  if (activePage === "terms" || activePage === "privacy" || activePage === "refund") return (
+  if (activePage === "terms" || activePage === "privacy" || activePage === "refund" || activePage === "disclaimer") return (
     <div className="cx-app">
       {topbar}
       <LegalPage kind={activePage} onBack={() => navigate("store")} navigate={navigate} />
@@ -1085,6 +1072,72 @@ function App() {
     </div>
   );
 
+  if (activePage === "katalog") return (
+    <div className="cx-app">
+      {topbar}
+      <div className="cx-container" style={{ paddingTop: 18 }}>
+        <button className="cx-back-link" onClick={() => navigate("store")}>
+          <ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali ke store
+        </button>
+      </div>
+      <main className="cx-container" id="catalog" style={{ paddingTop: 20, paddingBottom: 64 }}>
+        <div className="cx-section-header cx-section-header-stack">
+          <div>
+            <h2>Akun yang tersedia.</h2>
+            <p className="cx-section-sub">{data.loading ? "Memuat..." : `${products.length} produk ditemukan`}</p>
+          </div>
+          <div className="cx-search">
+            <Search size={13} />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari akun atau tipe login..." />
+          </div>
+        </div>
+
+        {data.loading && (
+          <div className="cx-grid">
+            {[1,2,3,4,5,6].map((i) => (
+              <div key={i} style={{ border: "1px solid var(--b1)", borderRadius: 4, overflow: "hidden" }}>
+                <div className="cx-skeleton" style={{ height: 110 }} />
+                <div style={{ padding: 14 }}>
+                  <div className="cx-skeleton" style={{ height: 10, width: "60%", marginBottom: 8 }} />
+                  <div className="cx-skeleton" style={{ height: 13, marginBottom: 6 }} />
+                  <div className="cx-skeleton" style={{ height: 11, width: "80%" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {data.error && (
+          <div className="cx-empty">
+            <CircleHelp size={28} />
+            <h3>Data belum bisa dimuat</h3>
+            <p>{data.error}</p>
+            <button className="cx-btn cx-btn-secondary" onClick={loadCatalog}><RefreshCw size={13} /> Coba lagi</button>
+          </div>
+        )}
+
+        {!data.loading && !data.error && products.length === 0 && (
+          <div className="cx-empty">
+            <Package size={28} />
+            <h3>Belum ada akun tersedia</h3>
+            <p>{search ? "Tidak ada produk yang cocok dengan pencarian." : "Belum ada listing nyata di database. Panel tidak menampilkan akun contoh."}</p>
+          </div>
+        )}
+
+        {!data.loading && products.length > 0 && (
+          <div className="cx-grid">
+            {products.map((p, i) => (
+              <ProductCard key={p.id || i} product={p} colorIdx={i} onBuy={(sel) => { setBuyItem(p); setBuySel(Array.isArray(sel) ? sel : []); }} />
+            ))}
+          </div>
+        )}
+      </main>
+      <StoreFooter navigate={navigate} />
+      {tabbar}
+      {overlays}
+    </div>
+  );
+
   /* ── store page ── */
   return (
     <div className="cx-app">
@@ -1094,12 +1147,12 @@ function App() {
       <section className="cx-hero cx-hero-modern">
         <div className="cx-hero-glow" aria-hidden="true" />
         <div className="cx-container cx-hero-inner">
-          <div className="cx-hero-badge"><span className="cx-hero-pulse" /> Stok live · {data.loading ? "memuat" : `${data.products.length} listing`} siap kirim</div>
+          <div className="cx-hero-badge"><span className="cx-hero-pulse" /> Stok live · {data.loading ? "memuat" : `${totalAccounts} akun`} tersedia</div>
           <div className="cx-kicker">CODEXA ACCESS</div>
           <h1>Akun digital,<br /><em>tanpa drama.</em></h1>
           <p className="cx-hero-sub">Akun siap pakai dari katalog nyata. Detail login hanya dibuka setelah pembayaran berhasil — otomatis, tanpa nunggu admin.</p>
           <div className="cx-hero-actions">
-            <button className="cx-btn cx-btn-primary" onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}>
+            <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
               Lihat katalog <ArrowRight size={13} />
             </button>
             <button className="cx-btn cx-btn-secondary cx-hero-ce-btn" onClick={() => navigate("custom-email")}>
@@ -1159,59 +1212,6 @@ function App() {
         </div>
       </section>
 
-      {/* Catalog */}
-      <main className="cx-container" id="catalog" style={{ paddingTop: 32, paddingBottom: 64 }}>
-        <div className="cx-section-header cx-section-header-stack">
-          <div>
-            <h2>Akun yang tersedia.</h2>
-            <p className="cx-section-sub">{data.loading ? "Memuat..." : `${products.length} produk ditemukan`}</p>
-          </div>
-          <div className="cx-search">
-            <Search size={13} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari akun atau tipe login..." />
-          </div>
-        </div>
-
-        {data.loading && (
-          <div className="cx-grid">
-            {[1,2,3,4,5,6].map((i) => (
-              <div key={i} style={{ border: "1px solid var(--b1)", borderRadius: 4, overflow: "hidden" }}>
-                <div className="cx-skeleton" style={{ height: 110 }} />
-                <div style={{ padding: 14 }}>
-                  <div className="cx-skeleton" style={{ height: 10, width: "60%", marginBottom: 8 }} />
-                  <div className="cx-skeleton" style={{ height: 13, marginBottom: 6 }} />
-                  <div className="cx-skeleton" style={{ height: 11, width: "80%" }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {data.error && (
-          <div className="cx-empty">
-            <CircleHelp size={28} />
-            <h3>Data belum bisa dimuat</h3>
-            <p>{data.error}</p>
-            <button className="cx-btn cx-btn-secondary" onClick={loadCatalog}><RefreshCw size={13} /> Coba lagi</button>
-          </div>
-        )}
-
-        {!data.loading && !data.error && products.length === 0 && (
-          <div className="cx-empty">
-            <Package size={28} />
-            <h3>Belum ada akun tersedia</h3>
-            <p>{search ? "Tidak ada produk yang cocok dengan pencarian." : "Belum ada listing nyata di database. Panel tidak menampilkan akun contoh."}</p>
-          </div>
-        )}
-
-        {!data.loading && products.length > 0 && (
-          <div className="cx-grid">
-            {products.map((p, i) => (
-              <ProductCard key={p.id || i} product={p} colorIdx={i} onBuy={(sel) => { setBuyItem(p); setBuySel(Array.isArray(sel) ? sel : []); }} />
-            ))}
-          </div>
-        )}
-      </main>
 
       <StoreFooter navigate={navigate} />
       {tabbar}
@@ -1357,7 +1357,7 @@ function OrdersPage({ onBack, onNotice, navigate }) {
       {state.error && <p className="cx-field-error">{state.error}</p>}
       {!state.loading && !state.error && state.orders.length === 0 && (
         <div className="cx-empty"><Package size={24} /><h3>Belum ada pesanan</h3><p>Beli akun dari katalog untuk mulai.</p>
-          <button className="cx-btn cx-btn-primary" onClick={() => navigate("store")}>Lihat katalog</button>
+          <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>Lihat katalog</button>
         </div>
       )}
       {state.orders.map((order) => (
@@ -1590,7 +1590,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
           <span>Code<span className="cx-brand-dot">Xa</span></span>
         </button>
         <nav className="cx-nav">
-          {[["store","Store"],["orders","Pesanan"],["help","Bantuan"]].map(([page, label]) => (
+          {[["store","Store"],["katalog","Katalog"],["orders","Pesanan"],["help","Bantuan"]].map(([page, label]) => (
             <button key={page} className={activePage === page ? "active" : ""} onClick={() => navigate(page)}>{label}</button>
           ))}
           <button
@@ -1777,12 +1777,12 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
 ════════════════════════════════════════════════════ */
 function MobileTabBar({ activePage, navigate, cart, onCartOpen, cartOpen }) {
   const items = [
-    { key: "store",  label: "Store",    Icon: Package },
-    { key: "orders", label: "Pesanan",  Icon: BadgeCheck },
-    { key: "cart",   label: "Keranjang",Icon: ShoppingBag },
+    { key: "store",   label: "Store",    Icon: Sparkles },
+    { key: "katalog", label: "Katalog",  Icon: Package },
+    { key: "cart",    label: "Keranjang",Icon: ShoppingBag },
     { key: "custom-email", label: "Email", Icon: Mail },
-    { key: "help",   label: "Bantuan",  Icon: CircleHelp },
-    { key: "account",label: "Akun",     Icon: User },
+    { key: "orders",  label: "Pesanan",  Icon: BadgeCheck },
+    { key: "account", label: "Akun",     Icon: User },
   ];
   return (
     <nav className="cx-tabbar" aria-label="Navigasi utama">
@@ -1854,7 +1854,7 @@ function HelpPage({ navigate, onAskAssistant }) {
         <section className="cx-help-quick">
           {[
             { icon: Wallet, label: "Top Up saldo", desc: "Isi saldo & pantau status", page: "topup" },
-            { icon: ShoppingBag, label: "Belanja akun", desc: "Lihat katalog & stok", page: "store" },
+            { icon: ShoppingBag, label: "Belanja akun", desc: "Lihat katalog & stok", page: "katalog" },
             { icon: Package, label: "Pesanan saya", desc: "Detail akun yang dibeli", page: "orders" },
             { icon: User, label: "Akun saya", desc: "Profil & keamanan", page: "account" },
           ].map((item) => (
@@ -2091,6 +2091,45 @@ function StoreFooter({ navigate }) {
 /* ═══════════════════════════════════════════════════
    PRODUCT CARD
 ════════════════════════════════════════════════════ */
+/* Daftar akun dengan Load More supaya tidak memanjang ke bawah di mobile. */
+function AccountPicker({ product, accounts, selected, onToggle, pageSize = 3, size }) {
+  const [shown, setShown] = useState(pageSize);
+  const visible = accounts.slice(0, shown);
+  const rest = accounts.length - visible.length;
+  return (
+    <div className={`cx-cred-preview${size === "lg" ? " cx-cred-preview-lg" : ""}`}>
+      <div className="cx-cred-head">Ceklis akun yang mau dibeli ({selected.length}/{accounts.length})</div>
+      <div className="cx-cred-list">
+        {visible.map((account) => {
+          const checked = selected.includes(account.index);
+          return (
+            <label className={`cx-cred-item cx-cred-pick${checked ? " is-picked" : ""}`} key={account.index}>
+              <input type="checkbox" className="cx-cred-check" checked={checked} onChange={() => onToggle(account.index)} />
+              <span className="cx-cred-tick" aria-hidden="true"><Check size={11} /></span>
+              <span className="cx-cred-no">#{account.index}</span>
+              <div className="cx-cred-pair">
+                <div className="cx-cred-row"><span>Email</span><code>{account.maskedEmail || "\u2014"}</code></div>
+                <div className="cx-cred-row"><span>Password</span><code>{account.maskedPassword || "\u2014"}</code></div>
+              </div>
+              <span className="cx-cred-price">{formatPrice(accountPriceOf(account, product))}</span>
+            </label>
+          );
+        })}
+      </div>
+      {rest > 0 && (
+        <button type="button" className="cx-cred-more" onClick={() => setShown((n) => n + pageSize)}>
+          Load more ({rest} akun lagi)
+        </button>
+      )}
+      {rest === 0 && accounts.length > pageSize && (
+        <button type="button" className="cx-cred-more is-less" onClick={() => setShown(pageSize)}>
+          Tampilkan lebih sedikit
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ProductCard({ product, colorIdx, onBuy }) {
   const color = ACCENT_COLORS[colorIdx % ACCENT_COLORS.length];
   const accounts = Array.isArray(product.accounts) ? product.accounts : [];
@@ -2114,23 +2153,7 @@ function ProductCard({ product, colorIdx, onBuy }) {
           text={product.description || "Akun digital siap digunakan. Detail dikirim setelah pembayaran."}
         />
         {accounts.length > 0 && (
-          <div className="cx-cred-preview">
-            <div className="cx-cred-head">Ceklis akun yang mau dibeli ({selected.length}/{accounts.length})</div>
-            {accounts.map((account) => {
-              const checked = selected.includes(account.index);
-              return (
-                <label className={`cx-cred-item cx-cred-pick${checked ? " is-picked" : ""}`} key={account.index}>
-                  <input type="checkbox" className="cx-cred-check" checked={checked} onChange={() => toggle(account.index)} />
-                  <span className="cx-cred-no">#{account.index}</span>
-                  <div className="cx-cred-pair">
-                    <div className="cx-cred-row"><span>Email</span><code>{account.maskedEmail || "—"}</code></div>
-                    <div className="cx-cred-row"><span>Password</span><code>{account.maskedPassword || "—"}</code></div>
-                  </div>
-                  <span className="cx-cred-price">{formatPrice(accountPriceOf(account, product))}</span>
-                </label>
-              );
-            })}
-          </div>
+          <AccountPicker product={product} accounts={accounts} selected={selected} onToggle={toggle} pageSize={3} />
         )}
         <div className="cx-product-bottom">
           <span className="cx-product-price">
