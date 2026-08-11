@@ -399,3 +399,49 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 }
 .cx-profile-form .cx-field input:focus { border-color: rgba(99,102,241,.55); }
 .cx-profile-form .cx-field input::placeholder { color: var(--faint); }
+
+/* ── Catatan "Cara mengamankan akun": grup + langkah bernomor ── */
+.cx-delivery { display: grid; gap: 10px; margin-top: 10px; }
+.cx-delivery-sec {
+  padding: 10px 11px;
+  border: 1px solid var(--b1);
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--s1) 90%, #000);
+  min-width: 0;
+}
+.cx-delivery-title {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 0 7px;
+  font: 700 10.5px Inter, system-ui, sans-serif;
+  letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink);
+}
+.cx-delivery-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cx-delivery-list li {
+  display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px;
+  align-items: start;
+  font-size: 11.5px; line-height: 1.6; color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.cx-delivery-num {
+  display: grid; place-items: center;
+  width: 18px; height: 18px; border-radius: 999px;
+  background: color-mix(in srgb, #6366f1 26%, transparent);
+  color: #c7d2fe;
+  font: 700 9.5px Inter, system-ui, sans-serif;
+}
+.cx-delivery .cx-expand-btn { margin-top: 2px; }
+
+/* ── Modal sukses: benar-benar pas di layar mobile ── */
+@media (max-width: 720px) {
+  .cx-modal-backdrop { align-items: flex-end; }
+  .cx-success-modal {
+    max-height: calc(100dvh - var(--tab-h, 64px) - env(safe-area-inset-bottom) - 16px);
+  }
+  .cx-success-head { padding: 13px 13px 11px; position: sticky; top: 0; z-index: 2; background: var(--s1); }
+  .cx-success-body { padding: 12px 13px 14px; }
+  .cx-success-foot { padding: 10px 13px calc(12px + env(safe-area-inset-bottom)); }
+  .cx-success-title h2 { font-size: 14px; }
+  .cx-success-foot .cx-btn { min-height: 44px; font-size: 12.5px; }
+  .cx-delivery-sec { padding: 9px 10px; }
+}

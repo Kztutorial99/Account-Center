@@ -296,6 +296,75 @@ function ExpandableText({ text: value, lines = 3, className = "", limit = 140 })
 
 
 
+/* ─── Catatan pengiriman / Cara mengamankan akun ───
+   Teks panjang satu paragraf dari admin dipecah jadi grup berjudul + langkah
+   bernomor supaya rapi dan mudah dibaca, terutama di mobile. */
+function parseDeliveryNote(raw) {
+  const text = String(raw == null ? "" : raw).replace(/\r\n/g, "\n").trim();
+  if (!text) return [];
+  const flat = text.split(/\n+/).join(" ").replace(/\s+/g, " ");
+  const marked = flat
+    .replace(/\s(?=[A-Z][A-Z\s&\/]{3,}(?:\([^)]*\))?\s*:)/g, "\n@@")
+    .replace(/^(?=[A-Z][A-Z\s&\/]{3,}(?:\([^)]*\))?\s*:)/, "@@")
+    .replace(/\s(?=\d{1,2}[.)]\s)/g, "\n")
+    .replace(/\s(?=[-\u2022]\s)/g, "\n");
+  const groups = [];
+  let cur = null;
+  const ensure = () => { if (!cur) { cur = { title: "", steps: [] }; groups.push(cur); } return cur; };
+  for (const line of marked.split("\n").map((v) => v.trim()).filter(Boolean)) {
+    if (line.startsWith("@@")) {
+      const body = line.slice(2).trim();
+      const m = body.match(/^([^:]{2,70}):\s*(.*)$/);
+      cur = { title: (m ? m[1] : body).trim(), steps: [] };
+      groups.push(cur);
+      if (m && m[2].trim()) cur.steps.push(m[2].trim());
+      continue;
+    }
+    const num = line.match(/^\d{1,2}[.)]\s*(.+)$/);
+    const dash = line.match(/^[-\u2022]\s*(.+)$/);
+    ensure().steps.push(String(num ? num[1] : dash ? dash[1] : line).trim());
+  }
+  return groups.filter((g) => g.title || g.steps.length);
+}
+function prettyTitle(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/(^|\s|\()([a-z0-9])/g, (m, a, b) => a + b.toUpperCase());
+}
+function DeliveryNote({ text, className = "" }) {
+  const [open, setOpen] = useState(false);
+  const groups = useMemo(() => parseDeliveryNote(text), [text]);
+  if (!groups.length) return null;
+  const total = groups.reduce((a, g) => a + g.steps.length, 0);
+  const needsToggle = total > 3;
+  const shown = open || !needsToggle;
+  return (
+    <div className={`cx-delivery ${className}`.trim()}>
+      {groups.map((g, gi) => {
+        const steps = shown ? g.steps : (gi === 0 ? g.steps.slice(0, 3) : []);
+        if (!steps.length && !shown && gi > 0) return null;
+        return (
+          <section className="cx-delivery-sec" key={`${g.title}-${gi}`}>
+            {g.title && <h4 className="cx-delivery-title"><ShieldCheck size={11} /> {prettyTitle(g.title)}</h4>}
+            {steps.length > 0 && (
+              <ol className="cx-delivery-list">
+                {steps.map((step, i) => (
+                  <li key={i}><span className="cx-delivery-num">{i + 1}</span><span>{step}</span></li>
+                ))}
+              </ol>
+            )}
+          </section>
+        );
+      })}
+      {needsToggle && (
+        <button type="button" className="cx-expand-btn" onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}>
+          {open ? "Sembunyikan" : "Selengkapnya"} <ChevronDown size={11} style={open ? { transform: "rotate(180deg)" } : undefined} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ─── Verifikasi ketersediaan nama custom email ───
    Tidak ada pengecekan manual: user klik tombol, server yang memanggil Apify. */
 const CE_STATE_LABEL = {
@@ -324,7 +393,6 @@ function CustomEmailChecker({ draft, setDraft, check, onVerify, onAdd, canAdd, q
           autoComplete="off"
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (canAdd) onAdd(); else if (canVerify) onVerify(); } }}
         />
-        {busy && <Spinner size={12} />}
         {state === "available" && <Check size={13} color="var(--green)" />}
         {(state === "taken" || state === "invalid") && <X size={13} color="var(--red)" />}
       </div>
@@ -665,6 +733,8 @@ function App() {
     setCartOpen(false);
     setBuyItem(null);
     setMenuOpen(false);
+    // Modal "Pembayaran berhasil" juga harus ikut tertutup saat pindah menu.
+    setCheckout({ loading: false, error: "", order: null });
     scrollTop();
   };
   // Timer lama dibersihkan dulu supaya notice baru tidak ikut terhapus.
@@ -1316,7 +1386,7 @@ function OrderItems({ items, onNotice }) {
               </div>
             );
           })}
-          {item.deliveryDetails && <ExpandableText className="cx-order-note" text={item.deliveryDetails} />}
+          {item.deliveryDetails && <DeliveryNote className="cx-order-note" text={item.deliveryDetails} />}
         </div>
       ))}
     </div>
