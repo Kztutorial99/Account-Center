@@ -537,17 +537,25 @@ function SessionSplash({ title = "Menyiapkan Account Center", subtitle = "Memeri
   return (
     <div className="cx-splash" role="status" aria-live="polite" aria-busy="true">
       <div className="cx-splash-aurora" aria-hidden="true"><span /><span /><span /></div>
+      <div className="cx-splash-grid" aria-hidden="true" />
       <div className="cx-splash-card">
         <div className="cx-splash-mark">
+          <span className="cx-splash-orbit cx-splash-orbit-a" aria-hidden="true"><i /></span>
+          <span className="cx-splash-orbit cx-splash-orbit-b" aria-hidden="true"><i /></span>
           <span className="cx-splash-ring" aria-hidden="true" />
-          <span className="cx-splash-core">&lt;/&gt;</span>
+          <span className="cx-splash-pulse" aria-hidden="true" />
+          <span className="cx-splash-core">AC</span>
         </div>
         <div className="cx-splash-copy">
           <strong>{title}</strong>
           <small>{subtitle}</small>
         </div>
         <div className="cx-splash-bar" aria-hidden="true" />
-        <div className="cx-splash-dots" aria-hidden="true"><i /><i /><i /></div>
+        <div className="cx-splash-steps" aria-hidden="true">
+          <span>Koneksi</span>
+          <span>Sesi</span>
+          <span>Beranda</span>
+        </div>
       </div>
     </div>
   );
@@ -1673,7 +1681,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
     <header className="cx-topbar">
       <div className="cx-container cx-topbar-inner">
         <button className="cx-brand" onClick={() => navigate("store")}>
-          <span className="cx-brand-mark">&lt;/&gt;</span>
+          <span className="cx-brand-mark">AC</span>
           <span>Account<span className="cx-brand-dot">Center</span></span>
         </button>
         <nav className="cx-nav">
@@ -2157,7 +2165,7 @@ function StoreFooter({ navigate }) {
     <footer className="cx-footer">
       <div className="cx-container cx-footer-inner">
         <button className="cx-brand" onClick={() => navigate("store")} style={{ fontSize: 13 }}>
-          <span className="cx-brand-mark" style={{ width: 20, height: 20, fontSize: 10 }}>&lt;/&gt;</span>
+          <span className="cx-brand-mark" style={{ width: 20, height: 20, fontSize: 10 }}>AC</span>
           Account<span className="cx-brand-dot">Center</span>
         </button>
         <p>Stok dan katalog terhubung ke Neon Database.</p>
@@ -2752,7 +2760,7 @@ function AdminPage({ onBack, onNotice }) {
   if (!authenticated) return (
     <div className="cx-login-wrap">
       <div className="cx-login-box">
-        <div className="cx-login-mark">&lt;/&gt;</div>
+        <div className="cx-login-mark">AC</div>
         <h1>Account Center Admin</h1>
         <p>Masuk untuk mengelola produk dan pesanan.</p>
         <form onSubmit={login}>
@@ -2793,7 +2801,7 @@ function AdminPage({ onBack, onNotice }) {
       {/* ── Sidebar ── */}
       <aside className={`cx-sidebar${navOpen ? " open" : ""}`}>
         <div className="cx-sidebar-brand">
-          <span className="cx-brand-mark" style={{ width: 24, height: 24, fontSize: 12, borderRadius: 4 }}>&lt;/&gt;</span>
+          <span className="cx-brand-mark" style={{ width: 24, height: 24, fontSize: 12, borderRadius: 4 }}>AC</span>
           <span>Account Center</span>
           <ChevronDown size={12} color="var(--faint)" />
           <button className="cx-sidebar-close" onClick={() => setNavOpen(false)} aria-label="Tutup menu"><X size={14} /></button>
@@ -3776,7 +3784,7 @@ function AuthPage({ onAuthenticated }) {
   return (
     <div className="cx-login-wrap">
       <div className="cx-login-box cx-auth-box">
-        <div className="cx-login-mark">&lt;/&gt;</div>
+        <div className="cx-login-mark">AC</div>
         <h1>{mode === "register" ? "Daftar Account Center" : "Masuk ke Account Center"}</h1>
         <p>{mode === "register" ? "Buat akun untuk mulai belanja dan isi saldo." : "Masuk dulu untuk mengakses katalog dan saldo kamu."}</p>
 
