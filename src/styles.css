@@ -2144,57 +2144,92 @@ html { scroll-behavior: smooth; }
 
 /* ══ SPLASH MEMUAT SESI ═══════════════════════ */
 @keyframes cx-splash-spin { to { transform: rotate(360deg); } }
-@keyframes cx-splash-breathe { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.06); opacity: 1; } }
+@keyframes cx-splash-spin-rev { to { transform: rotate(-360deg); } }
+@keyframes cx-splash-breathe { 0%, 100% { transform: scale(1) translateZ(0); } 50% { transform: scale(1.05); } }
+@keyframes cx-splash-pulse { 0% { transform: scale(.85); opacity: .55; } 70% { transform: scale(1.6); opacity: 0; } 100% { opacity: 0; } }
 @keyframes cx-splash-aurora {
   0%   { transform: translate3d(-8%, -6%, 0) scale(1); }
-  50%  { transform: translate3d(8%, 6%, 0) scale(1.15); }
+  50%  { transform: translate3d(8%, 6%, 0) scale(1.18); }
   100% { transform: translate3d(-8%, -6%, 0) scale(1); }
 }
 @keyframes cx-splash-shimmer { 0% { background-position: -180% 0; } 100% { background-position: 180% 0; } }
 @keyframes cx-splash-track { 0% { left: -42%; } 100% { left: 100%; } }
-@keyframes cx-splash-dot { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@keyframes cx-splash-step { 0%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-2px); } 60% { opacity: .3; } }
+@keyframes cx-splash-grid { from { transform: translateY(0); } to { transform: translateY(46px); } }
+@keyframes cx-splash-in { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
 
 .cx-splash {
   position: relative; min-height: 100dvh; overflow: hidden;
   display: grid; place-items: center; padding: 24px;
-  background: radial-gradient(120% 90% at 50% 0%, #1b1030 0%, var(--bg) 60%);
+  background:
+    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--indigo) 26%, var(--bg)) 0%, var(--bg) 62%);
 }
-.cx-splash-aurora { position: absolute; inset: -25%; pointer-events: none; filter: blur(70px); opacity: .55; }
+.cx-splash-grid {
+  position: absolute; inset: -40% 0 -10%; pointer-events: none; opacity: .16;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--indigo3) 45%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--indigo3) 45%, transparent) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(70% 55% at 50% 45%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(70% 55% at 50% 45%, #000 0%, transparent 75%);
+  animation: cx-splash-grid 6s linear infinite;
+}
+.cx-splash-aurora { position: absolute; inset: -25%; pointer-events: none; filter: blur(80px); opacity: .5; }
 .cx-splash-aurora span { position: absolute; display: block; border-radius: 50%; animation: cx-splash-aurora 12s ease-in-out infinite; }
 .cx-splash-aurora span:nth-child(1) { width: 42vmax; height: 42vmax; top: 4%; left: 6%; background: color-mix(in srgb, var(--indigo) 55%, transparent); }
-.cx-splash-aurora span:nth-child(2) { width: 34vmax; height: 34vmax; bottom: 2%; right: 4%; background: color-mix(in srgb, var(--indigo3) 40%, transparent); animation-duration: 15s; animation-direction: reverse; }
-.cx-splash-aurora span:nth-child(3) { width: 26vmax; height: 26vmax; top: 42%; left: 48%; background: color-mix(in srgb, var(--green) 22%, transparent); animation-duration: 18s; }
+.cx-splash-aurora span:nth-child(2) { width: 34vmax; height: 34vmax; bottom: 2%; right: 4%; background: color-mix(in srgb, var(--indigo3) 42%, transparent); animation-duration: 15s; animation-direction: reverse; }
+.cx-splash-aurora span:nth-child(3) { width: 26vmax; height: 26vmax; top: 42%; left: 48%; background: color-mix(in srgb, var(--green) 20%, transparent); animation-duration: 18s; }
 
 .cx-splash-card {
-  position: relative; z-index: 1; width: min(340px, 100%);
-  display: flex; flex-direction: column; align-items: center; gap: 16px;
-  padding: 30px 24px 26px; text-align: center;
+  position: relative; z-index: 1; width: min(350px, 100%);
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  padding: 34px 26px 28px; text-align: center;
   border: 1px solid color-mix(in srgb, var(--b3) 70%, transparent);
-  border-radius: 22px;
-  background: color-mix(in srgb, var(--s1) 78%, transparent);
-  box-shadow: 0 26px 70px rgba(0,0,0,.5);
-  backdrop-filter: blur(14px);
-  animation: cx-rise .45s cubic-bezier(.22,.8,.28,1) both;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #fff 6%, transparent), transparent 40%),
+    color-mix(in srgb, var(--s1) 74%, transparent);
+  box-shadow: 0 30px 80px rgba(0,0,0,.55), inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent);
+  backdrop-filter: blur(18px);
+  animation: cx-splash-in .5s cubic-bezier(.22,.8,.28,1) both;
 }
-.cx-splash-mark { position: relative; width: 74px; height: 74px; display: grid; place-items: center; }
-.cx-splash-ring {
+.cx-splash-mark { position: relative; width: 96px; height: 96px; display: grid; place-items: center; }
+.cx-splash-orbit {
   position: absolute; inset: 0; border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0deg, var(--indigo2) 120deg, var(--indigo3) 220deg, transparent 320deg);
-  animation: cx-splash-spin 1.5s linear infinite;
+  border: 1px dashed color-mix(in srgb, var(--indigo3) 30%, transparent);
+}
+.cx-splash-orbit i {
+  position: absolute; top: -3px; left: 50%; width: 6px; height: 6px; margin-left: -3px;
+  border-radius: 50%; background: var(--indigo3);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--indigo3) 80%, transparent);
+}
+.cx-splash-orbit-a { animation: cx-splash-spin 3.4s linear infinite; }
+.cx-splash-orbit-b { inset: 12px; animation: cx-splash-spin-rev 2.4s linear infinite; border-color: color-mix(in srgb, var(--indigo2) 26%, transparent); }
+.cx-splash-orbit-b i { background: var(--green); box-shadow: 0 0 12px color-mix(in srgb, var(--green) 75%, transparent); }
+.cx-splash-ring {
+  position: absolute; inset: 18px; border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg, var(--indigo2) 110deg, var(--indigo3) 210deg, transparent 320deg);
+  animation: cx-splash-spin 1.4s cubic-bezier(.6,.1,.4,.9) infinite;
   mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
 }
-.cx-splash-core {
-  width: 54px; height: 54px; border-radius: 18px;
-  display: grid; place-items: center;
-  font: 700 17px ui-monospace, monospace; color: #fff; letter-spacing: -.5px;
-  background: linear-gradient(140deg, var(--indigo), var(--indigo2));
-  box-shadow: 0 10px 26px color-mix(in srgb, var(--indigo) 42%, transparent);
-  animation: cx-splash-breathe 2.4s ease-in-out infinite;
+.cx-splash-pulse {
+  position: absolute; width: 56px; height: 56px; border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--indigo2) 55%, transparent);
+  animation: cx-splash-pulse 2.2s ease-out infinite;
 }
-.cx-splash-copy { display: flex; flex-direction: column; gap: 5px; }
+.cx-splash-core {
+  width: 56px; height: 56px; border-radius: 20px;
+  display: grid; place-items: center;
+  font: 800 18px Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: .5px; color: #fff;
+  background: linear-gradient(140deg, var(--indigo), var(--indigo2) 60%, var(--indigo3));
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--indigo) 48%, transparent), inset 0 1px 0 rgba(255,255,255,.28);
+  animation: cx-splash-breathe 2.6s ease-in-out infinite;
+}
+.cx-splash-copy { display: flex; flex-direction: column; gap: 6px; }
 .cx-splash-copy strong {
-  font: 700 17px Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 700 17.5px Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   letter-spacing: -.03em; color: var(--ink);
   background: linear-gradient(90deg, var(--ink) 30%, var(--indigo3) 50%, var(--ink) 70%);
   background-size: 220% 100%;
@@ -2202,28 +2237,41 @@ html { scroll-behavior: smooth; }
   animation: cx-splash-shimmer 2.6s linear infinite;
 }
 .cx-splash-copy small { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
-.cx-splash-bar { position: relative; width: 100%; height: 4px; border-radius: 999px; background: var(--s3); overflow: hidden; }
+.cx-splash-bar { position: relative; width: 100%; height: 5px; border-radius: 999px; background: var(--s3); overflow: hidden; }
 .cx-splash-bar::after {
   content: ""; position: absolute; top: 0; bottom: 0; width: 42%; border-radius: 999px;
   background: linear-gradient(90deg, transparent, var(--indigo2), var(--indigo3), transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--indigo3) 60%, transparent);
   animation: cx-splash-track 1.25s cubic-bezier(.5,.05,.35,1) infinite;
 }
-.cx-splash-dots { display: flex; align-items: center; gap: 5px; }
-.cx-splash-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--indigo2); animation: cx-splash-dot 1.2s ease-in-out infinite; }
-.cx-splash-dots i:nth-child(2) { animation-delay: .16s; }
-.cx-splash-dots i:nth-child(3) { animation-delay: .32s; }
+.cx-splash-steps { display: flex; align-items: center; gap: 14px; }
+.cx-splash-steps span {
+  position: relative; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--faint); animation: cx-splash-step 2.4s ease-in-out infinite;
+}
+.cx-splash-steps span:nth-child(2) { animation-delay: .35s; }
+.cx-splash-steps span:nth-child(3) { animation-delay: .7s; }
+.cx-splash-steps span + span::before {
+  content: ""; position: absolute; left: -9px; top: 50%; width: 4px; height: 1px;
+  background: color-mix(in srgb, var(--faint) 60%, transparent);
+}
 
 @media (max-width: 640px) {
-  .cx-splash-card { width: min(320px, 100%); padding: 26px 20px 22px; gap: 14px; }
+  .cx-splash-card { width: min(322px, 100%); padding: 28px 20px 24px; gap: 15px; }
+  .cx-splash-mark { width: 86px; height: 86px; }
   .cx-splash-copy strong { font-size: 16px; }
   .cx-splash-copy small { font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .cx-splash-grid,
   .cx-splash-aurora span,
+  .cx-splash-orbit,
   .cx-splash-ring,
+  .cx-splash-pulse,
   .cx-splash-core,
   .cx-splash-copy strong,
   .cx-splash-bar::after,
-  .cx-splash-dots i { animation-duration: .01ms; animation-iteration-count: 1; }
+  .cx-splash-steps span { animation-duration: .01ms; animation-iteration-count: 1; }
   .cx-splash-bar::after { left: 0; width: 100%; }
+}
 }
