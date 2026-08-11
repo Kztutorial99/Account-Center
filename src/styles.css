@@ -2274,4 +2274,3 @@ html { scroll-behavior: smooth; }
   .cx-splash-steps span { animation-duration: .01ms; animation-iteration-count: 1; }
   .cx-splash-bar::after { left: 0; width: 100%; }
 }
-}
