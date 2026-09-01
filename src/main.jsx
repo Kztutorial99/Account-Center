@@ -4161,12 +4161,13 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const [proof, setProof] = useState("");
   const [proofName, setProofName] = useState("");
   const [proofBusy, setProofBusy] = useState(false);
+  const [payment, setPayment] = useState(null);
 
   const amountNumber = Math.round(Number(amount) || 0);
   const appLabel = app;
   const methodLabel = `QRIS · ${appLabel}`;
   const pendingTotal = Number(state.pendingTotal) || 0;
-  const dataReady = trxId.trim().length >= 4 && Boolean(proof);
+  const dataReady = Boolean(payment);
 
   const goConfirm = (e) => {
     e.preventDefault(); setFormError("");
@@ -4175,6 +4176,20 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
     }
     setOrderId("CX" + Date.now().toString().slice(-6));
     setAgreed(false); setStep("confirm");
+  };
+
+  const startPayment = async () => {
+    setBusy(true); setFormError("");
+    try {
+      const result = await jsonRequest("/api/topup", {
+        method: "POST",
+        body: JSON.stringify({ amount: amountNumber, note: fullNote() }),
+      });
+      setPayment(result.payment);
+      setTrxId(result.topup.reference);
+      setStep("pay");
+    } catch (err) { setFormError(err.message); }
+    finally { setBusy(false); }
   };
 
   const fullNote = () => {
@@ -4197,28 +4212,12 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   };
 
   const submitTopup = async (e) => {
-    e.preventDefault(); setFormError(""); setShowTrxRequired(false);
-    if (!trxId.trim()) { setFormError("Nomor ID transaksi wajib diisi."); setShowTrxRequired(true); return; }
-    if (!proof) {
-      setFormError("Unggah bukti transfer dulu, bot yang akan mengirimnya ke admin.");
-      proofRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-    setBusy(true);
-
-    try {
-      await jsonRequest("/api/topup", {
-        method: "POST",
-        body: JSON.stringify({ amount: amountNumber, method: methodLabel, reference: trxId.trim(), note: fullNote(), proof }),
-      });
-      setAmount(""); setTrxId(""); setNote(""); setApp(QRIS_APPS[0].id);
-      setProof(""); setProofName("");
-      setStep("form"); setAgreed(false);
-      onNotice("Bukti transfer terkirim otomatis ke admin, menunggu verifikasi");
-      load(); onRefresh();
-      window.dispatchEvent(new Event("codexa:notify"));
-    } catch (err) { setFormError(err.message); }
-    finally { setBusy(false); }
+    e.preventDefault();
+    setAmount(""); setTrxId(""); setNote(""); setApp(QRIS_APPS[0].id);
+    setPayment(null); setStep("form"); setAgreed(false);
+    onNotice("Pembayaran sedang diverifikasi otomatis oleh WijayaPay");
+    load(); onRefresh();
+    window.dispatchEvent(new Event("codexa:notify"));
   };
 
   const summaryRows = [
@@ -4237,7 +4236,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
         <div className="cx-panel">
           <div className="cx-panel-header">
             <h3>Top Up Saldo</h3>
-            <span className="cx-panel-sub">QRIS statis · verifikasi manual admin</span>
+            <span className="cx-panel-sub">QRIS dinamis · verifikasi otomatis</span>
           </div>
 
           <div className="cx-steps-bar">
@@ -4309,8 +4308,8 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
             </label>
             <div className="cx-confirm-actions">
               <button type="button" className="cx-btn cx-btn-ghost" onClick={() => setStep("form")}>Ubah nominal</button>
-              <button type="button" className="cx-btn cx-btn-primary" disabled={!agreed} onClick={() => setStep("pay")}>
-                Lanjut bayar <ArrowRight size={13} />
+              <button type="button" className="cx-btn cx-btn-primary" disabled={!agreed || busy} onClick={startPayment}>
+                {busy ? "Menyiapkan QRIS..." : <>Lanjut bayar <ArrowRight size={13} /></>}
               </button>
             </div>
           </div>
@@ -4325,59 +4324,33 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
               </div>
             </div>
             <div className="cx-qris-wrap">
-              <img src={QRIS_IMAGE} alt={`QRIS statis ${QRIS_NAME}`} loading="lazy" />
+              {payment?.qrImage ? <img src={payment.qrImage} alt="QRIS pembayaran" loading="lazy" /> : <p>QRIS belum tersedia.</p>}
             </div>
-            <p className="cx-qris-meta">{QRIS_NAME} · NMID {QRIS_NMID}</p>
+            <p className="cx-qris-meta">QRIS WijayaPay · Ref {trxId}</p>
             <ol className="cx-qris-steps">
               <li>Buka aplikasi <strong>{appLabel}</strong>, pilih menu QRIS / Scan.</li>
               <li>Scan QR di atas, masukkan nominal <strong>{formatPrice(amountNumber)}</strong>.</li>
-              <li>Selesaikan pembayaran, catat <strong>nomor ID transaksi</strong> pada struk.</li>
-              <li>Lengkapi data + unggah bukti di bawah, bot langsung kirim ke admin.</li>
+              <li>Selesaikan pembayaran sesuai nominal yang tertera.</li>
+              <li>Status dan saldo akan diperbarui otomatis setelah WijayaPay mengonfirmasi pembayaran.</li>
             </ol>
 
-            <Field label="Nomor ID transaksi" hint="Wajib. Nomor referensi / transaction ID dari struk pembayaran." error={showTrxRequired ? "* wajib memasukkan ID transaksi" : ""}>
-              <InputWrap icon={FileText}>
-                <input ref={trxIdRef} value={trxId} onChange={(e) => { setTrxId(e.target.value); if (showTrxRequired) setShowTrxRequired(false); }} placeholder="Contoh: TRX-2408061234567" required />
-              </InputWrap>
-            </Field>
-            <Field label="Catatan untuk admin (opsional)" hint="Tulis di sini kalau aplikasi pembayaranmu tidak ada di daftar.">
-              <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Contoh: bayar QRIS dari Jenius a/n ..." />
+            <Field label="Catatan (opsional)" hint="Pembayaran diverifikasi otomatis oleh WijayaPay.">
+              <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Catatan tambahan" />
             </Field>
 
             <ul className="cx-summary-list">
               <li><span>Metode</span><strong>{methodLabel}</strong></li>
-              <li><span>ID transaksi</span><strong>{trxId.trim() || "-"}</strong></li>
-              <li><span>Order ID</span><strong>{orderId}</strong></li>
+              <li><span>Referensi</span><strong>{trxId || "-"}</strong></li>
+              <li><span>Berlaku sampai</span><strong>{payment?.expires || "-"}</strong></li>
               <li><span>Catatan</span><strong>{note.trim() || "-"}</strong></li>
             </ul>
 
             {formError && <p className="cx-form-error">{formError}</p>}
 
-            <div className="cx-proof-block" ref={proofRef}>
-              <div className="cx-proof-title">Unggah bukti transfer — bot yang kirim ke admin</div>
-              {proof ? (
-                <div className="cx-proof-preview">
-                  <img src={proof} alt="Pratinjau bukti transfer" />
-                  <div className="cx-proof-meta">
-                    <strong>{proofName || "bukti-transfer.jpg"}</strong>
-                    <small>Siap dikirim otomatis ke admin lewat bot Telegram.</small>
-                    <button type="button" className="cx-btn cx-btn-ghost" onClick={() => { setProof(""); setProofName(""); }}>Ganti gambar</button>
-                  </div>
-                </div>
-              ) : (
-                <label className={`cx-proof-drop${proofBusy ? " busy" : ""}`}>
-                  <input type="file" accept="image/*" onChange={pickProof} disabled={proofBusy} hidden />
-                  <FileText size={18} />
-                  <span>{proofBusy ? "Memproses gambar..." : "Pilih / foto struk pembayaran"}</span>
-                  <small>JPG atau PNG. Tidak perlu kirim manual ke WhatsApp/Telegram.</small>
-                </label>
-              )}
-            </div>
-
             <div className="cx-confirm-actions">
               <button type="button" className="cx-btn cx-btn-ghost" onClick={() => setStep("confirm")}>Kembali</button>
-              <button type="submit" className="cx-btn cx-btn-primary" disabled={busy || !dataReady}>
-                {busy ? <><RefreshCw size={13} /> Mengirim...</> : <><Plus size={13} /> Kirim bukti &amp; konfirmasi</>}
+              <button type="submit" className="cx-btn cx-btn-primary" disabled={!dataReady}>
+                <Check size={13} /> Saya sudah bayar
               </button>
             </div>
           </form>

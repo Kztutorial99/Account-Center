@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const { db, ensureTables, currentUser, bodyOf, text } = require("./_users");
-const { notifyNewTopup } = require("./_telegram");
 const { createNotification } = require("./_notifications");
+const { createPayment } = require("./_wijayapay");
 const { handleNotifications } = require("./_notifications_handler");
 
 const MIN_TOPUP = 10000;
@@ -49,20 +49,12 @@ module.exports = async function handler(request, response) {
     const method = text(body.method, 40) || "Transfer Bank";
     const reference = text(body.reference, 120);
     const note = text(body.note, 300);
-    const proof = typeof body.proof === "string" ? body.proof : "";
 
     if (!Number.isFinite(amount) || amount < MIN_TOPUP) {
       return response.status(400).json({ error: `Minimal top up Rp${MIN_TOPUP.toLocaleString("id-ID")}` });
     }
     if (amount > MAX_TOPUP) return response.status(400).json({ error: "Nominal top up terlalu besar" });
-    if (!reference) return response.status(400).json({ error: "Nomor ID transaksi wajib diisi" });
-    if (!proof) return response.status(400).json({ error: "Bukti transfer wajib diunggah" });
-    if (!/^data:image\/(png|jpe?g|webp);base64,/i.test(proof)) {
-      return response.status(400).json({ error: "Bukti transfer harus berupa gambar (JPG/PNG/WebP)" });
-    }
-    if (proof.length > 8 * 1024 * 1024) {
-      return response.status(400).json({ error: "Ukuran bukti transfer terlalu besar" });
-    }
+    if (reference && reference.length < 4) return response.status(400).json({ error: "Referensi transaksi tidak valid" });
 
     const pending = await sql`
       SELECT COUNT(*)::int AS total FROM codexa_topups WHERE user_id = ${user.id} AND status = 'pending'
@@ -71,30 +63,32 @@ module.exports = async function handler(request, response) {
       return response.status(429).json({ error: "Masih ada 3 permintaan top up menunggu verifikasi" });
     }
 
+    const refId = reference || `AC-${crypto.randomUUID()}`;
+    const payment = await createPayment({ refId, amount });
     const rows = await sql`
-      INSERT INTO codexa_topups (id, user_id, amount, method, reference, note, proof_blob)
-      VALUES (${crypto.randomUUID()}, ${user.id}, ${amount}, ${method}, ${reference}, ${note}, ${proof})
+      INSERT INTO codexa_topups (id, user_id, amount, method, reference, note)
+      VALUES (${crypto.randomUUID()}, ${user.id}, ${amount}, 'QRIS', ${refId}, ${note})
       RETURNING id, amount, method, reference, note, status, created_at AS "createdAt", reviewed_at AS "reviewedAt"
     `;
     const topup = { ...rows[0], amount: Number(rows[0].amount) || 0 };
-
-    // Kirim notifikasi ke admin lewat bot Telegram. Kegagalan Telegram
-    // tidak boleh membatalkan permintaan top up yang sudah tersimpan.
-    try {
-      await notifyNewTopup({ topup, user, proof });
-    } catch (notifyError) {
-      console.error("Telegram notify failure", notifyError && notifyError.message);
-    }
-
     await createNotification(sql, {
       userId: user.id,
       type: "topup_pending",
-      title: "Permintaan top up terkirim",
-      body: `Top up Rp${amount.toLocaleString("id-ID")} lewat ${method} sedang menunggu verifikasi admin.`,
+      title: "QRIS siap dibayar",
+      body: `Selesaikan pembayaran QRIS Rp${amount.toLocaleString("id-ID")}. Saldo akan masuk otomatis setelah pembayaran berhasil.`,
       link: "topup",
     });
-
-    return response.status(201).json({ topup });
+    return response.status(201).json({
+      topup,
+      payment: {
+        qrImage: payment.qr_image || "",
+        qrString: payment.qr_string || "",
+        expires: payment.expired || "",
+        totalFee: Number(payment.total_fee) || 0,
+        totalBayar: Number(payment.total_bayar) || amount,
+        trxReference: payment.trx_reference || "",
+      },
+    });
   } catch (error) {
     console.error("Topup failure", error && error.message);
     return response.status(500).json({ error: "Permintaan top up gagal diproses" });
