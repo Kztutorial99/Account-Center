@@ -2274,3 +2274,69 @@ html { scroll-behavior: smooth; }
   .cx-splash-steps span { animation-duration: .01ms; animation-iteration-count: 1; }
   .cx-splash-bar::after { left: 0; width: 100%; }
 }
+
+/* ── TOP UP PAGE (layout nominal ala marketplace) ──────────── */
+.cx-topup-hero-head { margin: 4px 0 14px; }
+.cx-topup-hero-head h1 { font-size: 26px; letter-spacing: -.02em; margin: 0 0 4px; }
+.cx-topup-hero-head p { margin: 0; color: var(--muted); font-size: 13px; }
+
+.cx-balance-hero {
+  position: relative; overflow: hidden;
+  border: 1px solid var(--b2); border-radius: 18px;
+  background: linear-gradient(135deg, rgba(168,85,247,.28), rgba(168,85,247,.08) 55%, transparent);
+  padding: 18px 20px; margin-bottom: 12px;
+}
+.cx-balance-hero-cap {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink2);
+}
+.cx-balance-hero strong { display: block; margin-top: 6px; font-size: clamp(28px, 7vw, 40px); letter-spacing: -.03em; }
+.cx-balance-hero small { display: block; margin-top: 4px; color: var(--indigo3); font-size: 12px; }
+
+.cx-pending-banner {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  border: 1px solid rgba(252,211,77,.28); border-radius: 16px;
+  background: rgba(252,211,77,.09); padding: 12px 14px; margin-bottom: 14px;
+}
+.cx-pending-icon {
+  display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 auto;
+  border-radius: 12px; background: rgba(252,211,77,.16); color: var(--amber);
+}
+.cx-pending-banner strong { display: block; font-size: 13px; color: var(--amber); }
+.cx-pending-banner small { display: block; font-size: 12px; color: var(--muted); }
+.cx-pending-banner > button { margin-left: auto; }
+
+.cx-nominal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.cx-nominal-head strong { display: block; font-size: 14px; }
+.cx-nominal-head small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.cx-nominal-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid rgba(168,85,247,.35); background: rgba(168,85,247,.12); color: var(--indigo3);
+  border-radius: 999px; padding: 4px 10px; font-size: 10px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+}
+
+.cx-nominal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.cx-nominal-tile {
+  text-align: left; border: 1px solid var(--b1); border-radius: 16px;
+  background: var(--s1); padding: 12px 13px; transition: transform .18s, border-color .18s, background .18s;
+}
+.cx-nominal-tile:hover { transform: translateY(-2px); border-color: rgba(168,85,247,.5); background: rgba(168,85,247,.07); }
+.cx-nominal-tile.active { border-color: var(--indigo); background: rgba(168,85,247,.14); }
+.cx-nominal-cap { display: block; font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
+.cx-nominal-tile strong { display: block; margin-top: 3px; font-size: 17px; letter-spacing: -.02em; }
+.cx-nominal-tile small { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
+
+.cx-topup-guide {
+  margin-top: 14px; border: 1px solid rgba(168,85,247,.2); border-radius: 16px;
+  background: linear-gradient(135deg, rgba(168,85,247,.12), rgba(168,85,247,.04));
+  padding: 13px 15px;
+}
+.cx-topup-guide strong { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 6px; }
+.cx-topup-guide ol { margin: 0; padding-left: 18px; color: var(--ink2); font-size: 12px; line-height: 1.7; }
+
+@media (max-width: 560px) {
+  .cx-nominal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cx-pending-banner > button { margin-left: 0; width: 100%; justify-content: center; }
+}
