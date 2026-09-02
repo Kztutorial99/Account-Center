@@ -4290,15 +4290,19 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                   <span className="cx-nominal-cap">Top up</span>
                   <strong>{formatPrice(v)}</strong>
                   <small>Saldo masuk otomatis</small>
+                  {Number(amount) === v && <span className="nk-tile-check"><Check size={10} /></span>}
                 </button>
               ))}
             </div>
 
-            <Field label="Atau nominal custom" hint="Minimal Rp10.000. QRIS dibuat otomatis sesuai nominal ini.">
-              <InputWrap icon={CreditCard}>
-                <input type="number" min="10000" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50000" required />
-              </InputWrap>
-            </Field>
+            <div className="nk-custom">
+              <span className="cx-field-label">Atau nominal custom</span>
+              <div className="nk-custom-input">
+                <span className="nk-custom-rp">Rp</span>
+                <input type="number" min="10000" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="10.000" inputMode="numeric" required />
+              </div>
+              <small className="cx-field-hint">Minimal Rp10.000 · Maksimal Rp10.000.000. QRIS dibuat otomatis sesuai nominal ini.</small>
+            </div>
 
             <div className="cx-field-label">Bisa dibayar dari aplikasi apa saja</div>
             <div className="cx-app-grid">
@@ -4316,8 +4320,10 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
             </Field>
 
             {formError && <p className="cx-form-error">{formError}</p>}
-            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full">
-              Cek &amp; konfirmasi nominal <ArrowRight size={13} />
+            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full nk-cta" disabled={amountNumber < 10000}>
+              {amountNumber >= 10000
+                ? <>Buat Kode QRIS — {formatPrice(amountNumber)} <ArrowRight size={13} /></>
+                : <>Pilih nominal dulu <ArrowRight size={13} /></>}
             </button>
           </form>
           ) : step === "confirm" ? (

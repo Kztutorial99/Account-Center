@@ -445,3 +445,74 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   .cx-success-foot .cx-btn { min-height: 44px; font-size: 12.5px; }
   .cx-delivery-sec { padding: 9px 10px; }
 }
+
+/* ══ Top Up gaya Nokos: kartu saldo gradient penuh, tile dengan centang, input Rp, CTA QRIS besar ══ */
+.cx-balance-hero {
+  border: none;
+  border-radius: 20px;
+  background: linear-gradient(120deg, #7c3aed 0%, #a855f7 55%, #c084fc 100%);
+  padding: 22px;
+  box-shadow: 0 14px 34px rgba(124, 58, 237, .35);
+}
+.cx-balance-hero::before,
+.cx-balance-hero::after {
+  content: "";
+  position: absolute;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .10);
+  transform: rotate(18deg);
+}
+.cx-balance-hero::before { width: 132px; height: 132px; right: -34px; top: -36px; }
+.cx-balance-hero::after  { width: 132px; height: 132px; right: 12px;  top: 46px; background: rgba(255, 255, 255, .06); }
+.cx-balance-hero-cap { color: rgba(255, 255, 255, .85); }
+.cx-balance-hero strong { color: #fff; }
+.cx-balance-hero small { color: rgba(255, 255, 255, .85); }
+
+.cx-nominal-tile { position: relative; border-radius: 14px; padding: 14px; }
+.cx-nominal-tile.active { box-shadow: 0 0 0 1px var(--indigo); }
+.nk-tile-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--indigo);
+  color: #fff;
+}
+
+.nk-custom { margin-top: 18px; border-top: 1px solid var(--b1); padding-top: 16px; }
+.nk-custom-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--b2);
+  border-radius: 14px;
+  background: var(--s1);
+  padding: 0 14px;
+  margin-top: 8px;
+  transition: border-color .18s;
+}
+.nk-custom-input:focus-within { border-color: var(--indigo); }
+.nk-custom-rp { font-size: 13px; font-weight: 700; color: var(--muted); }
+.nk-custom-input input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  padding: 13px 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+.nk-custom .cx-field-hint { display: block; margin-top: 8px; }
+
+.nk-cta {
+  padding: 15px 16px !important;
+  font-size: 14px !important;
+  font-weight: 800;
+  border-radius: 14px !important;
+}
+.nk-cta:disabled { opacity: .45; cursor: not-allowed; }
