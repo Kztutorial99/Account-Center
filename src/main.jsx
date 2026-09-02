@@ -4221,9 +4221,35 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
     ["Email", user.email],
   ];
 
+  const pendingTopup = state.topups.find((t) => t.status === "pending");
+
   return (
-    <div className="cx-container cx-account-page">
+    <div className="cx-container cx-account-page cx-topup-page">
       <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
+
+      <header className="cx-topup-hero-head">
+        <h1>Top Up Saldo</h1>
+        <p>Isi saldo via QRIS — diterima semua bank &amp; e-wallet di Indonesia.</p>
+      </header>
+
+      <section className="cx-balance-hero">
+        <span className="cx-balance-hero-cap"><Wallet size={12} /> Saldo saat ini</span>
+        <strong>{state.loading ? "..." : formatPrice(state.balance)}</strong>
+        {pendingTotal > 0 && <small>{formatPrice(pendingTotal)} menunggu pembayaran</small>}
+      </section>
+
+      {pendingTopup && step === "form" && (
+        <section className="cx-pending-banner">
+          <span className="cx-pending-icon"><Clock size={18} /></span>
+          <div>
+            <strong>Deposit menunggu pembayaran</strong>
+            <small>{formatPrice(pendingTopup.amount)}{pendingTopup.reference ? ` · Ref ${pendingTopup.reference}` : ""}</small>
+          </div>
+          <button type="button" className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => setAmount(String(pendingTopup.amount))}>
+            <CreditCard size={12} /> Pakai nominal ini
+          </button>
+        </section>
+      )}
 
       <div className="cx-account-grid">
         <div className="cx-panel">
@@ -4245,14 +4271,30 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
 
           {step === "form" ? (
           <form className="cx-topup-form" onSubmit={goConfirm}>
-            <div className="cx-topup-presets">
+            <div className="cx-nominal-head">
+              <div>
+                <strong>Pilih Nominal</strong>
+                <small>Min {formatPrice(10000)} · Max {formatPrice(10000000)}</small>
+              </div>
+              <span className="cx-nominal-tag"><Sparkles size={11} /> QRIS instan</span>
+            </div>
+
+            <div className="cx-nominal-grid">
               {TOPUP_PRESETS.map((v) => (
-                <button type="button" key={v} className={`cx-chip${Number(amount) === v ? " active" : ""}`} onClick={() => setAmount(String(v))}>
-                  {formatPrice(v)}
+                <button
+                  type="button"
+                  key={v}
+                  className={`cx-nominal-tile${Number(amount) === v ? " active" : ""}`}
+                  onClick={() => setAmount(String(v))}
+                >
+                  <span className="cx-nominal-cap">Top up</span>
+                  <strong>{formatPrice(v)}</strong>
+                  <small>Saldo masuk otomatis</small>
                 </button>
               ))}
             </div>
-            <Field label="Nominal top up" hint="Minimal Rp10.000. QRIS dibuat otomatis sesuai nominal ini.">
+
+            <Field label="Atau nominal custom" hint="Minimal Rp10.000. QRIS dibuat otomatis sesuai nominal ini.">
               <InputWrap icon={CreditCard}>
                 <input type="number" min="10000" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50000" required />
               </InputWrap>
@@ -4386,6 +4428,15 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                 {topupStatusBadge(t.status)}
               </div>
             ))}
+
+          <div className="cx-topup-guide">
+            <strong><CircleHelp size={13} /> Cara Top Up</strong>
+            <ol>
+              <li>Pilih atau isi nominal top up.</li>
+              <li>Konfirmasi, lalu scan QRIS dari aplikasi bank / e-wallet.</li>
+              <li>Saldo bertambah otomatis, biasanya di bawah 1 menit.</li>
+            </ol>
+          </div>
         </div>
       </div>
     </div>
