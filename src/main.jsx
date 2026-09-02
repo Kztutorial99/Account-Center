@@ -4118,113 +4118,105 @@ function ProfilePage({ user, onBack, onTopup, onSaved, onNotice }) {
   );
 }
 
-/* Kompres bukti transfer di browser supaya upload ringan (maks 1400px, JPEG). */
-function compressProof(file) {
-  return new Promise((resolve, reject) => {
-    if (!file.type.startsWith("image/")) { reject(new Error("File harus berupa gambar (JPG/PNG).")); return; }
-    if (file.size > 12 * 1024 * 1024) { reject(new Error("Ukuran gambar maksimal 12MB.")); return; }
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Gagal membaca file bukti."));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("Gambar tidak bisa dibaca."));
-      img.onload = () => {
-        const max = 1400;
-        const scale = Math.min(1, max / Math.max(img.width, img.height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
-      };
-      img.src = String(reader.result);
-    };
-    reader.readAsDataURL(file);
-  });
+/* ─── Halaman Top Up (QRIS otomatis via WijayaPay) ─── */
+function formatCountdown(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const m = String(Math.floor(total / 60)).padStart(2, "0");
+  const s = String(total % 60).padStart(2, "0");
+  return `${m}:${s}`;
 }
 
-/* ─── Halaman Top Up (berdiri sendiri) ─── */
 function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const [state, load] = useTopupData(user);
   const [amount, setAmount]     = useState("");
-  const [app, setApp]           = useState(QRIS_APPS[0].id);
-  const [trxId, setTrxId]       = useState("");
   const [note, setNote]         = useState("");
   const [busy, setBusy]         = useState(false);
   const [formError, setFormError] = useState("");
   const [step, setStep]         = useState("form");
   const [agreed, setAgreed]     = useState(false);
-  const [orderId, setOrderId]   = useState("");
-  const trxIdRef = useRef(null);
-  const proofRef = useRef(null);
-  const [showTrxRequired, setShowTrxRequired] = useState(false);
-  const [proof, setProof] = useState("");
-  const [proofName, setProofName] = useState("");
-  const [proofBusy, setProofBusy] = useState(false);
+  const [payment, setPayment]   = useState(null);
+  const [payStatus, setPayStatus] = useState("pending");
+  const [now, setNow]           = useState(Date.now());
+  const [copied, setCopied]     = useState(false);
 
   const amountNumber = Math.round(Number(amount) || 0);
-  const appLabel = app;
-  const methodLabel = `QRIS · ${appLabel}`;
   const pendingTotal = Number(state.pendingTotal) || 0;
-  const dataReady = trxId.trim().length >= 4 && Boolean(proof);
+  const expiredAt = payment && payment.expired ? new Date(payment.expired).getTime() : 0;
+  const remaining = expiredAt ? expiredAt - now : 0;
+
+  /* Timer countdown masa berlaku QRIS. */
+  useEffect(() => {
+    if (step !== "pay" || !expiredAt) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [step, expiredAt]);
+
+  /* Polling status pembayaran — saldo ditambah otomatis oleh server. */
+  useEffect(() => {
+    if (step !== "pay" || !payment || payStatus !== "pending") return;
+    let stop = false;
+    const tick = async () => {
+      try {
+        const res = await jsonRequest(`/api/topup?resource=status&ref=${encodeURIComponent(payment.refId)}`, { method: "GET" });
+        if (stop) return;
+        if (res.status === "paid") {
+          setPayStatus("paid");
+          setStep("done");
+          onNotice("Pembayaran diterima, saldo kamu sudah bertambah");
+          load(); onRefresh();
+          window.dispatchEvent(new Event("codexa:notify"));
+        } else if (res.status === "expired") {
+          setPayStatus("expired");
+        }
+      } catch (_) { /* diamkan, coba lagi di siklus berikutnya */ }
+    };
+    const timer = setInterval(tick, 5000);
+    tick();
+    return () => { stop = true; clearInterval(timer); };
+  }, [step, payment, payStatus]);
 
   const goConfirm = (e) => {
     e.preventDefault(); setFormError("");
     if (!Number.isFinite(amountNumber) || amountNumber < 10000) {
       setFormError("Minimal top up Rp10.000."); return;
     }
-    setOrderId("CX" + Date.now().toString().slice(-6));
     setAgreed(false); setStep("confirm");
   };
 
-  const fullNote = () => {
-    const parts = [];
-    if (note.trim()) parts.push(note.trim());
-    parts.push(`Order ID: ${orderId}`);
-    return parts.join(" | ").slice(0, 300);
-  };
-
-  const pickProof = async (e) => {
-    const file = e.target.files && e.target.files[0];
-    e.target.value = "";
-    if (!file) return;
-    setProofBusy(true); setFormError("");
+  const createPayment = async () => {
+    setBusy(true); setFormError("");
     try {
-      const dataUrl = await compressProof(file);
-      setProof(dataUrl); setProofName(file.name);
-    } catch (err) { setFormError(err.message); }
-    finally { setProofBusy(false); }
-  };
-
-  const submitTopup = async (e) => {
-    e.preventDefault(); setFormError(""); setShowTrxRequired(false);
-    if (!trxId.trim()) { setFormError("Nomor ID transaksi wajib diisi."); setShowTrxRequired(true); return; }
-    if (!proof) {
-      setFormError("Unggah bukti transfer dulu, bot yang akan mengirimnya ke admin.");
-      proofRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-    setBusy(true);
-
-    try {
-      await jsonRequest("/api/topup", {
+      const res = await jsonRequest("/api/topup", {
         method: "POST",
-        body: JSON.stringify({ amount: amountNumber, method: methodLabel, reference: trxId.trim(), note: fullNote(), proof }),
+        body: JSON.stringify({ amount: amountNumber, note: note.trim() }),
       });
-      setAmount(""); setTrxId(""); setNote(""); setApp(QRIS_APPS[0].id);
-      setProof(""); setProofName("");
-      setStep("form"); setAgreed(false);
-      onNotice("Bukti transfer terkirim otomatis ke admin, menunggu verifikasi");
+      setPayment(res.payment);
+      setPayStatus("pending");
+      setNow(Date.now());
+      setStep("pay");
       load(); onRefresh();
       window.dispatchEvent(new Event("codexa:notify"));
     } catch (err) { setFormError(err.message); }
     finally { setBusy(false); }
   };
 
+  const resetFlow = () => {
+    setPayment(null); setPayStatus("pending"); setAmount(""); setNote("");
+    setAgreed(false); setStep("form"); setFormError("");
+  };
+
+  const copyQrString = async () => {
+    if (!payment || !payment.qrString) return;
+    try {
+      await navigator.clipboard.writeText(payment.qrString);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (_) { /* clipboard tidak tersedia */ }
+  };
+
   const summaryRows = [
-    ["Order ID", orderId],
     ["Nominal", formatPrice(amountNumber)],
-    ["Bayar via", appLabel],
+    ["Metode", "QRIS (semua e-wallet & bank)"],
     ["Nama", user.name],
     ["Email", user.email],
   ];
@@ -4237,11 +4229,11 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
         <div className="cx-panel">
           <div className="cx-panel-header">
             <h3>Top Up Saldo</h3>
-            <span className="cx-panel-sub">QRIS statis · verifikasi manual admin</span>
+            <span className="cx-panel-sub">QRIS otomatis · saldo masuk seketika</span>
           </div>
 
           <div className="cx-steps-bar">
-            {["Nominal", "Konfirmasi", "Bayar & unggah bukti"].map((s, i) => {
+            {["Nominal", "Konfirmasi", "Scan & bayar"].map((s, i) => {
               const idx = step === "form" ? 0 : step === "confirm" ? 1 : 2;
               return (
                 <span key={s} className={`cx-step${i === idx ? " active" : ""}${i < idx ? " done" : ""}`}>
@@ -4260,26 +4252,26 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                 </button>
               ))}
             </div>
-            <Field label="Nominal top up" hint="Minimal Rp10.000.">
+            <Field label="Nominal top up" hint="Minimal Rp10.000. QRIS dibuat otomatis sesuai nominal ini.">
               <InputWrap icon={CreditCard}>
                 <input type="number" min="10000" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50000" required />
               </InputWrap>
             </Field>
 
-            <div className="cx-field-label">Bayar QRIS pakai aplikasi apa?</div>
+            <div className="cx-field-label">Bisa dibayar dari aplikasi apa saja</div>
             <div className="cx-app-grid">
               {QRIS_APPS.map((a) => (
-                <button type="button" key={a.id}
-                  className={`cx-app-tile${app === a.id ? " active" : ""}`}
-                  style={app === a.id ? { borderColor: a.color, background: a.tint } : undefined}
-                  onClick={() => setApp(a.id)}>
+                <div key={a.id} className="cx-app-tile is-static">
                   <AppLogo app={a.id} size={30} />
                   <span>{a.id.replace("QRIS ", "")}</span>
-                </button>
+                </div>
               ))}
             </div>
-            <p className="cx-field-hint">Pembayaran QRIS bisa lewat aplikasi di atas.</p>
+            <p className="cx-field-hint">Cukup scan QRIS yang muncul, saldo bertambah otomatis tanpa unggah bukti.</p>
 
+            <Field label="Catatan (opsional)" hint="Kalau ada keterangan tambahan untuk admin.">
+              <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Contoh: top up untuk order Netflix" />
+            </Field>
 
             {formError && <p className="cx-form-error">{formError}</p>}
             <button type="submit" className="cx-btn cx-btn-primary cx-btn-full">
@@ -4291,10 +4283,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
             <div className="cx-confirm-hero">
               <span className="cx-confirm-cap">Cek &amp; konfirmasi nominal</span>
               <strong className="cx-confirm-amount">{formatPrice(amountNumber)}</strong>
-              <div className="cx-confirm-app">
-                <AppLogo app={app} size={26} />
-                <span>{appLabel}</span>
-              </div>
+              <div className="cx-confirm-app"><span>QRIS otomatis</span></div>
             </div>
 
             <ul className="cx-summary-list">
@@ -4307,92 +4296,82 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
               <span>Saya sudah memeriksa, nominal <strong>{formatPrice(amountNumber)}</strong> sudah benar.</span>
             </label>
+            {formError && <p className="cx-form-error">{formError}</p>}
             <div className="cx-confirm-actions">
               <button type="button" className="cx-btn cx-btn-ghost" onClick={() => setStep("form")}>Ubah nominal</button>
-              <button type="button" className="cx-btn cx-btn-primary" disabled={!agreed} onClick={() => setStep("pay")}>
-                Lanjut bayar <ArrowRight size={13} />
+              <button type="button" className="cx-btn cx-btn-primary" disabled={!agreed || busy} onClick={createPayment}>
+                {busy ? <><Spinner size={12} /> Membuat QRIS...</> : <>Buat QRIS pembayaran <ArrowRight size={13} /></>}
               </button>
             </div>
           </div>
-          ) : (
-          <form className="cx-topup-form" onSubmit={submitTopup}>
+          ) : step === "pay" && payment ? (
+          <div className="cx-topup-form">
             <div className="cx-confirm-hero">
-              <span className="cx-confirm-cap">Bayar tepat sejumlah</span>
-              <strong className="cx-confirm-amount">{formatPrice(amountNumber)}</strong>
-              <div className="cx-confirm-app">
-                <AppLogo app={app} size={26} />
-                <span>{appLabel} · {orderId}</span>
-              </div>
+              <span className="cx-confirm-cap">Bayar QRIS sejumlah</span>
+              <strong className="cx-confirm-amount">{formatPrice(payment.totalBayar || amountNumber)}</strong>
+              <div className="cx-confirm-app"><span>Ref {payment.refId}</span></div>
             </div>
-            <div className="cx-qris-wrap">
-              <img src={QRIS_IMAGE} alt={`QRIS statis ${QRIS_NAME}`} loading="lazy" />
-            </div>
-            <p className="cx-qris-meta">{QRIS_NAME} · NMID {QRIS_NMID}</p>
-            <ol className="cx-qris-steps">
-              <li>Buka aplikasi <strong>{appLabel}</strong>, pilih menu QRIS / Scan.</li>
-              <li>Scan QR di atas, masukkan nominal <strong>{formatPrice(amountNumber)}</strong>.</li>
-              <li>Selesaikan pembayaran, catat <strong>nomor ID transaksi</strong> pada struk.</li>
-              <li>Lengkapi data + unggah bukti di bawah, bot langsung kirim ke admin.</li>
-            </ol>
 
-            <Field label="Nomor ID transaksi" hint="Wajib. Nomor referensi / transaction ID dari struk pembayaran." error={showTrxRequired ? "* wajib memasukkan ID transaksi" : ""}>
-              <InputWrap icon={FileText}>
-                <input ref={trxIdRef} value={trxId} onChange={(e) => { setTrxId(e.target.value); if (showTrxRequired) setShowTrxRequired(false); }} placeholder="Contoh: TRX-2408061234567" required />
-              </InputWrap>
-            </Field>
-            <Field label="Catatan untuk admin (opsional)" hint="Tulis di sini kalau aplikasi pembayaranmu tidak ada di daftar.">
-              <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Contoh: bayar QRIS dari Jenius a/n ..." />
-            </Field>
+            {payStatus === "expired" ? (
+              <div className="cx-topup-empty">QRIS sudah kedaluwarsa. Buat QRIS baru untuk melanjutkan.</div>
+            ) : (
+              <>
+                <div className="cx-qris-wrap">
+                  {payment.qrImage
+                    ? <img src={payment.qrImage} alt="QRIS pembayaran" />
+                    : <div className="cx-topup-empty">QR tidak tersedia, gunakan kode QRIS di bawah.</div>}
+                </div>
+                <p className="cx-qris-meta">
+                  {QRIS_NAME}
+                  {expiredAt ? <> · berlaku {formatCountdown(remaining)}</> : null}
+                </p>
+                <ol className="cx-qris-steps">
+                  <li>Buka aplikasi e-wallet / m-banking, pilih menu <strong>QRIS / Scan</strong>.</li>
+                  <li>Scan QR di atas, nominal <strong>{formatPrice(payment.totalBayar || amountNumber)}</strong> sudah terisi otomatis.</li>
+                  <li>Selesaikan pembayaran, halaman ini akan otomatis mendeteksi pembayaranmu.</li>
+                </ol>
+                {payment.qrString && (
+                  <button type="button" className="cx-btn cx-btn-secondary cx-btn-full" onClick={copyQrString}>
+                    {copied ? <><Check size={12} /> Kode QRIS tersalin</> : <><FileText size={12} /> Salin kode QRIS</>}
+                  </button>
+                )}
+                <div className="cx-topup-empty" style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+                  <Spinner size={12} /> Menunggu pembayaran... saldo bertambah otomatis.
+                </div>
+              </>
+            )}
 
             <ul className="cx-summary-list">
-              <li><span>Metode</span><strong>{methodLabel}</strong></li>
-              <li><span>ID transaksi</span><strong>{trxId.trim() || "-"}</strong></li>
-              <li><span>Order ID</span><strong>{orderId}</strong></li>
-              <li><span>Catatan</span><strong>{note.trim() || "-"}</strong></li>
+              <li><span>Metode</span><strong>QRIS · WijayaPay</strong></li>
+              <li><span>Ref ID</span><strong className="cx-mono">{payment.refId}</strong></li>
+              {payment.trxReference ? <li><span>No. transaksi</span><strong className="cx-mono">{payment.trxReference}</strong></li> : null}
+              <li><span>Status</span><strong>{payStatus === "expired" ? "Kedaluwarsa" : "Menunggu pembayaran"}</strong></li>
             </ul>
 
-            {formError && <p className="cx-form-error">{formError}</p>}
-
-            <div className="cx-proof-block" ref={proofRef}>
-              <div className="cx-proof-title">Unggah bukti transfer — bot yang kirim ke admin</div>
-              {proof ? (
-                <div className="cx-proof-preview">
-                  <img src={proof} alt="Pratinjau bukti transfer" />
-                  <div className="cx-proof-meta">
-                    <strong>{proofName || "bukti-transfer.jpg"}</strong>
-                    <small>Siap dikirim otomatis ke admin lewat bot Telegram.</small>
-                    <button type="button" className="cx-btn cx-btn-ghost" onClick={() => { setProof(""); setProofName(""); }}>Ganti gambar</button>
-                  </div>
-                </div>
-              ) : (
-                <label className={`cx-proof-drop${proofBusy ? " busy" : ""}`}>
-                  <input type="file" accept="image/*" onChange={pickProof} disabled={proofBusy} hidden />
-                  <FileText size={18} />
-                  <span>{proofBusy ? "Memproses gambar..." : "Pilih / foto struk pembayaran"}</span>
-                  <small>JPG atau PNG. Tidak perlu kirim manual ke WhatsApp/Telegram.</small>
-                </label>
-              )}
+            <button type="button" className="cx-btn cx-btn-ghost cx-btn-full" onClick={resetFlow}>
+              {payStatus === "expired" ? "Buat QRIS baru" : "Batalkan & kembali"}
+            </button>
+          </div>
+          ) : (
+          <div className="cx-topup-form">
+            <div className="cx-confirm-hero">
+              <span className="cx-confirm-cap">Pembayaran berhasil</span>
+              <strong className="cx-confirm-amount">{formatPrice(state.balance)}</strong>
+              <div className="cx-confirm-app"><span>Saldo terbaru kamu</span></div>
             </div>
-
+            <p className="cx-field-hint">Pembayaran QRIS sudah diterima dan saldo langsung ditambahkan. Admin juga sudah dapat notifikasinya.</p>
             <div className="cx-confirm-actions">
-              <button type="button" className="cx-btn cx-btn-ghost" onClick={() => setStep("confirm")}>Kembali</button>
-              <button type="submit" className="cx-btn cx-btn-primary" disabled={busy || !dataReady}>
-                {busy ? <><RefreshCw size={13} /> Mengirim...</> : <><Plus size={13} /> Kirim bukti &amp; konfirmasi</>}
-              </button>
+              <button type="button" className="cx-btn cx-btn-primary" onClick={resetFlow}>Top up lagi</button>
+              <button type="button" className="cx-btn cx-btn-ghost" onClick={onBack}>Kembali</button>
             </div>
-          </form>
+          </div>
           )}
         </div>
 
         <div className="cx-panel">
           <div className="cx-panel-header">
             <h3>Riwayat Top Up</h3>
-            <button className="cx-icon-btn" style={{ marginLeft: "auto" }} onClick={load} aria-label="Muat ulang"><RefreshCw size={13} /></button>
-          </div>
-          <div className="cx-balance-card" style={{ margin: "0 14px 12px" }}>
-            <span><Wallet size={13} /> Saldo tersedia</span>
-            <strong>{formatPrice(state.balance)}</strong>
-            {pendingTotal > 0 && <small>{formatPrice(pendingTotal)} menunggu verifikasi</small>}
+            <span className="cx-panel-sub">saldo {formatPrice(state.balance)}{pendingTotal > 0 ? ` · ${formatPrice(pendingTotal)} belum dibayar` : ""}</span>
           </div>
           {state.loading ? <div className="cx-topup-empty">Memuat riwayat...</div>
             : state.error ? <div className="cx-topup-empty">{state.error}</div>
@@ -4401,7 +4380,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
               <div key={t.id} className="cx-topup-row">
                 <div>
                   <strong>{formatPrice(t.amount)}</strong>
-                  <small>{t.method}{t.reference ? ` · ID ${t.reference}` : ""}{t.note ? ` · ${t.note}` : ""}</small>
+                  <small>{t.method}{t.reference ? ` · Ref ${t.reference}` : ""}{t.note ? ` · ${t.note}` : ""}</small>
                 </div>
                 <span className="cx-topup-date">{formatDate(t.createdAt)}</span>
                 {topupStatusBadge(t.status)}

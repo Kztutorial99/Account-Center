@@ -25,6 +25,10 @@
       "destination": "/api/topup?resource=notifications"
     },
     {
+      "source": "/api/callback/wijayapay",
+      "destination": "/api/topup?resource=callback"
+    },
+    {
       "source": "/custom-email",
       "destination": "/"
     },
