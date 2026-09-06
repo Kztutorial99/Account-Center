@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'id.akuninstan.app'
+    namespace 'com.akuninstan'
     compileSdk 34
 
     defaultConfig {
-        applicationId "id.akuninstan.app"
+        applicationId "com.akuninstan"
         minSdk 24
         targetSdk 34
         versionCode = Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
