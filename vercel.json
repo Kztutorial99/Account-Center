@@ -5,9 +5,16 @@
   "functions": {
     "api/orders.js": {
       "maxDuration": 60
+    },
+    "api/topup.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
+    {
+      "source": "/api/stream",
+      "destination": "/api/topup?resource=stream"
+    },
     {
       "source": "/api/products",
       "destination": "/api/data"
