@@ -3891,7 +3891,7 @@ const QRIS_NAME    = "KZ.TUTORIAL";
 const QRIS_NMID    = "ID1026476486182";
 const WA_NUMBER    = "62895325844493";
 const TG_USERNAME  = "Kztutorial";
-const TOPUP_PRESETS = [25000, 50000, 100000, 250000, 500000];
+const TOPUP_PRESETS = [500, 25000, 50000, 100000, 250000, 500000];
 
 
 const topupStatusBadge = (status) =>
@@ -4177,8 +4177,8 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
 
   const goConfirm = (e) => {
     e.preventDefault(); setFormError("");
-    if (!Number.isFinite(amountNumber) || amountNumber < 10000) {
-      setFormError("Minimal top up Rp10.000."); return;
+    if (!Number.isFinite(amountNumber) || amountNumber < 500) {
+      setFormError("Minimal top up Rp500."); return;
     }
     setAgreed(false); setStep("confirm");
   };
@@ -4274,7 +4274,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
             <div className="cx-nominal-head">
               <div>
                 <strong>Pilih Nominal</strong>
-                <small>Min {formatPrice(10000)} · Max {formatPrice(10000000)}</small>
+                <small>Min {formatPrice(500)} · Max {formatPrice(10000000)}</small>
               </div>
               <span className="cx-nominal-tag"><Sparkles size={11} /> QRIS instan</span>
             </div>
@@ -4299,9 +4299,9 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
               <span className="cx-field-label">Atau nominal custom</span>
               <div className="nk-custom-input">
                 <span className="nk-custom-rp">Rp</span>
-                <input type="number" min="10000" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="10.000" inputMode="numeric" required />
+                <input type="number" min="500" step="100" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="500" inputMode="numeric" required />
               </div>
-              <small className="cx-field-hint">Minimal Rp10.000 · Maksimal Rp10.000.000. QRIS dibuat otomatis sesuai nominal ini.</small>
+              <small className="cx-field-hint">Minimal Rp500 · Maksimal Rp10.000.000. QRIS dibuat otomatis sesuai nominal ini.</small>
             </div>
 
             <div className="cx-field-label">Bisa dibayar dari aplikasi apa saja</div>
@@ -4320,8 +4320,8 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
             </Field>
 
             {formError && <p className="cx-form-error">{formError}</p>}
-            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full nk-cta" disabled={amountNumber < 10000}>
-              {amountNumber >= 10000
+            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full nk-cta" disabled={amountNumber < 500}>
+              {amountNumber >= 500
                 ? <>Buat Kode QRIS — {formatPrice(amountNumber)} <ArrowRight size={13} /></>
                 : <>Pilih nominal dulu <ArrowRight size={13} /></>}
             </button>
