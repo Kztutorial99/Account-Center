@@ -8,6 +8,11 @@ const crypto = require("crypto");
  *  - WIJAYAPAY_CODE_MERCHANT  code merchant dari https://wijayapay.com/pengaturan/credential
  *  - WIJAYAPAY_API_KEY        api key merchant
  *  - WIJAYAPAY_CALLBACK_URL   URL webhook publik (mis. https://domain/api/callback/wijayapay)
+ *  - STATIC_PROXY_URL         (opsional) URL proxy HTTP ber-IP tetap, format:
+ *                             http://user:pass@host:port
+ *                             Jika diisi, SEMUA request ke gateway WijayaPay keluar lewat
+ *                             proxy ini, sehingga IP yang terlihat WijayaPay selalu sama.
+ *                             Whitelist IP proxy ini (bukan IP Vercel) di dashboard WijayaPay.
  */
 
 const BASE_URL = "https://gateway.wijayapay.com/api";
@@ -18,6 +23,7 @@ const WEBHOOK_IP = "45.158.126.118";
 const codeMerchant = () => process.env.WIJAYAPAY_CODE_MERCHANT || "";
 const apiKey = () => process.env.WIJAYAPAY_API_KEY || "";
 const callbackUrl = () => process.env.WIJAYAPAY_CALLBACK_URL || "";
+const proxyUrl = () => process.env.STATIC_PROXY_URL || "";
 const configured = () => Boolean(codeMerchant() && apiKey());
 
 /** X-Signature = md5(code_merchant + api_key + ref_id) — digabung tanpa pemisah. */
@@ -38,6 +44,37 @@ function newRefId() {
   return `AC${Date.now().toString(36).toUpperCase()}${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
 }
 
+/**
+ * Fetch dengan dukungan proxy IP statis.
+ * Vercel tidak punya IP keluar tetap, jadi request gateway dialihkan lewat
+ * STATIC_PROXY_URL (undici ProxyAgent) supaya IP whitelist WijayaPay stabil.
+ * Kalau paket undici belum terpasang atau proxy gagal, fallback ke fetch biasa
+ * agar fitur tidak mati total (dicatat di log).
+ */
+async function gatewayFetch(url, options = {}) {
+  const proxy = proxyUrl();
+  if (!proxy) return fetch(url, options);
+  try {
+    const { ProxyAgent, request } = require("undici");
+    const dispatcher = new ProxyAgent({ uri: proxy, requestTimeout: 20000 });
+    const res = await request(url, {
+      method: options.method || "GET",
+      headers: options.headers || {},
+      body: options.body,
+      dispatcher,
+    });
+    const text = await res.body.text();
+    return {
+      ok: res.statusCode >= 200 && res.statusCode < 300,
+      status: res.statusCode,
+      text: async () => text,
+    };
+  } catch (err) {
+    console.error(`STATIC_PROXY_URL gagal dipakai (${err && err.message}); fallback ke koneksi langsung`);
+    return fetch(url, options);
+  }
+}
+
 async function requestGateway(path, { method = "GET", refId, form } = {}) {
   if (!configured()) throw new Error("Gateway pembayaran belum dikonfigurasi");
   const headers = { "X-Signature": signature(refId) };
@@ -47,7 +84,7 @@ async function requestGateway(path, { method = "GET", refId, form } = {}) {
     headers["Content-Type"] = "application/x-www-form-urlencoded";
     options.body = new URLSearchParams(form).toString();
   }
-  const res = await fetch(url, options);
+  const res = await gatewayFetch(url, options);
   const raw = await res.text();
   let payload = null;
   try { payload = JSON.parse(raw); } catch (_) { payload = null; }
@@ -118,9 +155,11 @@ module.exports = {
   WEBHOOK_IP,
   configured,
   callbackUrl,
+  proxyUrl,
   signature,
   signatureValid,
   newRefId,
+  gatewayFetch,
   createQrisTransaction,
   checkQrisStatus,
   mapStatus,
