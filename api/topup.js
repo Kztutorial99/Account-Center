@@ -4,13 +4,14 @@ const { callTelegram, adminChatId } = require("./_telegram");
 const { createNotification } = require("./_notifications");
 const { handleNotifications } = require("./_notifications_handler");
 const wijayapay = require("./_wijayapay");
+const { once } = require("./_schema");
 
 const MIN_TOPUP = 500;
 const MAX_TOPUP = 20000000;
 const METHOD_LABEL = "QRIS · WijayaPay";
 
 /** Kolom tambahan untuk pembayaran QRIS otomatis (idempotent). */
-async function ensurePaymentColumns(sql) {
+const ensurePaymentColumns = once(async function ensurePaymentColumnsUncached(sql) {
   await sql`ALTER TABLE codexa_topups ADD COLUMN IF NOT EXISTS trx_reference TEXT`;
   await sql`ALTER TABLE codexa_topups ADD COLUMN IF NOT EXISTS qr_string TEXT`;
   await sql`ALTER TABLE codexa_topups ADD COLUMN IF NOT EXISTS qr_image TEXT`;
@@ -18,7 +19,7 @@ async function ensurePaymentColumns(sql) {
   await sql`ALTER TABLE codexa_topups ADD COLUMN IF NOT EXISTS expired_at TIMESTAMPTZ`;
   await sql`ALTER TABLE codexa_topups ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS codexa_topups_reference_idx ON codexa_topups (reference)`;
-}
+});
 
 const rupiah = (n) => `Rp${(Number(n) || 0).toLocaleString("id-ID")}`;
 
