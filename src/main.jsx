@@ -1682,7 +1682,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
       <div className="cx-container cx-topbar-inner">
         <button className="cx-brand" onClick={() => navigate("store")}>
           <span className="cx-brand-mark">AI</span>
-          <span>Account<span className="cx-brand-dot">Center</span></span>
+          <span>Akun<span className="cx-brand-dot">Instan</span></span>
         </button>
         <nav className="cx-nav">
           {[["store","Store"],["katalog","Katalog"],["orders","Pesanan"],["help","Bantuan"]].map(([page, label]) => (
@@ -2166,7 +2166,7 @@ function StoreFooter({ navigate }) {
       <div className="cx-container cx-footer-inner">
         <button className="cx-brand" onClick={() => navigate("store")} style={{ fontSize: 13 }}>
           <span className="cx-brand-mark" style={{ width: 20, height: 20, fontSize: 10 }}>AI</span>
-          Account<span className="cx-brand-dot">Center</span>
+          Akun<span className="cx-brand-dot">Instan</span>
         </button>
         <p>Stok dan katalog terhubung ke Neon Database.</p>
         <div className="cx-footer-links">
