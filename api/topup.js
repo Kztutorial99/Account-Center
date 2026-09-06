@@ -5,7 +5,7 @@ const { createNotification } = require("./_notifications");
 const { handleNotifications } = require("./_notifications_handler");
 const wijayapay = require("./_wijayapay");
 
-const MIN_TOPUP = 10000;
+const MIN_TOPUP = 500;
 const MAX_TOPUP = 20000000;
 const METHOD_LABEL = "QRIS · WijayaPay";
 
