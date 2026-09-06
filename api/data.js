@@ -1,7 +1,8 @@
 const { neon } = require("@neondatabase/serverless");
 const crypto = require("crypto");
+const { once } = require("./_schema");
 
-async function ensureTable(sql) {
+const ensureTable = once(async function ensureTableUncached(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS codexa_account_listings (
       id TEXT PRIMARY KEY,
@@ -16,7 +17,7 @@ async function ensureTable(sql) {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
-}
+});
 
 function key() { return process.env.ACCOUNT_CREDENTIALS_KEY || ""; }
 function cipherKey() { return crypto.createHash("sha256").update(key()).digest(); }
