@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const { db, ensureTables, currentUser, bodyOf } = require("./_users");
 const { createNotification } = require("./_notifications");
 const { isAdmin } = require("./admin/_auth");
+const { once } = require("./_schema");
 
 /* ── enkripsi kredensial (format sama dengan api/admin/products.js) ── */
 function key() { return process.env.ACCOUNT_CREDENTIALS_KEY || ""; }
@@ -32,7 +33,7 @@ function accountsOf(credentials, basePrice) {
   return legacy.email || legacy.password ? [legacy] : [];
 }
 
-async function ensureOrderTables(sql) {
+async function ensureOrderTablesUncached(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS codexa_orders (
       id TEXT PRIMARY KEY,
@@ -47,8 +48,10 @@ async function ensureOrderTables(sql) {
   await sql`CREATE INDEX IF NOT EXISTS codexa_orders_user_idx ON codexa_orders (user_id, created_at DESC)`;
 }
 
+const ensureOrderTables = once(ensureOrderTablesUncached);
+
 /* ── permintaan email/username kustom dari pembeli ── */
-async function ensureCustomEmailTable(sql) {
+async function ensureCustomEmailTableUncached(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS codexa_custom_emails (
       id TEXT PRIMARY KEY,
@@ -64,6 +67,8 @@ async function ensureCustomEmailTable(sql) {
   await sql`ALTER TABLE codexa_custom_emails ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT ''`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS codexa_custom_emails_unique ON codexa_custom_emails (lower(requested))`;
 }
+
+const ensureCustomEmailTable = once(ensureCustomEmailTableUncached);
 
 const CUSTOM_EMAIL_STATUS = ["pending", "processing", "done", "rejected"];
 // Satu "tugas" custom email = maksimal 3 nama. Pembeli baru boleh beli lagi
@@ -145,7 +150,7 @@ async function domainHasMx(domain) {
    pendaftaran Google, jadi hasilnya pasti (available/taken), bukan tebakan.
    Tiap run berbayar → hasilnya di-cache di database. */
 
-async function ensureEmailCheckCacheTable(sql) {
+const ensureEmailCheckCacheTable = once(async function ensureEmailCheckCacheTableUncached(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS codexa_email_checks (
       canonical TEXT PRIMARY KEY,
@@ -153,7 +158,7 @@ async function ensureEmailCheckCacheTable(sql) {
       checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
-}
+});
 
 /* Cache: "taken" disimpan 7 hari (Google tidak mendaur ulang username),
    "available" cuma 1 jam (bisa diambil orang kapan saja).
@@ -526,8 +531,7 @@ async function handleAdmin(sql, request, response) {
 module.exports = async function handler(request, response) {
   try {
     const sql = db();
-    await ensureTables(sql);
-    await ensureOrderTables(sql);
+    await Promise.all([ensureTables(sql), ensureOrderTables(sql)]);
     const adminScope = String((request.query && request.query.scope) || "") === "admin";
     if (adminScope) {
       if (!isAdmin(request)) return response.status(401).json({ error: "Sesi admin tidak valid" });
