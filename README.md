@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ Account Center
+# ⚡ Akun Instan
 
 ### Modern Digital Store & Account Marketplace
 
@@ -38,7 +38,7 @@
 <div align="center">
 
 <a href="https://accounter.my.id/">
-  <img src="https://image.thum.io/get/width/1400/crop/900/https://accounter.my.id/" alt="Account Center Preview" width="100%" />
+  <img src="https://image.thum.io/get/width/1400/crop/900/https://accounter.my.id/" alt="Akun Instan Preview" width="100%" />
 </a>
 
 <br />
@@ -47,19 +47,19 @@
 
 </div>
 
-> 💡 The preview above is generated from the live Account Center. Click it to open the application.
+> 💡 The preview above is generated from the live Akun Instan. Click it to open the application.
 
 ---
 
-## ✨ What is Account Center?
+## ✨ What is Akun Instan?
 
-**Account Center** is a modern web-based digital store built to provide a clean purchasing experience for customers while giving administrators a centralized dashboard to manage the entire store.
+**Akun Instan** is a modern web-based digital store built to provide a clean purchasing experience for customers while giving administrators a centralized dashboard to manage the entire store.
 
 The project is designed around three principles:
 
 > **⚡ Fast interactions · 🎨 Clean UI · 📱 Excellent mobile experience**
 
-Whether a customer is browsing products or an administrator is processing orders and top-up requests, Account Center aims to keep every workflow simple, clear, and responsive.
+Whether a customer is browsing products or an administrator is processing orders and top-up requests, Akun Instan aims to keep every workflow simple, clear, and responsive.
 
 ---
 
@@ -134,7 +134,7 @@ This helps administrators create requested accounts without accidentally conflic
 
 ### 📱 Responsive UI
 
-Account Center is built to work across:
+Akun Instan is built to work across:
 
 - 📱 Mobile phones
 - 📲 Tablets
@@ -147,7 +147,7 @@ Layouts, cards, navigation, dialogs, tables, and forms are designed to remain us
 
 Important actions should never leave the interface looking frozen or inactive.
 
-Account Center uses UX patterns such as:
+Akun Instan uses UX patterns such as:
 
 - Loading states
 - Disabled buttons during requests
@@ -190,10 +190,10 @@ Lucide React
 
 ## 🏗️ Architecture
 
-Account Center combines a React/Vite frontend with server-side API handlers for application data and administrative operations.
+Akun Instan combines a React/Vite frontend with server-side API handlers for application data and administrative operations.
 
 ```text
-Account Center
+Akun Instan
 ├── Frontend
 │   ├── React
 │   ├── React DOM
@@ -233,7 +233,7 @@ Account Center
 
 ## 🎨 Design Philosophy
 
-Account Center aims for a visual style that feels:
+Akun Instan aims for a visual style that feels:
 
 - Minimal
 - Modern
@@ -276,7 +276,7 @@ The interface should prioritize **clarity over unnecessary visual complexity** w
 
 ```bash
 git clone https://github.com/Kztutorial99/Account-Center.git
-cd Account Center
+cd Akun Instan
 npm install
 ```
 
@@ -319,7 +319,7 @@ For larger changes, please open an issue first so the proposed direction can be 
 
 Found something broken?
 
-<a href="https://github.com/Kztutorial99/Account-Center/issues/new">🚨 Open a Account Center Issue</a>
+<a href="https://github.com/Kztutorial99/Account-Center/issues/new">🚨 Open a Akun Instan Issue</a>
 
 Please include:
 
@@ -345,24 +345,24 @@ Please include:
 
 ## 📄 License
 
-No explicit license file is currently included in the repository. Before redistributing or using Account Center commercially, please check with the project owner regarding applicable permissions.
+No explicit license file is currently included in the repository. Before redistributing or using Akun Instan commercially, please check with the project owner regarding applicable permissions.
 
 ---
 
 <div align="center">
 
-## ⚡ Account Center
+## ⚡ Akun Instan
 
 **Digital commerce, made simpler.**
 
 <br />
 
-<a href="https://accounter.my.id/">🌐 Visit Account Center</a> ·
+<a href="https://accounter.my.id/">🌐 Visit Akun Instan</a> ·
 <a href="https://github.com/Kztutorial99/Account-Center">⭐ Star on GitHub</a> ·
 <a href="https://github.com/Kztutorial99/Account-Center/issues">🐛 Report a Bug</a>
 
 <br /><br />
 
-<sub>© 2026 Account Center · Built by Kztutorial99</sub>
+<sub>© 2026 Akun Instan · Built by Kztutorial99</sub>
 
 </div>
