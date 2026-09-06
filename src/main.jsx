@@ -1513,7 +1513,7 @@ const NOTIF_TONE = {
   order_paid: { icon: ShoppingBag, color: "#818cf8" },
 };
 
-/* Lonceng notifikasi: polling ringan tiap 30 detik + refresh saat dibuka. */
+/* Lonceng notifikasi: sinkron real-time (tiap 1 detik saat tab terlihat). */
 function NotificationBell({ navigate, activePage }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
@@ -1533,14 +1533,40 @@ function NotificationBell({ navigate, activePage }) {
   };
 
   useEffect(() => {
+    let busy = false;
+    let failures = 0;
+    const sync = async () => {
+      if (busy) return;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      busy = true;
+      try {
+        const p = await jsonRequest("/api/notifications");
+        setItems(p.notifications || []);
+        setUnread(Number(p.unread) || 0);
+        failures = 0;
+      } catch (_) { failures = Math.min(failures + 1, 5); }
+      busy = false;
+    };
+    let tick = 0;
     load();
-    const timer = window.setInterval(load, 30000);
-    const onFocus = () => load();
+    // Denyut 1 detik; bila server sedang bermasalah, jeda melebar otomatis.
+    const timer = window.setInterval(() => {
+      tick += 1;
+      if (failures && tick % (failures * 3) !== 0) return;
+      sync();
+    }, 1000);
+    const onFocus = () => { failures = 0; sync(); };
+    window.appSync = onFocus;
     window.addEventListener("focus", onFocus);
+    window.addEventListener("visibilitychange", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
     window.addEventListener("codexa:notify", onFocus);
     return () => {
       window.clearInterval(timer);
+      if (window.appSync === onFocus) delete window.appSync;
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener("visibilitychange", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
       window.removeEventListener("codexa:notify", onFocus);
     };
   }, []);
@@ -4182,7 +4208,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
         }
       } catch (_) { /* diamkan, coba lagi di siklus berikutnya */ }
     };
-    const timer = setInterval(tick, 5000);
+    const timer = setInterval(tick, 1000);
     tick();
     return () => { stop = true; clearInterval(timer); };
   }, [step, payment, payStatus]);
