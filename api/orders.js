@@ -254,7 +254,7 @@ function gmailLikelyTaken(base) {
   return "";
 }
 
-/* Cek lengkap: dipakai pembeli Account Center lain, aturan Gmail, heuristik nama
+/* Cek lengkap: dipakai pembeli Akun Instan lain, aturan Gmail, heuristik nama
    umum/dicadangkan, lalu cek definitif ke pendaftaran Gmail via actor Apify
    (dengan cache). Kalau actor tidak bisa dijangkau, fallback ke jejak publik
    (Gravatar) + status "belum bisa dipastikan". */
@@ -268,9 +268,9 @@ async function inspectCustomEmail(sql, parsed) {
   await ensureCustomEmailTable(sql);
   const takenHere = (await isCustomEmailTaken(sql, value)) || (value !== canonical && await isCustomEmailTaken(sql, canonical));
   if (takenHere) {
-    return { available: false, state: "taken", normalized: value, canonical, reason: "Sudah dipesan pembeli Account Center lain, pilih nama lain", signals: ["Sudah dipesan di Account Center"] };
+    return { available: false, state: "taken", normalized: value, canonical, reason: "Sudah dipesan pembeli Akun Instan lain, pilih nama lain", signals: ["Sudah dipesan di Akun Instan"] };
   }
-  signals.push("Belum dipesan di Account Center");
+  signals.push("Belum dipesan di Akun Instan");
 
   if (isGoogle) {
     const policy = gmailPolicyError(local);
