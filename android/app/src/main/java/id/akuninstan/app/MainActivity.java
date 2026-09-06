@@ -4,7 +4,8 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.View;
+import android.os.Handler;
+import android.os.Looper;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
 import android.webkit.ValueCallback;
@@ -17,16 +18,25 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String START_URL = "https://accounter.my.id/";
     private static final String APP_HOST = "accounter.my.id";
+    private static final long AUTO_SYNC_INTERVAL_MS = 30_000; // sinkron tiap 30 detik
 
     private WebView webView;
-    private SwipeRefreshLayout swipeRefresh;
     private ValueCallback<Uri[]> filePathCallback;
+    private boolean wasInBackground = false;
+
+    private final Handler syncHandler = new Handler(Looper.getMainLooper());
+    private final Runnable autoSync = new Runnable() {
+        @Override
+        public void run() {
+            syncPage();
+            syncHandler.postDelayed(this, AUTO_SYNC_INTERVAL_MS);
+        }
+    };
 
     private final androidx.activity.result.ActivityResultLauncher<Intent> fileChooser =
             registerForActivityResult(
@@ -48,7 +58,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        swipeRefresh = findViewById(R.id.swipeRefresh);
         webView = findViewById(R.id.webView);
 
         WebSettings settings = webView.getSettings();
@@ -82,11 +91,6 @@ public class MainActivity extends AppCompatActivity {
                 }
                 return false;
             }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                swipeRefresh.setRefreshing(false);
-            }
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
@@ -113,8 +117,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        swipeRefresh.setOnRefreshListener(() -> webView.reload());
-
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
@@ -132,6 +134,47 @@ public class MainActivity extends AppCompatActivity {
             Uri deepLink = getIntent() != null ? getIntent().getData() : null;
             webView.loadUrl(deepLink != null ? deepLink.toString() : START_URL);
         }
+    }
+
+    /** Sinkronisasi halus: minta halaman memuat ulang data tanpa refresh penuh bila memungkinkan. */
+    private void syncPage() {
+        if (webView == null) return;
+        webView.evaluateJavascript(
+                "(function(){"
+                        + "if(document.visibilityState!=='visible')return 'hidden';"
+                        + "if(typeof window.appSync==='function'){window.appSync();return 'appSync';}"
+                        + "window.dispatchEvent(new Event('focus'));"
+                        + "document.dispatchEvent(new Event('visibilitychange'));"
+                        + "return 'events';"
+                        + "})()", null);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        webView.onResume();
+        // Kembali dari latar belakang -> sinkronkan data terbaru
+        if (wasInBackground) {
+            webView.reload();
+            wasInBackground = false;
+        }
+        syncHandler.removeCallbacks(autoSync);
+        syncHandler.postDelayed(autoSync, AUTO_SYNC_INTERVAL_MS);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        webView.onPause();
+        syncHandler.removeCallbacks(autoSync);
+        wasInBackground = true;
+    }
+
+    @Override
+    protected void onDestroy() {
+        syncHandler.removeCallbacks(autoSync);
+        if (webView != null) webView.destroy();
+        super.onDestroy();
     }
 
     private void openExternally(Uri uri) {
