@@ -4138,11 +4138,20 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const [payStatus, setPayStatus] = useState("pending");
   const [now, setNow]           = useState(Date.now());
   const [copied, setCopied]     = useState(false);
+  const formPanelRef            = useRef(null);
 
   const amountNumber = Math.round(Number(amount) || 0);
   const pendingTotal = Number(state.pendingTotal) || 0;
   const expiredAt = payment && payment.expired ? new Date(payment.expired).getTime() : 0;
   const remaining = expiredAt ? expiredAt - now : 0;
+
+  /* Saat pindah ke konfirmasi/pembayaran/selesai, gulirkan panel form ke
+     bagian atas supaya user langsung melihat konten langkah tersebut,
+     bukan terscroll ke bawah halaman. */
+  useEffect(() => {
+    if (step === "form" || !formPanelRef.current) return;
+    formPanelRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [step]);
 
   /* Timer countdown masa berlaku QRIS. */
   useEffect(() => {
@@ -4252,7 +4261,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
       )}
 
       <div className="cx-account-grid">
-        <div className="cx-panel">
+        <div className="cx-panel" ref={formPanelRef}>
           <div className="cx-panel-header">
             <h3>Top Up Saldo</h3>
             <span className="cx-panel-sub">QRIS otomatis · saldo masuk seketika</span>
