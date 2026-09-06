@@ -23,7 +23,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String START_URL = "https://accounter.my.id/";
     private static final String APP_HOST = "accounter.my.id";
-    private static final long AUTO_SYNC_INTERVAL_MS = 30_000; // sinkron tiap 30 detik
+    private static final long AUTO_SYNC_INTERVAL_MS = 1_000; // sinkron tiap 1 detik (mendekati real-time)
 
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
