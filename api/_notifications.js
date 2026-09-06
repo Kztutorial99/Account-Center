@@ -1,11 +1,12 @@
 const crypto = require("crypto");
+const { once } = require("./_schema");
 
 /**
  * Notifikasi in-app untuk user Account Center.
  * Dipakai oleh: top up (diajukan / disetujui / ditolak) dan checkout akun.
  */
 
-async function ensureNotificationTables(sql) {
+async function ensureNotificationTablesUncached(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS codexa_notifications (
       id TEXT PRIMARY KEY,
@@ -20,6 +21,8 @@ async function ensureNotificationTables(sql) {
   `;
   await sql`CREATE INDEX IF NOT EXISTS codexa_notifications_user_idx ON codexa_notifications (user_id, created_at DESC)`;
 }
+
+const ensureNotificationTables = once(ensureNotificationTablesUncached);
 
 const clamp = (value, max) => String(value == null ? "" : value).slice(0, max);
 
