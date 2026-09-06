@@ -1513,7 +1513,7 @@ const NOTIF_TONE = {
   order_paid: { icon: ShoppingBag, color: "#818cf8" },
 };
 
-/* Lonceng notifikasi: sinkron real-time (tiap 1 detik saat tab terlihat). */
+/* Lonceng notifikasi: dorongan real-time dari server (SSE), tanpa jeda tetap. */
 function NotificationBell({ navigate, activePage }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
@@ -1535,6 +1535,9 @@ function NotificationBell({ navigate, activePage }) {
   useEffect(() => {
     let busy = false;
     let failures = 0;
+    let stream = null;
+    let reconnect = null;
+    let closed = false;
     const sync = async () => {
       if (busy) return;
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
@@ -1547,22 +1550,54 @@ function NotificationBell({ navigate, activePage }) {
       } catch (_) { failures = Math.min(failures + 1, 5); }
       busy = false;
     };
-    let tick = 0;
+
+    /* Dorongan real-time: server yang memberi tahu begitu ada perubahan,
+       jadi tidak ada jeda tetap sama sekali (biasanya < 0,3 detik). */
+    const connect = () => {
+      if (closed || typeof window === "undefined" || !("EventSource" in window)) return;
+      try { if (stream) stream.close(); } catch (_) {}
+      stream = new EventSource("/api/stream", { withCredentials: true });
+      stream.addEventListener("sync", (e) => {
+        let payload = null;
+        try { payload = JSON.parse(e.data || "{}"); } catch (_) {}
+        if (payload && typeof payload.unread === "number") setUnread(payload.unread);
+        sync();
+      });
+      const retry = () => {
+        if (closed) return;
+        try { if (stream) stream.close(); } catch (_) {}
+        window.clearTimeout(reconnect);
+        reconnect = window.setTimeout(connect, 1000);
+      };
+      stream.addEventListener("bye", retry);
+      stream.onerror = retry;
+    };
+
     load();
-    // Denyut 1 detik; bila server sedang bermasalah, jeda melebar otomatis.
+    connect();
+
+    /* Jaring pengaman kalau saluran dorong terputus (jaringan seluler jelek):
+       cek berkala pelan supaya hemat baterai dan kuota. */
     const timer = window.setInterval(() => {
-      tick += 1;
-      if (failures && tick % (failures * 3) !== 0) return;
+      const live = stream && stream.readyState === 1;
+      if (live && !failures) return;
       sync();
-    }, 1000);
-    const onFocus = () => { failures = 0; sync(); };
+    }, 5000);
+    const onFocus = () => {
+      failures = 0;
+      sync();
+      if (!stream || stream.readyState === 2) connect();
+    };
     window.appSync = onFocus;
     window.addEventListener("focus", onFocus);
     window.addEventListener("visibilitychange", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     window.addEventListener("codexa:notify", onFocus);
     return () => {
+      closed = true;
       window.clearInterval(timer);
+      window.clearTimeout(reconnect);
+      try { if (stream) stream.close(); } catch (_) {}
       if (window.appSync === onFocus) delete window.appSync;
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("visibilitychange", onFocus);
