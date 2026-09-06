@@ -2393,14 +2393,17 @@ function AdminPage({ onBack, onNotice }) {
     } catch (e) { setApiError(e.message); }
   };
 
-  const loadUsersData = () => {
-    jsonRequest("/api/admin/topups", { method: "GET" })
-      .then((p) => setTopups(p.topups || []))
-      .catch(() => {});
-    return jsonRequest("/api/admin/users", { method: "GET" })
-      .then((p) => setUsers(p.users || []))
-      .catch(() => {});
-  };
+  // Kedua request jalan bersamaan supaya sinkronisasi selesai secepat
+  // request paling lambat, bukan jumlah keduanya.
+  const loadUsersData = () =>
+    Promise.all([
+      jsonRequest("/api/admin/topups", { method: "GET" })
+        .then((p) => setTopups(p.topups || []))
+        .catch(() => {}),
+      jsonRequest("/api/admin/users", { method: "GET" })
+        .then((p) => setUsers(p.users || []))
+        .catch(() => {}),
+    ]);
 
   const openUserForm = (u) => {
     setApiError("");
@@ -2494,7 +2497,7 @@ function AdminPage({ onBack, onNotice }) {
   const refreshAll = async () => {
     if (refreshing) return;
     setRefreshing(true);
-    try { await Promise.all([loadListings(), loadUsersData(), loadOrders()]); }
+    try { await Promise.all([loadListings(), loadUsersData(), loadOrders(), loadSettings()]); }
     finally { setRefreshing(false); }
   };
 
