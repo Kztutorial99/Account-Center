@@ -3,6 +3,7 @@ const { db, ensureTables, currentUser, bodyOf, text } = require("./_users");
 const { callTelegram, adminChatId } = require("./_telegram");
 const { createNotification } = require("./_notifications");
 const { handleNotifications } = require("./_notifications_handler");
+const { handleStream } = require("./_stream");
 const wijayapay = require("./_wijayapay");
 const { once } = require("./_schema");
 
@@ -125,6 +126,9 @@ module.exports = async function handler(request, response) {
     if (!user) return response.status(401).json({ error: "Silakan masuk terlebih dahulu" });
 
     if (resource === "notifications") return handleNotifications(sql, user, request, response);
+
+    // Saluran dorong real-time (SSE) untuk lonceng, saldo, dan status top up.
+    if (resource === "stream") return handleStream(sql, user, request, response);
 
     // Cek status pembayaran QRIS milik user (dipakai polling di halaman top up).
     if (resource === "status") {
