@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const { once } = require("./_schema");
 
 /**
- * Notifikasi in-app untuk user Account Center.
+ * Notifikasi in-app untuk user Akun Instan.
  * Dipakai oleh: top up (diajukan / disetujui / ditolak) dan checkout akun.
  */
 
