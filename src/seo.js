@@ -35,14 +35,14 @@ const PAGE_SEO = {
     title: "Top Up Saldo Akun Instan — QRIS, E-Wallet & Transfer Bank",
     description:
       "Isi saldo Akun Instan lewat QRIS, e-wallet (DANA, OVO, GoPay, ShopeePay) atau transfer bank. Saldo langsung bisa dipakai untuk membeli akun digital.",
-    keywords: "top up saldo account center, bayar qris, e-wallet, transfer bank",
+    keywords: "top up saldo akun instan, bayar qris, e-wallet, transfer bank",
   },
   help: {
     path: "/help",
     title: "Bantuan & FAQ Akun Instan — Cara Beli Akun Digital",
     description:
       "Panduan lengkap cara membeli akun Google/Gmail dan akun digital lain di Akun Instan, metode pembayaran, garansi, dan cara klaim bantuan.",
-    keywords: "cara beli akun gmail, faq account center, bantuan akun digital",
+    keywords: "cara beli akun gmail, faq akun instan, bantuan akun digital",
   },
   terms: { path: "/terms", title: "Syarat & Ketentuan | Akun Instan", description: "Syarat dan ketentuan penggunaan layanan Akun Instan." },
   privacy: { path: "/privacy", title: "Kebijakan Privasi | Akun Instan", description: "Kebijakan privasi dan perlindungan data pengguna Akun Instan." },
