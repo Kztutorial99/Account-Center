@@ -1,4 +1,4 @@
-/* Account Center mobile/admin visual fixes */
+/* Akun Instan mobile/admin visual fixes */
 
 /* Admin product cards: keep Edit/Hapus buttons inside the card and vertically centered. */
 .cx-admin-product-card footer {
@@ -265,7 +265,7 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   .cx-ce-verify-btn { min-height: 42px; white-space: normal; line-height: 1.3; font-size: 12px; }
 }
 
-/* ═══ Perbaikan tampilan (Agustus 2026 · rilis Account Center) ═══ */
+/* ═══ Perbaikan tampilan (Agustus 2026 · rilis Akun Instan) ═══ */
 
 /* ── Foto profil pada avatar ── */
 .cx-avatar.has-photo {
