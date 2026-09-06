@@ -1,5 +1,5 @@
 /**
- * Menu interaktif bot Telegram Account Center.
+ * Menu interaktif bot Telegram Akun Instan.
  * Semua tampilan menu (tombol + isi teks) dikumpulkan di sini supaya
  * webhook cukup memanggil satu fungsi.
  */
@@ -44,7 +44,7 @@ function backKeyboard(extraRows) {
 function homeView() {
   return {
     text: [
-      "🤖 <b>Account Center — Panel Admin</b>",
+      "🤖 <b>Akun Instan — Panel Admin</b>",
       "",
       "Pilih menu di bawah untuk melihat data toko secara langsung.",
       "Permintaan top up baru otomatis dikirim ke chat ini beserta bukti transfer dan tombol verifikasi.",
@@ -143,7 +143,7 @@ async function statsView(sql) {
   `;
   return {
     text: [
-      "📊 <b>Statistik Account Center</b>",
+      "📊 <b>Statistik Akun Instan</b>",
       "",
       "💰 <b>Top Up</b>",
       `Total permintaan : ${t.total}`,
