@@ -127,7 +127,7 @@ async function gravatarUsed(email) {
   const hash = crypto.createHash("md5").update(email.trim().toLowerCase()).digest("hex");
   try {
     const res = await fetchWithTimeout(`https://en.gravatar.com/${hash}.json`, {
-      headers: { "user-agent": "AccountCenter-EmailCheck/1.0" },
+      headers: { "user-agent": "AkunInstan-EmailCheck/1.0" },
     }, 6000);
     return res.status === 200;
   } catch (_) { return null; }
