@@ -1,5 +1,6 @@
 const { neon } = require("@neondatabase/serverless");
 const crypto = require("crypto");
+const { once } = require("./_schema");
 
 const COOKIE_NAME = "codexa_user";
 const MAX_AGE = 60 * 60 * 24 * 14; // 14 hari
@@ -21,7 +22,7 @@ function secret() {
   return crypto.createHmac("sha256", admin).update("codexa/user-session/v1").digest("hex");
 }
 
-async function ensureTables(sql) {
+async function ensureTablesUncached(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS codexa_users (
       id TEXT PRIMARY KEY,
@@ -67,14 +68,20 @@ async function ensureTables(sql) {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
-  await sql`CREATE INDEX IF NOT EXISTS codexa_reports_user_idx ON codexa_reports (user_id, created_at DESC)`;
-  await sql`CREATE INDEX IF NOT EXISTS codexa_reports_status_idx ON codexa_reports (status, created_at DESC)`;
-  await sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'`;
-  await sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT ''`;
-  await sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'`;
-  await sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT ''`;
+  // Sisa DDL tidak saling bergantung, jadi dikirim bersamaan (1 gelombang
+  // round-trip) alih-alih satu per satu.
+  await Promise.all([
+    sql`CREATE INDEX IF NOT EXISTS codexa_reports_user_idx ON codexa_reports (user_id, created_at DESC)`,
+    sql`CREATE INDEX IF NOT EXISTS codexa_reports_status_idx ON codexa_reports (status, created_at DESC)`,
+    sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'`,
+    sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT ''`,
+    sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'`,
+    sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT ''`,
+  ]);
   await sql`UPDATE codexa_users SET role = 'user' WHERE role NOT IN ('user','admin')`;
 }
+
+const ensureTables = once(ensureTablesUncached);
 
 /* ── password hashing (scrypt) ── */
 function hashPassword(password, salt) {
