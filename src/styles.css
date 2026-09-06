@@ -2340,3 +2340,74 @@ html { scroll-behavior: smooth; }
   .cx-nominal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cx-pending-banner > button { margin-left: 0; width: 100%; justify-content: center; }
 }
+
+/* ═══ Top up: perapihan alur mobile (nominal → konfirmasi → scan) ═══ */
+@media (max-width: 640px) {
+  .cx-topup-hero-head { margin: 0 0 10px; }
+  .cx-topup-hero-head h1 { font-size: 21px; }
+  .cx-topup-hero-head p { font-size: 12px; }
+
+  .cx-balance-hero { padding: 14px 16px; border-radius: 14px; margin-bottom: 10px; }
+  .cx-balance-hero strong { font-size: 26px; margin-top: 4px; }
+
+  .cx-pending-banner { padding: 10px 12px; gap: 10px; border-radius: 14px; }
+  .cx-pending-icon { width: 32px; height: 32px; border-radius: 10px; }
+
+  /* Panel langkah: padding rapat supaya konten pas di layar kecil. */
+  .cx-topup-page .cx-panel-header h3 { font-size: 14px; }
+  .cx-topup-form { padding: 12px; display: grid; gap: 10px; }
+
+  /* Step bar selalu satu baris, tidak turun-turun. */
+  .cx-steps-bar { flex-wrap: nowrap; gap: 4px; padding: 10px 10px 0; }
+  .cx-step { flex: 1 1 0; padding: 5px 4px; font-size: 9.5px; gap: 4px; }
+  .cx-step b { width: 14px; height: 14px; font-size: 8.5px; }
+
+  /* Grid nominal: 2 kolom rapat, tile tetap gampang disentuh. */
+  .cx-nominal-head { margin-bottom: 2px; }
+  .cx-nominal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .cx-nominal-tile { padding: 10px 11px; border-radius: 13px; }
+  .cx-nominal-tile:hover { transform: none; }
+  .cx-nominal-tile strong { font-size: 15px; }
+  .cx-nominal-tile small { font-size: 10px; }
+
+  /* Input nominal custom: font 16px supaya iOS tidak auto-zoom. */
+  .nk-custom-input input { font-size: 16px; min-height: 44px; }
+
+  /* Logo aplikasi pembayar: 4 kolom rapi. */
+  .cx-app-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .cx-app-tile { padding: 8px 4px; font-size: 9px; border-radius: 10px; }
+
+  /* Tombol utama mengambang di bawah layar — selalu terjangkau jempol. */
+  .cx-topup-form .nk-cta {
+    position: sticky; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    z-index: 30; min-height: 48px; border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.28);
+  }
+
+  /* Konfirmasi & pembayaran: hero lebih ringkas. */
+  .cx-confirm-hero { padding: 13px 12px; gap: 4px; border-radius: 14px; margin-bottom: 4px; }
+  .cx-confirm-amount { font-size: clamp(22px, 7vw, 28px); }
+
+  .cx-confirm-actions { flex-direction: column; gap: 8px; }
+  .cx-confirm-actions > * { flex: 0 0 auto; width: 100%; min-height: 46px; }
+
+  .cx-confirm-check { align-items: flex-start; gap: 10px; padding: 10px 12px; }
+  .cx-confirm-check input { width: 18px; height: 18px; margin-top: 1px; }
+
+  /* QR: pas di tengah, tidak kebesaran, tetap tajam untuk discan. */
+  .cx-qris-wrap { padding: 10px; border-radius: 14px; }
+  .cx-qris-wrap img { max-width: min(240px, 78vw); }
+  .cx-qris-steps { font-size: 12px; gap: 5px; }
+  .cx-qris-meta { font-size: 10px; margin: 6px 0 8px; }
+
+  /* Ringkasan: tetap 2 kolom tapi nilai tidak kepotong. */
+  .cx-summary-list li { grid-template-columns: minmax(76px, 34%) minmax(0, 1fr); padding: 8px 10px; }
+
+  .cx-topup-guide { padding: 11px 13px; border-radius: 14px; }
+  .cx-topup-guide ol { font-size: 11.5px; }
+}
+
+@media (max-width: 380px) {
+  .cx-nominal-tile strong { font-size: 13.5px; }
+  .cx-app-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
