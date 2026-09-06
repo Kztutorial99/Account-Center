@@ -7,6 +7,7 @@
  */
 
 const crypto = require("crypto");
+const { once } = require("./_schema");
 
 /* ── Enkripsi API key Assisten saat disimpan di database ─────────────
    Sebelumnya key tersimpan apa adanya, jadi siapa pun yang bisa membaca
@@ -61,7 +62,7 @@ const DEFAULTS = {
   extraPrompt: "",
 };
 
-async function ensureSettingsTable(sql) {
+const ensureSettingsTable = once(async function ensureSettingsTableUncached(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS codexa_settings (
       key TEXT PRIMARY KEY,
@@ -69,7 +70,7 @@ async function ensureSettingsTable(sql) {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
-}
+});
 
 /** Baca setting mentah (apa yang diisi admin), belum dicampur env. */
 async function readAssistantSettings(sql) {
