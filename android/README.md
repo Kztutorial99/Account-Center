@@ -51,6 +51,6 @@ dipasang, tapi update berikutnya harus uninstall dulu).
 
 ## Ubah alamat situs / nama aplikasi
 
-- Alamat: `app/src/main/java/id/akuninstan/app/MainActivity.java` → `START_URL`
+- Alamat: `app/src/main/java/com/akuninstan/MainActivity.java` → `START_URL`
 - Nama aplikasi: `app/src/main/res/values/strings.xml`
 - Warna & ikon: `res/values/colors.xml`, `res/drawable/ic_launcher.xml`
