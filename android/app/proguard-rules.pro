@@ -1,1 +1,1 @@
--keep class id.akuninstan.app.** { *; }
+-keep class com.akuninstan.** { *; }
