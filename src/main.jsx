@@ -533,7 +533,7 @@ function RowSkeleton({ rows = 4 }) {
 }
 
 /* ─── Splash saat sesi sedang diperiksa ─── */
-function SessionSplash({ title = "Menyiapkan Account Center", subtitle = "Memeriksa sesi kamu, sebentar ya..." }) {
+function SessionSplash({ title = "Menyiapkan Akun Instan", subtitle = "Memeriksa sesi kamu, sebentar ya..." }) {
   return (
     <div className="cx-splash" role="status" aria-live="polite" aria-busy="true">
       <div className="cx-splash-aurora" aria-hidden="true"><span /><span /><span /></div>
@@ -544,7 +544,7 @@ function SessionSplash({ title = "Menyiapkan Account Center", subtitle = "Memeri
           <span className="cx-splash-orbit cx-splash-orbit-b" aria-hidden="true"><i /></span>
           <span className="cx-splash-ring" aria-hidden="true" />
           <span className="cx-splash-pulse" aria-hidden="true" />
-          <span className="cx-splash-core">AC</span>
+          <span className="cx-splash-core">AI</span>
         </div>
         <div className="cx-splash-copy">
           <strong>{title}</strong>
@@ -864,7 +864,7 @@ function App() {
     return <AdminPage onBack={() => navigate("store")} onNotice={showNotice} />;
   }
 
-  /* ── auth gate: wajib login sebelum akses Account Center ── */
+  /* ── auth gate: wajib login sebelum akses Akun Instan ── */
   if (auth.loading) return <SessionSplash />;
   if (!auth.user) return (
     <AuthPage onAuthenticated={(user) => { setAuth({ user, loading: false }); navigate("store"); }} />
@@ -1246,7 +1246,7 @@ function App() {
         <div className="cx-hero-glow" aria-hidden="true" />
         <div className="cx-container cx-hero-inner">
           <div className="cx-hero-badge"><span className="cx-hero-pulse" /> Stok live · {data.loading ? "memuat" : `${totalAccounts} akun`} tersedia</div>
-          <div className="cx-kicker">ACCOUNT CENTER ACCESS</div>
+          <div className="cx-kicker">AKUN INSTAN ACCESS</div>
           <h1>Akun digital,<br /><em>tanpa drama.</em></h1>
           <p className="cx-hero-sub">Akun siap pakai dari katalog nyata. Detail login hanya dibuka setelah pembayaran berhasil — otomatis, tanpa nunggu admin.</p>
           <div className="cx-hero-actions">
@@ -1681,7 +1681,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
     <header className="cx-topbar">
       <div className="cx-container cx-topbar-inner">
         <button className="cx-brand" onClick={() => navigate("store")}>
-          <span className="cx-brand-mark">AC</span>
+          <span className="cx-brand-mark">AI</span>
           <span>Account<span className="cx-brand-dot">Center</span></span>
         </button>
         <nav className="cx-nav">
@@ -1917,7 +1917,7 @@ const HELP_STEPS = [
 
 const HELP_FAQ = [
   { q: "Berapa lama top up diproses?", a: "Umumnya di bawah 1x24 jam pada jam kerja. Status top up bisa dipantau di menu Top Up." },
-  { q: "Akun yang saya beli bermasalah, bagaimana?", a: "Buka Assisten Account Center dan laporkan kendalanya. Laporan tersimpan dan dibalas admin lewat notifikasi." },
+  { q: "Akun yang saya beli bermasalah, bagaimana?", a: "Buka Assisten Akun Instan dan laporkan kendalanya. Laporan tersimpan dan dibalas admin lewat notifikasi." },
   { q: "Bisa refund saldo?", a: "Saldo yang sudah masuk dipakai untuk pembelian akun. Untuk kasus akun gagal dipakai, admin akan mengganti akun atau mengembalikan saldo." },
   { q: "Di mana melihat detail akun saya?", a: "Menu Pesanan menyimpan semua pembelian beserta kredensial akunnya." },
   { q: "Kenapa notifikasi tidak muncul?", a: "Tarik ulang halaman atau buka lonceng notifikasi di kanan atas. Pesan dari admin masuk ke situ." },
@@ -1935,7 +1935,7 @@ function HelpPage({ navigate, onAskAssistant }) {
         <section className="cx-help-hero">
           <span className="cx-help-badge"><CircleHelp size={12} /> Pusat Bantuan</span>
           <h1>Ada yang bisa kami bantu?</h1>
-          <p>Panduan singkat memakai Account Center, mulai dari isi saldo sampai mengambil detail akun.</p>
+          <p>Panduan singkat memakai Akun Instan, mulai dari isi saldo sampai mengambil detail akun.</p>
           <div className="cx-help-cta">
             <button className="cx-btn cx-btn-primary" onClick={onAskAssistant}>
               <Sparkles size={13} /> Tanya Assisten
@@ -1965,7 +1965,7 @@ function HelpPage({ navigate, onAskAssistant }) {
         </section>
 
         <section className="cx-help-section">
-          <h2>Cara belanja di Account Center</h2>
+          <h2>Cara belanja di Akun Instan</h2>
           <ol className="cx-help-steps">
             {HELP_STEPS.map((step, i) => (
               <li key={step.title}>
@@ -2000,7 +2000,7 @@ function HelpPage({ navigate, onAskAssistant }) {
         <section className="cx-help-contact">
           <div>
             <strong>Masih belum terjawab?</strong>
-            <p>Kirim keluhanmu lewat Assisten Account Center. Laporan langsung masuk ke admin dan balasannya dikirim sebagai notifikasi.</p>
+            <p>Kirim keluhanmu lewat Assisten Akun Instan. Laporan langsung masuk ke admin dan balasannya dikirim sebagai notifikasi.</p>
           </div>
           <button className="cx-btn cx-btn-primary" onClick={onAskAssistant}>
             <Send size={13} /> Kirim laporan
@@ -2018,17 +2018,17 @@ const LEGAL_CONTENT = {
   terms: {
     kicker: "Dokumen resmi",
     title: "Syarat & Ketentuan",
-    intro: "Dengan mendaftar dan bertransaksi di Account Center, kamu dianggap sudah membaca dan menyetujui ketentuan di bawah ini.",
+    intro: "Dengan mendaftar dan bertransaksi di Akun Instan, kamu dianggap sudah membaca dan menyetujui ketentuan di bawah ini.",
     sections: [
       { h: "1. Ketentuan akun pembeli", p: [
-        "Satu orang hanya boleh memakai satu akun Account Center. Data yang didaftarkan wajib benar dan aktif, terutama email dan nomor WhatsApp.",
-        "Keamanan password akun Account Center sepenuhnya tanggung jawab pemilik akun. Segala aktivitas yang terjadi setelah login dianggap dilakukan oleh pemilik akun.",
-        "Account Center berhak menangguhkan atau memblokir akun yang terindikasi melakukan penipuan, chargeback, spam pembelian, atau menyalahgunakan sistem saldo.",
+        "Satu orang hanya boleh memakai satu akun Akun Instan. Data yang didaftarkan wajib benar dan aktif, terutama email dan nomor WhatsApp.",
+        "Keamanan password akun Akun Instan sepenuhnya tanggung jawab pemilik akun. Segala aktivitas yang terjadi setelah login dianggap dilakukan oleh pemilik akun.",
+        "Akun Instan berhak menangguhkan atau memblokir akun yang terindikasi melakukan penipuan, chargeback, spam pembelian, atau menyalahgunakan sistem saldo.",
       ] },
       { h: "2. Saldo dan pembayaran", p: [
-        "Seluruh pembelian di Account Center memakai saldo. Saldo diisi lewat menu Top Up dan baru masuk setelah admin memverifikasi bukti pembayaran.",
+        "Seluruh pembelian di Akun Instan memakai saldo. Saldo diisi lewat menu Top Up dan baru masuk setelah admin memverifikasi bukti pembayaran.",
         "Permintaan top up diproses pada jam operasional. Nominal yang masuk mengikuti jumlah yang benar-benar diterima admin.",
-        "Saldo yang sudah masuk tidak dapat dicairkan kembali menjadi uang tunai dan hanya bisa dipakai untuk transaksi di Account Center.",
+        "Saldo yang sudah masuk tidak dapat dicairkan kembali menjadi uang tunai dan hanya bisa dipakai untuk transaksi di Akun Instan.",
       ] },
       { h: "3. Produk akun digital", p: [
         "Produk yang dijual adalah akun digital dengan stok terbatas. Stok yang ditampilkan adalah stok nyata dari database, bukan contoh.",
@@ -2036,11 +2036,11 @@ const LEGAL_CONTENT = {
         "Pembeli wajib segera mengganti password akun yang dibeli setelah menerima detail login.",
       ] },
       { h: "4. Larangan", p: [
-        "Dilarang menjual ulang akun dengan klaim garansi atas nama Account Center tanpa izin tertulis.",
+        "Dilarang menjual ulang akun dengan klaim garansi atas nama Akun Instan tanpa izin tertulis.",
         "Dilarang memakai akun yang dibeli untuk aktivitas ilegal, penipuan, atau tindakan yang melanggar ketentuan penyedia layanan asal.",
       ] },
       { h: "5. Perubahan ketentuan", p: [
-        "Account Center dapat memperbarui syarat dan ketentuan ini sewaktu-waktu. Versi terbaru yang tayang di halaman ini adalah versi yang berlaku.",
+        "Akun Instan dapat memperbarui syarat dan ketentuan ini sewaktu-waktu. Versi terbaru yang tayang di halaman ini adalah versi yang berlaku.",
       ] },
     ],
   },
@@ -2060,7 +2060,7 @@ const LEGAL_CONTENT = {
         "Mendeteksi penyalahgunaan, penipuan, dan aktivitas mencurigakan.",
       ] },
       { h: "3. Keamanan data", p: [
-        "Password akun Account Center disimpan dalam bentuk hash, bukan teks biasa.",
+        "Password akun Akun Instan disimpan dalam bentuk hash, bukan teks biasa.",
         "Kredensial akun yang dijual disimpan dalam bentuk terenkripsi dan hanya terbuka untuk pembeli sah setelah pembayaran.",
         "Akses admin dilindungi sesi terpisah dan tidak dibagikan ke pihak ketiga.",
       ] },
@@ -2089,7 +2089,7 @@ const LEGAL_CONTENT = {
         "Laporan dikirim lewat dari batas waktu klaim.",
       ] },
       { h: "3. Bentuk pengembalian", p: [
-        "Refund yang disetujui dikembalikan dalam bentuk saldo Account Center, bukan uang tunai.",
+        "Refund yang disetujui dikembalikan dalam bentuk saldo Akun Instan, bukan uang tunai.",
         "Proses peninjauan maksimal 2x24 jam sejak laporan lengkap diterima admin.",
       ] },
     ],
@@ -2097,10 +2097,10 @@ const LEGAL_CONTENT = {
   disclaimer: {
     kicker: "Dokumen resmi",
     title: "Disclaimer",
-    intro: "Batasan tanggung jawab Account Center atas produk digital dan layanan yang dijual di platform ini.",
+    intro: "Batasan tanggung jawab Akun Instan atas produk digital dan layanan yang dijual di platform ini.",
     sections: [
       { h: "1. Status platform", p: [
-        "Account Center adalah toko digital independen yang menjual akun dan lisensi layanan pihak ketiga. Kami tidak berafiliasi, tidak disponsori, dan tidak mewakili merek mana pun yang produknya tercantum di katalog.",
+        "Akun Instan adalah toko digital independen yang menjual akun dan lisensi layanan pihak ketiga. Kami tidak berafiliasi, tidak disponsori, dan tidak mewakili merek mana pun yang produknya tercantum di katalog.",
         "Seluruh nama merek, logo, dan tanda dagang adalah milik pemiliknya masing-masing dan hanya dipakai sebagai keterangan produk.",
       ] },
       { h: "2. Ketersediaan layanan", p: [
@@ -2109,10 +2109,10 @@ const LEGAL_CONTENT = {
       ] },
       { h: "3. Tanggung jawab pengguna", p: [
         "Pembeli bertanggung jawab menjaga kerahasiaan detail akun yang diterima dan tidak membagikannya ke pihak lain.",
-        "Penyalahgunaan akun, pelanggaran ketentuan penyedia layanan, atau perubahan kredensial oleh pembeli berada di luar tanggung jawab Account Center.",
+        "Penyalahgunaan akun, pelanggaran ketentuan penyedia layanan, atau perubahan kredensial oleh pembeli berada di luar tanggung jawab Akun Instan.",
       ] },
       { h: "4. Batasan ganti rugi", p: [
-        "Tanggung jawab maksimum Account Center atas satu transaksi terbatas pada nilai saldo yang dibayarkan untuk transaksi tersebut.",
+        "Tanggung jawab maksimum Akun Instan atas satu transaksi terbatas pada nilai saldo yang dibayarkan untuk transaksi tersebut.",
         "Kami tidak bertanggung jawab atas kerugian tidak langsung seperti kehilangan data, kehilangan pendapatan, atau gangguan pekerjaan.",
       ] },
       { h: "5. Konten informasi", p: [
@@ -2165,7 +2165,7 @@ function StoreFooter({ navigate }) {
     <footer className="cx-footer">
       <div className="cx-container cx-footer-inner">
         <button className="cx-brand" onClick={() => navigate("store")} style={{ fontSize: 13 }}>
-          <span className="cx-brand-mark" style={{ width: 20, height: 20, fontSize: 10 }}>AC</span>
+          <span className="cx-brand-mark" style={{ width: 20, height: 20, fontSize: 10 }}>AI</span>
           Account<span className="cx-brand-dot">Center</span>
         </button>
         <p>Stok dan katalog terhubung ke Neon Database.</p>
@@ -2177,7 +2177,7 @@ function StoreFooter({ navigate }) {
           <button onClick={() => navigate("refund")}>Kebijakan Refund</button>
           <button onClick={() => navigate("disclaimer")}>Disclaimer</button>
         </div>
-        <p className="cx-footer-copy">© {new Date().getFullYear()} Account Center. Seluruh transaksi tunduk pada Syarat &amp; Ketentuan.</p>
+        <p className="cx-footer-copy">© {new Date().getFullYear()} Akun Instan. Seluruh transaksi tunduk pada Syarat &amp; Ketentuan.</p>
       </div>
     </footer>
   );
@@ -2763,8 +2763,8 @@ function AdminPage({ onBack, onNotice }) {
   if (!authenticated) return (
     <div className="cx-login-wrap">
       <div className="cx-login-box">
-        <div className="cx-login-mark">AC</div>
-        <h1>Account Center Admin</h1>
+        <div className="cx-login-mark">AI</div>
+        <h1>Akun Instan Admin</h1>
         <p>Masuk untuk mengelola produk dan pesanan.</p>
         <form onSubmit={login}>
           <Field label="Password Admin">
@@ -2804,8 +2804,8 @@ function AdminPage({ onBack, onNotice }) {
       {/* ── Sidebar ── */}
       <aside className={`cx-sidebar${navOpen ? " open" : ""}`}>
         <div className="cx-sidebar-brand">
-          <span className="cx-brand-mark" style={{ width: 24, height: 24, fontSize: 12, borderRadius: 4 }}>AC</span>
-          <span>Account Center</span>
+          <span className="cx-brand-mark" style={{ width: 24, height: 24, fontSize: 12, borderRadius: 4 }}>AI</span>
+          <span>Akun Instan</span>
           <ChevronDown size={12} color="var(--faint)" />
           <button className="cx-sidebar-close" onClick={() => setNavOpen(false)} aria-label="Tutup menu"><X size={14} /></button>
         </div>
@@ -2856,7 +2856,7 @@ function AdminPage({ onBack, onNotice }) {
               className={`cx-admin-asst-btn${asstOpen ? " active" : ""}`}
               onClick={() => setAsstOpen((v) => !v)}
               aria-label="Buka Assisten"
-              title="Assisten Account Center"
+              title="Assisten Akun Instan"
             >
               <Sparkles size={13} />
               <span>Assisten</span>
@@ -2921,7 +2921,7 @@ function AdminPage({ onBack, onNotice }) {
                 <div className="cx-admin-menu">
                   <div className="cx-admin-menu-head">
                     <div className="cx-avatar">AR</div>
-                    <div><strong>Admin</strong><small>Owner · Account Center</small></div>
+                    <div><strong>Admin</strong><small>Owner · Akun Instan</small></div>
                   </div>
                   <button className="cx-admin-menu-item" onClick={() => { goNav("Pengaturan"); setHeaderMenu(""); }}><Settings size={12} /> Pengaturan</button>
                   <button className="cx-admin-menu-item" onClick={() => { onBack(); setHeaderMenu(""); }}><ShoppingBag size={12} /> Lihat store</button>
@@ -3787,8 +3787,8 @@ function AuthPage({ onAuthenticated }) {
   return (
     <div className="cx-login-wrap">
       <div className="cx-login-box cx-auth-box">
-        <div className="cx-login-mark">AC</div>
-        <h1>{mode === "register" ? "Daftar Account Center" : "Masuk ke Account Center"}</h1>
+        <div className="cx-login-mark">AI</div>
+        <h1>{mode === "register" ? "Daftar Akun Instan" : "Masuk ke Akun Instan"}</h1>
         <p>{mode === "register" ? "Buat akun untuk mulai belanja dan isi saldo." : "Masuk dulu untuk mengakses katalog dan saldo kamu."}</p>
 
         <div className="cx-auth-tabs">
@@ -3947,7 +3947,7 @@ function compressAvatar(file) {
 }
 
 function initialsOf(name) {
-  return String(name || "AC").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "AC";
+  return String(name || "AI").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "AI";
 }
 
 /* Avatar: pakai foto profil user kalau ada, kalau tidak inisial nama. */
@@ -4011,7 +4011,7 @@ function ProfilePage({ user, onBack, onTopup, onSaved, onNotice }) {
             <UserAvatar user={editing ? { name: form.name, avatar } : user} className="cx-avatar-xl" />
             <div className="cx-profile-head-copy">
               <h2>{editing ? (form.name || "Nama kamu") : user.name}</h2>
-              <p>Member Account Center sejak {formatDate(user.createdAt)}</p>
+              <p>Member Akun Instan sejak {formatDate(user.createdAt)}</p>
             </div>
             {!editing && (
               <button className="cx-btn cx-btn-secondary cx-btn-sm cx-profile-edit-btn" onClick={startEdit}>
@@ -4698,12 +4698,12 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
       {open && <div className="cx-ai-backdrop" onClick={() => setOpen(false)} />}
 
       {open && (
-        <div className="cx-ai-panel" role="dialog" aria-label="Assisten Account Center">
+        <div className="cx-ai-panel" role="dialog" aria-label="Assisten Akun Instan">
           <div className="cx-ai-grab" />
           <div className="cx-ai-head">
             <div className="cx-ai-avatar"><Sparkles size={14} /></div>
             <div className="cx-ai-head-copy">
-              <strong>Assisten Account Center</strong>
+              <strong>Assisten Akun Instan</strong>
               <small>
                 {info.loading ? "Menyiapkan..."
                   : info.error ? "Perlu masuk dulu"
