@@ -2224,10 +2224,12 @@ function StoreFooter({ navigate }) {
   return (
     <footer className="cx-footer">
       <div className="cx-container cx-footer-inner">
-        <button className="cx-brand" onClick={() => navigate("store")} style={{ fontSize: 13 }}>
-          <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.png" alt="Akun Instan" />
-        </button>
-        <p>Stok dan katalog terhubung ke Neon Database.</p>
+        <div className="cx-footer-brand">
+          <button className="cx-brand" onClick={() => navigate("store")} style={{ fontSize: 13 }}>
+            <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+          </button>
+          <p>Stok dan katalog terhubung ke Neon Database.</p>
+        </div>
         <div className="cx-footer-links">
           <button onClick={() => navigate("help")}>Bantuan</button>
           <button onClick={() => navigate("orders")}>Pesanan</button>
