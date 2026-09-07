@@ -2416,3 +2416,71 @@ html { scroll-behavior: smooth; }
   .cx-nominal-tile strong { font-size: 13.5px; }
   .cx-app-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+
+/* ── Hamburger + drawer menu ───────────────────────────── */
+.cx-burger{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:34px; height:34px; margin-right:2px; flex:none;
+  border-radius:10px; cursor:pointer; color:var(--ink2);
+  border:1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  background:color-mix(in srgb, var(--ink) 5%, transparent);
+}
+.cx-burger:hover{ color:var(--ink); background:color-mix(in srgb, var(--indigo) 18%, transparent); }
+
+.cx-drawer-root{ position:fixed; inset:0; z-index:120; }
+.cx-drawer-backdrop{ position:absolute; inset:0; background:rgba(4,2,12,.66); backdrop-filter:blur(3px); }
+.cx-drawer{
+  position:absolute; top:0; left:0; bottom:0; width:min(84vw,310px);
+  display:flex; flex-direction:column; gap:10px; padding:14px 12px 18px;
+  overflow-y:auto;
+  background:linear-gradient(160deg,#150a2e 0%,#0c0620 46%,#07030f 100%);
+  border-right:1px solid color-mix(in srgb, var(--indigo) 34%, transparent);
+  box-shadow:22px 0 60px rgba(0,0,0,.55);
+  animation:cx-drawer-in .22s ease both;
+}
+@keyframes cx-drawer-in{ from{ transform:translateX(-102%); } to{ transform:translateX(0); } }
+.cx-drawer-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:2px 2px 8px; }
+.cx-drawer-wordmark{ height:20px; width:auto; max-width:150px; object-fit:contain; }
+
+.cx-drawer-balance{
+  border-radius:14px; padding:12px;
+  background:linear-gradient(135deg, color-mix(in srgb, var(--indigo) 40%, transparent), rgba(255,255,255,.03));
+  border:1px solid color-mix(in srgb, var(--indigo) 40%, transparent);
+}
+.cx-drawer-balance span{ display:flex; align-items:center; gap:6px; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); }
+.cx-drawer-balance strong{ display:block; margin:4px 0 10px; font:600 19px Inter; letter-spacing:-.02em; }
+.cx-drawer-balance-actions{ display:flex; gap:8px; }
+.cx-drawer-balance-actions button{
+  flex:1; padding:7px 0; border-radius:9px; cursor:pointer; font:600 12px Inter;
+  border:1px solid transparent; background:var(--indigo); color:#fff;
+}
+.cx-drawer-balance-actions button.ghost{
+  background:transparent; color:var(--ink2);
+  border-color:color-mix(in srgb, var(--ink) 20%, transparent);
+}
+
+.cx-drawer-label{ margin:8px 4px 0; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); }
+.cx-drawer-nav{ display:flex; flex-direction:column; gap:2px; }
+.cx-drawer-nav button{
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:10px 10px; border-radius:10px; cursor:pointer;
+  border:1px solid transparent; background:transparent;
+  color:var(--ink2); font:500 13px Inter; text-align:left;
+}
+.cx-drawer-nav button span{ flex:1; }
+.cx-drawer-arrow{ opacity:.35; }
+.cx-drawer-nav button:hover{ background:color-mix(in srgb, var(--ink) 8%, transparent); color:var(--ink); }
+.cx-drawer-nav button.active{
+  color:#fff; background:color-mix(in srgb, var(--indigo) 30%, transparent);
+  border-color:color-mix(in srgb, var(--indigo) 45%, transparent);
+}
+
+.cx-drawer-user{
+  margin-top:auto; display:flex; align-items:center; gap:10px; padding:10px;
+  border-radius:12px; background:rgba(255,255,255,.04);
+  border:1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.cx-drawer-user-copy{ flex:1; min-width:0; }
+.cx-drawer-user-copy strong{ display:block; font:600 13px Inter; }
+.cx-drawer-user-copy small{ display:block; font-size:11px; color:var(--faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
