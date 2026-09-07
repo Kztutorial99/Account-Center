@@ -444,8 +444,6 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
   /* forms: 16px inputs avoid iOS auto-zoom */
   .cx-input-wrap input, .cx-input-wrap textarea, .cx-input-wrap select { font-size: 16px; }
 
-  .cx-footer-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .cx-footer-links { margin-left: 0; flex-wrap: wrap; gap: 14px; }
 
   .cx-modal-backdrop { padding: 12px; align-items: flex-end; }
   .cx-modal { max-height: 88vh; }
@@ -1102,8 +1100,6 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-section-header, .cx-section-header-stack { margin: 20px 0 14px; }
   .cx-hero-actions .cx-btn { flex: 1 1 100%; }
   .cx-benefit { align-items: flex-start; }
-  .cx-footer-links { gap: 4px 12px; }
-  .cx-footer-links button { min-height: 36px; padding: 0 4px; font-size: 11.5px; }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1171,7 +1167,6 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-app { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)); }
   .cx-ai-fab { bottom: calc(var(--tab-h) + 16px + env(safe-area-inset-bottom)) !important; }
   .cx-toast { bottom: calc(var(--tab-h) + 18px + env(safe-area-inset-bottom)); }
-  .cx-footer { border-top: 1px solid var(--b1); }
 
   /* ── TIPOGRAFI: mono hanya untuk kredensial/kode ── */
   body { font-size: 15px; line-height: 1.6; letter-spacing: -.005em; }
@@ -1252,9 +1247,6 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-cred-price { font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
   .cx-product-type { font-size: 11px; letter-spacing: .06em; }
   .cx-kicker { font-size: 10.5px; letter-spacing: .12em; }
-  .cx-footer-inner { padding-bottom: 4px; }
-  .cx-footer-links button { min-height: 40px; font-size: 12.5px; display: inline-flex; align-items: center; }
-  .cx-footer p { font-size: 11.5px; }
   .cx-section-sub { font-size: 12.5px; }
   .cx-search input { letter-spacing: 0; }
 }
@@ -1769,9 +1761,6 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .cx-legal-contact strong { display: block; font-size: 12.5px; color: var(--ink); }
 .cx-legal-contact p { margin: 2px 0 0; font-size: 11.5px; color: var(--muted); }
 
-/* ── Footer ── */
-.cx-footer-copy { margin-top: 10px; font-size: 10.5px; color: var(--faint); }
-.cx-footer-links { flex-wrap: wrap; }
 
 /* ── Animasi halus global ── */
 .cx-btn, .cx-row-btn, .cx-icon-btn, .cx-sidebar-item, .cx-quick-card {
