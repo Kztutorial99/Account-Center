@@ -2557,3 +2557,28 @@ html { scroll-behavior: smooth; }
   .nk-pop, .nk-pay { border-radius: 22px; max-height: 92vh; }
   .nk-pop-amount, .nk-pay-amount { font-size: 27px; }
 }
+
+/* ═══ Top up: tombol lihat QR & perapihan popup di mobile ═══ */
+.cx-pending-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.cx-topup-qr-btn { margin-left: 8px; white-space: nowrap; }
+
+@media (max-width: 560px) {
+  .cx-pending-banner { flex-wrap: wrap; }
+  .cx-pending-actions { margin-left: 0; width: 100%; }
+  .cx-pending-actions .cx-btn { flex: 1 1 0; justify-content: center; }
+  .cx-topup-row { flex-wrap: wrap; row-gap: 6px; }
+  .cx-topup-qr-btn { margin-left: 0; width: 100%; justify-content: center; }
+}
+
+@media (max-width: 640px) {
+  /* Popup tidak boleh terpotong: badan popup bisa digulir. */
+  .nk-pop, .nk-pay { width: 100%; max-width: 100%; display: flex; flex-direction: column; overflow: hidden; }
+  .nk-pay-body, .nk-pop-body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+  .nk-pay-head { position: sticky; top: 0; z-index: 2; }
+  .nk-pay-qr { padding: 10px; border-radius: 14px; }
+  .nk-pay-qr img { width: min(230px, 58vw); }
+  .nk-pay-actions, .nk-pop-actions { flex-direction: row; gap: 8px; }
+  .nk-pay-actions .cx-btn, .nk-pop-actions .cx-btn { font-size: 13px; padding: 11px 10px; }
+  .nk-pop-body { padding: 24px 18px 20px; }
+  .nk-pay-guide ol { font-size: 12px; }
+}
