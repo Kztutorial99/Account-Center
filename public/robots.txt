@@ -5,6 +5,8 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /account
 Disallow: /orders
+Disallow: /login
+Disallow: /register
 
 User-agent: Googlebot
 Allow: /
@@ -13,5 +15,7 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /account
 Disallow: /orders
+Disallow: /login
+Disallow: /register
 
 Sitemap: https://akuninstan.com/sitemap.xml
