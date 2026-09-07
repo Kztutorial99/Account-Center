@@ -4257,10 +4257,9 @@ function ProfilePage({ user, onBack, onTopup, onSaved, onNotice }) {
             : state.topups.length === 0 ? <div className="cx-topup-empty">Belum ada permintaan top up.</div>
             : state.topups.slice(0, 5).map((t) => (
               <div key={t.id} className="cx-topup-row cx-profile-activity-row">
-                <div>
-                  <strong>{formatPrice(t.amount)}</strong>
-                  <small>{t.method}{t.reference ? ` · ID ${t.reference}` : ""}</small>
-                </div>
+                <strong className="cx-act-amount">{formatPrice(t.amount)}</strong>
+                <span className="cx-act-detail">{t.method}</span>
+                {t.reference && <span className="cx-act-refid">ID {t.reference}</span>}
                 <span className="cx-topup-date">{formatDate(t.createdAt)}</span>
                 {topupStatusBadge(t.status)}
               </div>
