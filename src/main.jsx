@@ -4291,6 +4291,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const [now, setNow]           = useState(Date.now());
   const [copied, setCopied]     = useState(false);
   const [checking, setChecking] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   const amountNumber = Math.round(Number(amount) || 0);
   const pendingTotal = Number(state.pendingTotal) || 0;
@@ -4486,6 +4487,15 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
           <div className="cx-panel-header">
             <h3>Top Up Saldo</h3>
             <span className="cx-panel-sub">QRIS otomatis · saldo masuk seketika</span>
+            <button
+              type="button"
+              className="cx-icon-btn cx-topup-help-btn"
+              aria-label="Cara top up"
+              title="Cara Top Up"
+              onClick={() => setShowGuide(true)}
+            >
+              <CircleHelp size={15} />
+            </button>
           </div>
 
           <div className="cx-topup-form">
@@ -4577,14 +4587,25 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
         </div>
       </div>
 
-      <div className="cx-topup-guide">
-        <strong><CircleHelp size={13} /> Cara Top Up</strong>
-        <ol>
-          <li>Pilih nominal top up.</li>
-          <li>Klik Buat QRIS, lalu scan dari aplikasi bank / e-wallet.</li>
-          <li>Saldo bertambah otomatis, biasanya di bawah 1 menit.</li>
-        </ol>
-      </div>
+      {showGuide && createPortal(
+        <div className="cx-modal-backdrop nk-pop-backdrop" onClick={() => setShowGuide(false)}>
+          <div className="cx-modal nk-pop" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="nk-pop-body">
+              <span className="nk-pop-icon"><CircleHelp size={44} /></span>
+              <h2>Cara Top Up</h2>
+              <ol className="cx-topup-guide-list">
+                <li>Pilih nominal top up.</li>
+                <li>Klik Buat QRIS, lalu scan dari aplikasi bank / e-wallet.</li>
+                <li>Saldo bertambah otomatis, biasanya di bawah 1 menit.</li>
+              </ol>
+              <div className="nk-pop-actions">
+                <button type="button" className="cx-btn cx-btn-primary" onClick={() => setShowGuide(false)}>Mengerti</button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* ── Popup konfirmasi nominal / loading QRIS ── */}
       {step === "confirm" && createPortal(
