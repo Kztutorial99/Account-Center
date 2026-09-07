@@ -2,7 +2,7 @@
    SEO — meta tag dinamis per halaman (SPA)
    Dipakai oleh App: useEffect(() => applySeo(activePage), [activePage])
 ════════════════════════════════════════════════════ */
-export const SITE_URL = "https://accounter.my.id";
+export const SITE_URL = "https://akuninstan.com";
 export const SITE_NAME = "Akun Instan";
 
 const PAGE_SEO = {
