@@ -508,3 +508,102 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   border-radius: 14px !important;
 }
 .nk-cta:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ═══ AUTH PAGE — cyber-glass premium (visual saja, alur tidak berubah) ═══ */
+.cx-auth-shell {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 5vw, 40px) 16px calc(20px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(168,85,247,.18), transparent 60%),
+    var(--bg);
+  overflow: hidden;
+}
+.cx-auth-glow { position: absolute; border-radius: 50%; filter: blur(70px); pointer-events: none; opacity: .5; }
+.cx-auth-glow-a { width: 320px; height: 320px; top: -110px; left: -90px; background: rgba(168,85,247,.42); }
+.cx-auth-glow-b { width: 300px; height: 300px; bottom: -120px; right: -80px; background: rgba(99,102,241,.32); }
+
+.cx-auth-layout {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  gap: 20px;
+}
+.cx-auth-aside { display: none; }
+
+.cx-auth-card {
+  width: 100%;
+  border-radius: 20px;
+  padding: clamp(20px, 5.5vw, 28px);
+  background: linear-gradient(180deg, rgba(34,23,53,.92), rgba(20,13,32,.94));
+  border: 1px solid var(--b2);
+  box-shadow: 0 24px 60px rgba(8,4,18,.55), inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: cx-rise .35s cubic-bezier(.22,.8,.28,1) both;
+}
+.cx-auth-card .cx-auth-back { margin: 0 0 14px -2px; }
+
+.cx-auth-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.cx-auth-mark {
+  width: 42px; height: 42px; flex: none; border-radius: 13px;
+  display: grid; place-items: center;
+  font: 800 16px Outfit, Inter, system-ui, sans-serif; color: #fff;
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  box-shadow: 0 8px 22px rgba(168,85,247,.35);
+}
+.cx-auth-card h1 {
+  font: 700 clamp(18px, 5vw, 21px)/1.2 Outfit, Inter, system-ui, sans-serif;
+  letter-spacing: -.02em; margin: 0 0 3px; color: var(--ink);
+}
+.cx-auth-card > .cx-auth-head p { margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
+
+.cx-auth-tabs {
+  display: flex; gap: 4px; margin: 0 0 16px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--b1);
+  border-radius: 12px; padding: 4px;
+}
+.cx-auth-tabs button {
+  flex: 1; padding: 9px 0; border-radius: 9px;
+  font: 600 12.5px Figtree, Inter, system-ui, sans-serif;
+  color: var(--muted); transition: background .18s, color .18s;
+}
+.cx-auth-tabs button.active {
+  background: linear-gradient(135deg, rgba(168,85,247,.9), rgba(99,102,241,.9));
+  color: #fff; box-shadow: 0 6px 16px rgba(168,85,247,.28);
+}
+
+.cx-auth-form { display: grid; gap: 12px; }
+.cx-auth-submit { margin-top: 4px; height: 48px; border-radius: 13px; font-weight: 700; font-size: 13.5px; }
+.cx-auth-switch { margin: 16px 0 0; text-align: center; font-size: 12px; color: var(--muted); }
+.cx-auth-switch button { font-size: 12px; }
+
+@media (min-width: 900px) {
+  .cx-auth-layout {
+    max-width: 920px;
+    grid-template-columns: 1fr 400px;
+    align-items: center;
+    gap: 48px;
+  }
+  .cx-auth-aside { display: block; }
+  .cx-auth-aside-mark {
+    width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center;
+    font: 800 18px Outfit, Inter, sans-serif; color: #fff;
+    background: linear-gradient(135deg, #a855f7, #6366f1);
+    box-shadow: 0 10px 26px rgba(168,85,247,.35); margin-bottom: 20px;
+  }
+  .cx-auth-aside h2 { font: 700 34px/1.15 Outfit, Inter, sans-serif; letter-spacing: -.03em; margin: 0 0 10px; }
+  .cx-auth-aside p { color: var(--muted); font-size: 14px; max-width: 42ch; margin: 0 0 22px; }
+  .cx-auth-points { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+  .cx-auth-points li {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 13px; color: var(--ink2);
+  }
+  .cx-auth-points svg { color: var(--indigo2); flex: none; }
+}

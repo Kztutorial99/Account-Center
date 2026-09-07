@@ -4215,65 +4215,87 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome }) {
   };
 
   return (
-    <div className="cx-login-wrap">
-      <div className="cx-login-box cx-auth-box">
-        {onBackToWelcome && (
-          <button type="button" className="cx-auth-back" onClick={onBackToWelcome}>
-            <ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali
-          </button>
-        )}
-        <div className="cx-login-mark">AI</div>
-        <h1>{mode === "register" ? "Daftar Akun Instan" : "Masuk ke Akun Instan"}</h1>
-        <p>{mode === "register" ? "Buat akun untuk mulai belanja dan isi saldo." : "Masuk dulu untuk mengakses katalog dan saldo kamu."}</p>
+    <div className="cx-auth-shell">
+      <div className="cx-auth-glow cx-auth-glow-a" aria-hidden="true" />
+      <div className="cx-auth-glow cx-auth-glow-b" aria-hidden="true" />
 
-        <div className="cx-auth-tabs">
-          <button className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); }}>Masuk</button>
-          <button className={mode === "register" ? "active" : ""} onClick={() => { setMode("register"); setError(""); }}>Daftar</button>
-        </div>
+      <div className="cx-auth-layout">
+        <aside className="cx-auth-aside" aria-hidden="true">
+          <div className="cx-auth-aside-mark">AI</div>
+          <h2>Akun Instan</h2>
+          <p>Akun Google, Gmail &amp; akun digital siap pakai. Proses cepat, saldo aman, dibantu admin.</p>
+          <ul className="cx-auth-points">
+            <li><ShieldCheck size={14} /> Garansi login &amp; bantuan admin</li>
+            <li><Zap size={14} /> Pesanan diproses cepat</li>
+            <li><LockKeyhole size={14} /> Data akun kamu tetap privat</li>
+          </ul>
+        </aside>
 
-        <form onSubmit={submit}>
-          {mode === "register" && (
-            <>
-              <Field label="Nama lengkap">
-                <InputWrap icon={User}>
-                  <input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Nama kamu" required />
-                </InputWrap>
-              </Field>
-              <Field label="Nomor WhatsApp" hint="Opsional, dipakai admin untuk konfirmasi top up.">
-                <InputWrap icon={Phone}>
-                  <input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="08xxxxxxxxxx" />
-                </InputWrap>
-              </Field>
-            </>
+        <div className="cx-auth-card">
+          {onBackToWelcome && (
+            <button type="button" className="cx-auth-back" onClick={onBackToWelcome}>
+              <ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali
+            </button>
           )}
-          <Field label="Email">
-            <InputWrap icon={Mail}>
-              <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="nama@email.com" required />
-            </InputWrap>
-          </Field>
-          <Field label="Password" hint={mode === "register" ? "Minimal 6 karakter." : ""}>
-            <InputWrap icon={LockKeyhole}>
-              <input type={showPass ? "text" : "password"} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="••••••" required />
-              <button type="button" onClick={() => setShowPass((v) => !v)} style={{ color: "var(--muted)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
-                {showPass ? <EyeOff size={13} /> : <Eye size={13} />}
-              </button>
-            </InputWrap>
-          </Field>
-          {error && <p className="cx-form-error">{error}</p>}
-          <button type="submit" className="cx-btn cx-btn-primary cx-btn-full" style={{ marginTop: 6 }} disabled={busy}>
-            {busy ? <><RefreshCw size={13} /> Memproses...</> : <><LogIn size={13} /> {mode === "register" ? "Daftar sekarang" : "Masuk"}</>}
-          </button>
-        </form>
-        <p className="cx-auth-switch">
-          {mode === "register" ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
-          <button onClick={() => { setMode(mode === "register" ? "login" : "register"); setError(""); }}>
-            {mode === "register" ? "Masuk di sini" : "Daftar gratis"}
-          </button>
-        </p>
+          <div className="cx-auth-head">
+            <div className="cx-auth-mark">AI</div>
+            <div>
+              <h1>{mode === "register" ? "Daftar Akun Instan" : "Masuk ke Akun Instan"}</h1>
+              <p>{mode === "register" ? "Buat akun untuk mulai belanja dan isi saldo." : "Masuk dulu untuk mengakses katalog dan saldo kamu."}</p>
+            </div>
+          </div>
+
+          <div className="cx-auth-tabs">
+            <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); }}>Masuk</button>
+            <button type="button" className={mode === "register" ? "active" : ""} onClick={() => { setMode("register"); setError(""); }}>Daftar</button>
+          </div>
+
+          <form onSubmit={submit} className="cx-auth-form">
+            {mode === "register" && (
+              <>
+                <Field label="Nama lengkap">
+                  <InputWrap icon={User}>
+                    <input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Nama kamu" required />
+                  </InputWrap>
+                </Field>
+                <Field label="Nomor WhatsApp" hint="Opsional, dipakai admin untuk konfirmasi top up.">
+                  <InputWrap icon={Phone}>
+                    <input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="08xxxxxxxxxx" />
+                  </InputWrap>
+                </Field>
+              </>
+            )}
+            <Field label="Email">
+              <InputWrap icon={Mail}>
+                <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="nama@email.com" required />
+              </InputWrap>
+            </Field>
+            <Field label="Password" hint={mode === "register" ? "Minimal 6 karakter." : ""}>
+              <InputWrap icon={LockKeyhole}>
+                <input type={showPass ? "text" : "password"} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="••••••" required />
+                <button type="button" onClick={() => setShowPass((v) => !v)} style={{ color: "var(--muted)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
+                  {showPass ? <EyeOff size={13} /> : <Eye size={13} />}
+                </button>
+              </InputWrap>
+            </Field>
+            {error && <p className="cx-form-error">{error}</p>}
+            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full cx-auth-submit" disabled={busy}>
+              {busy ? <><RefreshCw size={13} /> Memproses...</> : <><LogIn size={13} /> {mode === "register" ? "Daftar sekarang" : "Masuk"}</>}
+            </button>
+          </form>
+
+          <p className="cx-auth-switch">
+            {mode === "register" ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
+            <button type="button" onClick={() => { setMode(mode === "register" ? "login" : "register"); setError(""); }}>
+              {mode === "register" ? "Masuk di sini" : "Daftar gratis"}
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );
 }
+
 
 /* ═══════════════════════════════════════════════════
    PROFIL & TOP UP (halaman terpisah)
