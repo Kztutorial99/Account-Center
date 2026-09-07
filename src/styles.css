@@ -2166,7 +2166,7 @@ html { scroll-behavior: smooth; }
   position: relative; min-height: 100dvh; overflow: hidden;
   display: grid; place-items: center; padding: 24px;
   background:
-    radial-gradient(130% 100% at 50% 0%, #4c1d95 0%, #240b63 22%, #0a0218 55%, #000000 100%);
+    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--indigo) 26%, var(--bg)) 0%, var(--bg) 62%);
 }
 .cx-splash-grid {
   position: absolute; inset: -40% 0 -10%; pointer-events: none; opacity: .16;
@@ -2227,7 +2227,7 @@ html { scroll-behavior: smooth; }
   display: grid; place-items: center;
   font: 800 18px Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   letter-spacing: .5px; color: #fff;
-  background: linear-gradient(140deg, var(--indigo), var(--indigo2) 60%, var(--indigo3));
+  background: radial-gradient(130% 100% at 50% 0%, #4c1d95 0%, #240b63 22%, #0a0218 55%, #000000 100%);
   box-shadow: 0 12px 30px color-mix(in srgb, var(--indigo) 48%, transparent), inset 0 1px 0 rgba(255,255,255,.28);
   animation: cx-splash-breathe 2.6s ease-in-out infinite;
   overflow: hidden;
