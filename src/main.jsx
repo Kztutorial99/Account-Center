@@ -729,7 +729,12 @@ function App() {
   const [data, setData]         = useState({ products: [], loading: true, error: "" });
   const [auth, setAuth]         = useState({ user: null, loading: true });
   const [authScreen, setAuthScreen] = useState(() => authScreenFromPath(window.location.pathname)); // welcome | login | register
+  // Halaman terakhir sebelum masuk ke layar Masuk/Daftar, dipakai tombol "Kembali".
+  const [authReturn, setAuthReturn] = useState(null);
   const goAuthScreen = (screen) => {
+    if (screen === "login" || screen === "register") {
+      setAuthReturn((prev) => (authScreen === "welcome" ? pageFromPath(window.location.pathname) : prev));
+    }
     setAuthScreen(screen);
     if (typeof window !== "undefined") {
       window.history.pushState({}, "", screen === "welcome" ? "/" : `/${screen}`);
@@ -1036,8 +1041,14 @@ function App() {
       return (
         <AuthPage
           initialMode={authScreen === "register" ? "register" : "login"}
-          onAuthenticated={(user) => { setAuth({ user, loading: false }); goAuthScreen("welcome"); navigate("store"); }}
-          onBackToWelcome={() => { goAuthScreen("welcome"); navigate("store"); }}
+          onAuthenticated={(user) => { setAuth({ user, loading: false }); setAuthScreen("welcome"); setAuthReturn(null); navigate("store"); }}
+          onBackToWelcome={() => {
+            // Kembali ke halaman sebelumnya (bukan selalu beranda).
+            const target = PUBLIC_PAGES.includes(authReturn) ? authReturn : "store";
+            setAuthScreen("welcome");
+            setAuthReturn(null);
+            navigate(target);
+          }}
         />
       );
     }
