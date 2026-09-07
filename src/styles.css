@@ -2961,3 +2961,161 @@ html { scroll-behavior: smooth; }
   .cx-account-page:not(.cx-topup-page) .cx-profile-activity-row .cx-act-amount { font-size: 12.5px; }
   .cx-account-page:not(.cx-topup-page) + .cx-footer { padding: 12px 0; }
 }
+
+/* ── WELCOME / LANDING PAGE ─────────────────── */
+.cx-welcome {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(99,102,241,.12), transparent 60%),
+              radial-gradient(ellipse 60% 40% at 120% 80%, rgba(168,85,247,.10), transparent 50%),
+              var(--bg);
+  padding: 24px 16px 32px;
+  text-align: center;
+}
+.cx-welcome-glow {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(99,102,241,.18) 0%, transparent 45%),
+    radial-gradient(circle at 20% 70%, rgba(168,85,247,.12) 0%, transparent 35%);
+}
+.cx-welcome-grid {
+  position: absolute; inset: 0; pointer-events: none; opacity: .18;
+  background-image:
+    linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 38px 38px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, black 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, black 0%, transparent 70%);
+}
+.cx-welcome-content {
+  position: relative; z-index: 1;
+  width: min(420px, 100%);
+  display: flex; flex-direction: column; align-items: center;
+}
+.cx-welcome-brand {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin-bottom: 28px;
+}
+.cx-welcome-logo {
+  width: 34px; height: 34px; object-fit: contain;
+  filter: drop-shadow(0 0 18px rgba(99,102,241,.35));
+}
+.cx-welcome-wordmark {
+  height: 22px; width: auto; object-fit: contain;
+}
+.cx-welcome-hero { margin-bottom: 10px; }
+.cx-welcome-hero h1 {
+  font: 700 clamp(26px, 6.5vw, 38px)/1.12 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -.04em; color: var(--ink); margin: 0 0 12px;
+}
+.cx-welcome-hero h1 span {
+  background: linear-gradient(110deg, var(--indigo3) 0%, #818cf8 55%, #60a5fa 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.cx-welcome-sub {
+  color: var(--muted); font-size: 14px; line-height: 1.65;
+  max-width: 300px; margin: 0 auto 28px;
+}
+
+/* Hero visual: abstract fintech card */
+.cx-welcome-visual {
+  position: relative; width: 220px; height: 160px; margin: 0 auto 32px;
+  perspective: 800px;
+}
+.cx-welcome-card {
+  position: absolute; border-radius: 18px;
+  width: 180px; height: 110px; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, rgba(99,102,241,.22), rgba(168,85,247,.16));
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 18px 50px -12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+.cx-welcome-card-front { transform: translate(-50%, -50%) rotateX(8deg) rotateY(-12deg) translateZ(20px); z-index: 2; }
+.cx-welcome-card-back {
+  transform: translate(-50%, -50%) rotateX(8deg) rotateY(-12deg) translateZ(-30px) translate(28px, 18px);
+  background: linear-gradient(135deg, rgba(168,85,247,.14), rgba(99,102,241,.10));
+  z-index: 1;
+}
+.cx-welcome-card-chip {
+  position: absolute; left: 16px; top: 18px;
+  width: 28px; height: 20px; border-radius: 5px;
+  background: linear-gradient(135deg, rgba(253,224,71,.55), rgba(250,204,21,.35));
+  border: 1px solid rgba(255,255,255,.15);
+}
+.cx-welcome-card-lines { position: absolute; left: 16px; bottom: 20px; display: grid; gap: 5px; }
+.cx-welcome-card-lines span { height: 5px; border-radius: 2px; background: rgba(255,255,255,.18); }
+.cx-welcome-card-lines span:nth-child(1) { width: 90px; }
+.cx-welcome-card-lines span:nth-child(2) { width: 60px; }
+.cx-welcome-card-lines span:nth-child(3) { width: 40px; }
+.cx-welcome-card-brand {
+  position: absolute; right: 16px; bottom: 16px;
+  font: 700 14px Inter, system-ui, sans-serif; color: rgba(255,255,255,.85);
+  letter-spacing: -.03em;
+}
+.cx-welcome-orb {
+  position: absolute; border-radius: 50%; filter: blur(18px); pointer-events: none;
+}
+.cx-welcome-orb-a { width: 90px; height: 90px; background: rgba(99,102,241,.35); top: -18px; right: -6px; animation: cx-welcome-float 5s ease-in-out infinite; }
+.cx-welcome-orb-b { width: 70px; height: 70px; background: rgba(168,85,247,.30); bottom: -8px; left: -8px; animation: cx-welcome-float 5s ease-in-out infinite reverse; }
+@keyframes cx-welcome-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* Buttons */
+.cx-welcome-actions {
+  width: 100%; display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;
+}
+.cx-welcome-btn {
+  width: 100%; height: 46px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: 600 14px Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  transition: transform .12s, box-shadow .18s, background .18s; border: 1px solid transparent;
+}
+.cx-welcome-btn:active { transform: scale(.985); }
+.cx-welcome-btn-primary {
+  color: #fff; border: 0;
+  background: linear-gradient(110deg, #7c3aed 0%, #6366f1 55%, #3b82f6 100%);
+  box-shadow: 0 6px 20px -6px rgba(99,102,241,.55), inset 0 1px 0 rgba(255,255,255,.15);
+}
+.cx-welcome-btn-primary:hover {
+  background: linear-gradient(110deg, #6d28d9 0%, #4f46e5 55%, #2563eb 100%);
+  box-shadow: 0 8px 26px -6px rgba(99,102,241,.65), inset 0 1px 0 rgba(255,255,255,.15);
+}
+.cx-welcome-btn-secondary {
+  color: var(--ink2); background: rgba(255,255,255,.04);
+  border-color: var(--b3);
+}
+.cx-welcome-btn-secondary:hover { background: rgba(255,255,255,.08); border-color: var(--b2); color: var(--ink); }
+
+.cx-welcome-trust {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  color: var(--faint); font-size: 11px; font-weight: 500; margin: 0;
+}
+.cx-welcome-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--b3); }
+
+/* Auth back button */
+.cx-auth-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--muted); font-size: 11px; font-weight: 500;
+  background: transparent; border: 0; padding: 0; margin: -4px 0 14px -4px;
+  cursor: pointer; transition: color .15s;
+}
+.cx-auth-back:hover { color: var(--ink2); }
+
+@media (max-width: 430px) {
+  .cx-welcome { padding: 20px 14px 24px; }
+  .cx-welcome-brand { margin-bottom: 22px; }
+  .cx-welcome-logo { width: 32px; height: 32px; }
+  .cx-welcome-wordmark { height: 19px; }
+  .cx-welcome-hero h1 { font-size: clamp(24px, 7vw, 30px); margin-bottom: 10px; }
+  .cx-welcome-sub { font-size: 13px; margin-bottom: 22px; }
+  .cx-welcome-visual { width: 200px; height: 142px; margin-bottom: 26px; }
+  .cx-welcome-card { width: 160px; height: 98px; }
+  .cx-welcome-btn { height: 44px; font-size: 13.5px; }
+}
+
+@media (min-width: 720px) {
+  .cx-welcome-actions { flex-direction: row; }
+  .cx-welcome-btn { width: auto; min-width: 170px; padding: 0 28px; }
+}
