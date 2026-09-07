@@ -1738,9 +1738,30 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
     return () => { document.removeEventListener("pointerdown", onDown, true); window.removeEventListener("keydown", onKey); };
   }, [menuOpen, setMenuOpen]);
 
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") setDrawerOpen(false); };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
+  }, [drawerOpen]);
+  const goto = (page) => { setDrawerOpen(false); navigate(page); };
+  const DRAWER_MENU = [
+    ["store", "Beranda", LayoutDashboard],
+    ["katalog", "Katalog Produk", ShoppingBag],
+    ["custom-email", "Custom Email", Mail],
+    ["orders", "Pesanan Saya", Package],
+    ["topup", "Top Up Saldo", CreditCard],
+    ["help", "Bantuan", CircleHelp],
+  ];
+
   return (
     <header className="cx-topbar">
       <div className="cx-container cx-topbar-inner">
+        <button className="cx-burger" onClick={() => setDrawerOpen(true)} aria-label="Buka menu">
+          <Menu size={18} />
+        </button>
         <button className="cx-brand" onClick={() => navigate("store")}>
           <img className="cx-brand-wordmark" src="/akun-instan-wordmark.png" alt="Akun Instan" />
         </button>
@@ -1810,6 +1831,62 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
           </div>
         </div>
       </div>
+
+      {drawerOpen && (
+        <div className="cx-drawer-root">
+          <div className="cx-drawer-backdrop" onClick={() => setDrawerOpen(false)} />
+          <aside className="cx-drawer" role="dialog" aria-label="Menu layanan">
+            <div className="cx-drawer-head">
+              <img className="cx-drawer-wordmark" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+              <button className="cx-icon-btn" onClick={() => setDrawerOpen(false)} aria-label="Tutup menu"><X size={14} /></button>
+            </div>
+
+            <div className="cx-drawer-balance">
+              <span><Wallet size={12} /> Saldo kamu</span>
+              <strong>{formatPrice(user ? user.balance : 0)}</strong>
+              <div className="cx-drawer-balance-actions">
+                <button onClick={() => goto("topup")}>Top Up</button>
+                <button className="ghost" onClick={() => goto("orders")}>Riwayat</button>
+              </div>
+            </div>
+
+            <p className="cx-drawer-label">Semua Layanan</p>
+            <nav className="cx-drawer-nav">
+              {DRAWER_MENU.map(([page, label, Icon]) => (
+                <button
+                  key={page}
+                  className={activePage === page ? "active" : ""}
+                  onClick={() => goto(page)}
+                >
+                  <Icon size={15} /> <span>{label}</span>
+                  <ArrowRight size={12} className="cx-drawer-arrow" />
+                </button>
+              ))}
+            </nav>
+
+            <p className="cx-drawer-label">Akses Cepat</p>
+            <nav className="cx-drawer-nav">
+              <button onClick={() => goto("account")}><User size={15} /> <span>Profil Saya</span><ArrowRight size={12} className="cx-drawer-arrow" /></button>
+              <button onClick={() => { setDrawerOpen(false); onCartOpen(); }}>
+                <ShoppingBag size={15} /> <span>Keranjang{cart.length ? ` (${cart.length})` : ""}</span>
+                <ArrowRight size={12} className="cx-drawer-arrow" />
+              </button>
+              {user && user.role === "admin" && (
+                <button onClick={() => goto("admin")}><ShieldCheck size={15} /> <span>Panel Admin</span><ArrowRight size={12} className="cx-drawer-arrow" /></button>
+              )}
+            </nav>
+
+            <div className="cx-drawer-user">
+              <UserAvatar user={user} className="cx-avatar-lg" />
+              <div className="cx-drawer-user-copy">
+                <strong>{user ? user.name : "Akun"}</strong>
+                <small>{user ? user.email : "-"}</small>
+              </div>
+              <button className="cx-icon-btn" onClick={onLogout} aria-label="Keluar"><LogOut size={13} /></button>
+            </div>
+          </aside>
+        </div>
+      )}
     </header>
   );
 }
