@@ -669,30 +669,24 @@ function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }
           </button>
         </section>
 
-        <section className="cx-container cx-land-section cx-land-cta" aria-labelledby="mulai">
-          <h2 id="mulai" className="cx-land-h2">Siap mulai?</h2>
-          <p>Daftar gratis, isi saldo, lalu beli akun kapan saja.</p>
-          <div className="cx-hero-actions">
-            <button className="cx-btn cx-btn-primary" onClick={onRegister}><UserPlus size={13} /> Daftar</button>
-            <button className="cx-btn cx-btn-ghost" onClick={onLogin}><LogIn size={13} /> Masuk</button>
-          </div>
-        </section>
       </main>
 
       <footer className="cx-footer">
         <div className="cx-container cx-footer-inner">
-          <div className="cx-footer-brand">
-            <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.png" alt="Akun Instan" />
-            <p>Akun digital siap pakai, dikirim otomatis setelah pembayaran berhasil.</p>
-          </div>
-          <div className="cx-footer-links">
-            <button onClick={() => navigate("katalog")}>Katalog</button>
-            <button onClick={() => navigate("custom-email")}>Custom Email</button>
-            <button onClick={() => navigate("help")}>Bantuan</button>
-            <button onClick={() => navigate("terms")}>Syarat &amp; Ketentuan</button>
-            <button onClick={() => navigate("privacy")}>Kebijakan Privasi</button>
-            <button onClick={() => navigate("refund")}>Kebijakan Refund</button>
-            <button onClick={() => navigate("disclaimer")}>Disclaimer</button>
+          <div className="cx-footer-top">
+            <div className="cx-footer-brand">
+              <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+              <p>Akun digital siap pakai, dikirim otomatis.</p>
+            </div>
+            <div className="cx-footer-links">
+              <button onClick={() => navigate("katalog")}>Katalog</button>
+              <button onClick={() => navigate("custom-email")}>Custom Email</button>
+              <button onClick={() => navigate("help")}>Bantuan</button>
+              <button onClick={() => navigate("terms")}>Syarat &amp; Ketentuan</button>
+              <button onClick={() => navigate("privacy")}>Kebijakan Privasi</button>
+              <button onClick={() => navigate("refund")}>Kebijakan Refund</button>
+              <button onClick={() => navigate("disclaimer")}>Disclaimer</button>
+            </div>
           </div>
           <p className="cx-footer-copy">© {new Date().getFullYear()} Akun Instan. Seluruh transaksi tunduk pada Syarat &amp; Ketentuan.</p>
         </div>
@@ -2514,19 +2508,21 @@ function StoreFooter({ navigate }) {
   return (
     <footer className="cx-footer">
       <div className="cx-container cx-footer-inner">
-        <div className="cx-footer-brand">
-          <button className="cx-brand" onClick={() => navigate("store")} style={{ fontSize: 13 }}>
-            <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.png" alt="Akun Instan" />
-          </button>
-          <p>Stok dan katalog terhubung ke Neon Database.</p>
-        </div>
-        <div className="cx-footer-links">
-          <button onClick={() => navigate("help")}>Bantuan</button>
-          <button onClick={() => navigate("orders")}>Pesanan</button>
-          <button onClick={() => navigate("terms")}>Syarat &amp; Ketentuan</button>
-          <button onClick={() => navigate("privacy")}>Kebijakan Privasi</button>
-          <button onClick={() => navigate("refund")}>Kebijakan Refund</button>
-          <button onClick={() => navigate("disclaimer")}>Disclaimer</button>
+        <div className="cx-footer-top">
+          <div className="cx-footer-brand">
+            <button className="cx-brand" onClick={() => navigate("store")} style={{ fontSize: 13 }}>
+              <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+            </button>
+            <p>Stok dan katalog terhubung ke Neon Database.</p>
+          </div>
+          <div className="cx-footer-links">
+            <button onClick={() => navigate("help")}>Bantuan</button>
+            <button onClick={() => navigate("orders")}>Pesanan</button>
+            <button onClick={() => navigate("terms")}>Syarat &amp; Ketentuan</button>
+            <button onClick={() => navigate("privacy")}>Kebijakan Privasi</button>
+            <button onClick={() => navigate("refund")}>Kebijakan Refund</button>
+            <button onClick={() => navigate("disclaimer")}>Disclaimer</button>
+          </div>
         </div>
         <p className="cx-footer-copy">© {new Date().getFullYear()} Akun Instan. Seluruh transaksi tunduk pada Syarat &amp; Ketentuan.</p>
       </div>
