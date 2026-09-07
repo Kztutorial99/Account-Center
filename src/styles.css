@@ -2628,3 +2628,8 @@ html { scroll-behavior: smooth; }
   .nk-pop-body { padding: 24px 18px 20px; }
   .nk-pay-guide ol { font-size: 12px; }
 }
+
+/* Tombol ikon "Cara Top Up" di header panel + isi popup panduan */
+.cx-topup-page .cx-topup-help-btn { margin-left: auto; flex: 0 0 auto; }
+.cx-topup-guide-list { margin: 10px 0 0; padding-left: 18px; text-align: left; display: grid; gap: 6px; font: 400 12.5px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink2, #b9b6c9); }
+.cx-topup-guide-list li::marker { color: var(--acc, #8b5cf6); font-weight: 700; }
