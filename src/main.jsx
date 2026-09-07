@@ -544,7 +544,7 @@ function SessionSplash({ title = "Menyiapkan Akun Instan", subtitle = "Memeriksa
           <span className="cx-splash-orbit cx-splash-orbit-b" aria-hidden="true"><i /></span>
           <span className="cx-splash-ring" aria-hidden="true" />
           <span className="cx-splash-pulse" aria-hidden="true" />
-          <span className="cx-splash-core">AI</span>
+          <span className="cx-splash-core"><img src="/brand-logo.png" alt="Akun Instan" /></span>
         </div>
         <div className="cx-splash-copy">
           <strong>{title}</strong>
