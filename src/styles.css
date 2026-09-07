@@ -2429,9 +2429,9 @@ html { scroll-behavior: smooth; }
 .cx-burger:hover{ color:var(--ink); background:color-mix(in srgb, var(--indigo) 18%, transparent); }
 
 .cx-drawer-root{ position:fixed; inset:0; z-index:120; }
-.cx-drawer-backdrop{ position:absolute; inset:0; background:rgba(4,2,12,.66); backdrop-filter:blur(3px); }
+.cx-drawer-root .cx-drawer-backdrop{ position:absolute; inset:0; z-index:0; background:rgba(4,2,12,.66); backdrop-filter:blur(3px); }
 .cx-drawer{
-  position:absolute; top:0; left:0; bottom:0; width:min(84vw,310px);
+  position:absolute; z-index:1; top:0; left:0; bottom:0; width:min(84vw,310px);
   display:flex; flex-direction:column; gap:10px; padding:14px 12px 18px;
   overflow-y:auto;
   background:linear-gradient(160deg,#150a2e 0%,#0c0620 46%,#07030f 100%);
