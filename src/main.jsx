@@ -1035,15 +1035,27 @@ function App() {
   }
 
   /* ── auth gate: cek sesi dulu sebelum merender halaman internal ── */
-  if (auth.loading && (!PUBLIC_PAGES.includes(activePage) || activePage === "store")) return <SessionSplash />;
+  if (auth.loading && !PUBLIC_PAGES.includes(activePage)) return <SessionSplash />;
   if (!auth.user && !auth.loading) {
-    const needsAuth = activePage === "store" || !PUBLIC_PAGES.includes(activePage);
-    if (needsAuth || authScreen === "login" || authScreen === "register") {
+    // Layar Masuk/Daftar hanya muncul saat diminta (klik tombol yang butuh login).
+    if (authScreen === "login" || authScreen === "register" || !PUBLIC_PAGES.includes(activePage)) {
       return (
         <AuthPage
           initialMode={authScreen === "register" ? "register" : "login"}
-          onAuthenticated={(user) => { setAuth({ user, loading: false }); navigate("store"); }}
-          onBackToWelcome={() => navigate("katalog")}
+          onAuthenticated={(user) => { setAuth({ user, loading: false }); goAuthScreen("welcome"); navigate("store"); }}
+          onBackToWelcome={() => { goAuthScreen("welcome"); navigate("store"); }}
+        />
+      );
+    }
+    // Root "/" untuk tamu = landing publik (SEO), bukan dashboard.
+    if (activePage === "store") {
+      return (
+        <PublicLanding
+          navigate={navigate}
+          onLogin={() => goAuthScreen("login")}
+          onRegister={() => goAuthScreen("register")}
+          totalAccounts={totalAccounts}
+          loading={data.loading}
         />
       );
     }
