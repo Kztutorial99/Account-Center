@@ -163,6 +163,30 @@ module.exports = async function handler(request, response) {
       });
     }
 
+    // Ambil ulang QR pembayaran yang masih menunggu (tombol "Lihat QR").
+    if (resource === "qr") {
+      const refId = text((request.query && (request.query.ref || request.query.reference)) || "", 120);
+      if (!refId) return response.status(400).json({ error: "ref_id wajib diisi" });
+      const [row] = await sql`
+        SELECT amount, status, reference, qr_string AS "qrString", qr_image AS "qrImage",
+               trx_reference AS "trxReference", expired_at AS "expiredAt"
+        FROM codexa_topups WHERE reference = ${refId} AND user_id = ${user.id} LIMIT 1
+      `;
+      if (!row) return response.status(404).json({ error: "Transaksi tidak ditemukan" });
+      if (row.status !== "pending") return response.status(409).json({ error: "Pembayaran ini sudah selesai" });
+      return response.status(200).json({
+        payment: {
+          refId: row.reference,
+          trxReference: row.trxReference,
+          qrImage: row.qrImage,
+          qrString: row.qrString,
+          totalBayar: Number(row.amount) || 0,
+          expired: row.expiredAt,
+        },
+      });
+    }
+
+
     if (request.method === "GET") {
       const rows = await sql`
         SELECT id, amount, method, reference, note, status, trx_reference AS "trxReference",
