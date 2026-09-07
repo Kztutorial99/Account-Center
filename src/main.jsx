@@ -563,6 +563,145 @@ function SessionSplash({ title = "Menyiapkan Akun Instan", subtitle = "Memeriksa
 }
 
 /* ═══════════════════════════════════════════════════
+   PUBLIC LANDING ("/") — halaman informasi untuk pengunjung
+   yang belum login. Tanpa bottom nav, saldo, profil, top up,
+   atau elemen internal aplikasi.
+════════════════════════════════════════════════════ */
+const LANDING_FAQ = [
+  ["Bagaimana cara membeli akun?", "Pilih produk di katalog, lakukan checkout, selesaikan pembayaran, lalu detail akun terbuka otomatis di menu Pesanan."],
+  ["Metode pembayaran apa yang tersedia?", "Pembayaran memakai QRIS, e-wallet (DANA, OVO, GoPay, ShopeePay) dan transfer bank melalui saldo Akun Instan."],
+  ["Kapan akun saya dikirim?", "Setelah pembayaran terverifikasi, detail login langsung terbuka di akun kamu tanpa menunggu admin."],
+  ["Bisa pesan Gmail dengan nama sendiri?", "Bisa. Gunakan menu Custom Email untuk memesan nama Gmail/username sesuai keinginan, lalu tim kami yang membuatkan akunnya."],
+  ["Bagaimana kalau akun bermasalah?", "Ajukan klaim lewat halaman Bantuan sesuai ketentuan pada Kebijakan Refund."],
+];
+
+function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }) {
+  return (
+    <div className="cx-app cx-land">
+      <header className="cx-land-top">
+        <div className="cx-container cx-land-top-inner">
+          <img className="cx-brand-wordmark" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+          <nav className="cx-land-top-nav" aria-label="Navigasi publik">
+            <button onClick={() => navigate("katalog")}>Katalog</button>
+            <button onClick={() => navigate("custom-email")}>Custom Email</button>
+            <button onClick={() => navigate("help")}>Bantuan</button>
+          </nav>
+          <div className="cx-land-top-auth">
+            <button className="cx-btn cx-btn-ghost" onClick={onLogin}><LogIn size={13} /> Masuk</button>
+            <button className="cx-btn cx-btn-primary" onClick={onRegister}><UserPlus size={13} /> Daftar</button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section className="cx-hero cx-hero-modern cx-land-hero">
+          <div className="cx-hero-glow" aria-hidden="true" />
+          <div className="cx-container cx-hero-inner">
+            <div className="cx-hero-badge">
+              <span className="cx-hero-pulse" /> Stok live · {loading ? "memuat" : `${totalAccounts} akun`} tersedia
+            </div>
+            <div className="cx-kicker">AKUNINSTAN</div>
+            <h1>Akun digital,<br /><em>tanpa drama.</em></h1>
+            <p className="cx-hero-sub">
+              Akun siap pakai dari katalog nyata. Pilih akun, lakukan pembayaran, dan detail akun
+              dikirim otomatis setelah pembayaran berhasil.
+            </p>
+            <div className="cx-hero-actions">
+              <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
+                Lihat Katalog <ArrowRight size={13} />
+              </button>
+              <button className="cx-btn cx-btn-ghost" onClick={() => navigate("help")}>Cara Beli</button>
+            </div>
+          </div>
+        </section>
+
+        <section className="cx-container cx-land-section" aria-labelledby="layanan">
+          <h2 id="layanan" className="cx-land-h2">Layanan Akun Instan</h2>
+          <div className="cx-land-grid">
+            <article className="cx-land-card">
+              <span className="cx-land-icon"><Package size={16} /></span>
+              <h3>Katalog Akun</h3>
+              <p>Lihat akun yang tersedia secara real-time, lengkap dengan tipe login dan harga transparan.</p>
+              <button className="cx-land-link" onClick={() => navigate("katalog")}>Buka katalog <ArrowRight size={12} /></button>
+            </article>
+            <article className="cx-land-card">
+              <span className="cx-land-icon"><Mail size={16} /></span>
+              <h3>Custom Email</h3>
+              <p>Pesan Gmail atau username custom sesuai kebutuhan kamu, dibuatkan oleh tim Akun Instan.</p>
+              <button className="cx-land-link" onClick={() => navigate("custom-email")}>Pesan custom email <ArrowRight size={12} /></button>
+            </article>
+            <article className="cx-land-card">
+              <span className="cx-land-icon"><CreditCard size={16} /></span>
+              <h3>Cara Pembelian</h3>
+              <p>Pilih produk → checkout → pembayaran → akun dikirim. Semua tahapan bisa dipantau dari akun kamu.</p>
+              <button className="cx-land-link" onClick={() => navigate("help")}>Baca panduan <ArrowRight size={12} /></button>
+            </article>
+            <article className="cx-land-card">
+              <span className="cx-land-icon"><ShieldCheck size={16} /></span>
+              <h3>Aman &amp; Otomatis</h3>
+              <p>Pembayaran diverifikasi sistem, detail login tetap tersembunyi sampai pembayaran berhasil, lalu dikirim otomatis ke halaman pesanan kamu.</p>
+            </article>
+          </div>
+        </section>
+
+        <section className="cx-container cx-land-section" aria-labelledby="cara-beli">
+          <h2 id="cara-beli" className="cx-land-h2">Empat langkah pembelian</h2>
+          <ol className="cx-land-steps">
+            <li><strong>Pilih produk</strong><span>Telusuri katalog dan pilih akun yang sesuai kebutuhan.</span></li>
+            <li><strong>Checkout</strong><span>Masuk atau daftar, lalu konfirmasi pesanan kamu.</span></li>
+            <li><strong>Pembayaran</strong><span>Bayar lewat QRIS, e-wallet, atau transfer bank.</span></li>
+            <li><strong>Akun dikirim</strong><span>Detail akun terbuka otomatis setelah pembayaran berhasil.</span></li>
+          </ol>
+        </section>
+
+        <section className="cx-container cx-land-section" aria-labelledby="faq">
+          <h2 id="faq" className="cx-land-h2">FAQ &amp; Bantuan</h2>
+          <div className="cx-land-faq">
+            {LANDING_FAQ.map(([q, a]) => (
+              <details key={q} className="cx-land-faq-item">
+                <summary>{q}</summary>
+                <p>{a}</p>
+              </details>
+            ))}
+          </div>
+          <button className="cx-btn cx-btn-secondary cx-land-faq-cta" onClick={() => navigate("help")}>
+            <CircleHelp size={13} /> Lihat semua bantuan
+          </button>
+        </section>
+
+        <section className="cx-container cx-land-section cx-land-cta" aria-labelledby="mulai">
+          <h2 id="mulai" className="cx-land-h2">Siap mulai?</h2>
+          <p>Daftar gratis, isi saldo, lalu beli akun kapan saja.</p>
+          <div className="cx-hero-actions">
+            <button className="cx-btn cx-btn-primary" onClick={onRegister}><UserPlus size={13} /> Daftar</button>
+            <button className="cx-btn cx-btn-ghost" onClick={onLogin}><LogIn size={13} /> Masuk</button>
+          </div>
+        </section>
+      </main>
+
+      <footer className="cx-footer">
+        <div className="cx-container cx-footer-inner">
+          <div className="cx-footer-brand">
+            <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+            <p>Akun digital siap pakai, dikirim otomatis setelah pembayaran berhasil.</p>
+          </div>
+          <div className="cx-footer-links">
+            <button onClick={() => navigate("katalog")}>Katalog</button>
+            <button onClick={() => navigate("custom-email")}>Custom Email</button>
+            <button onClick={() => navigate("help")}>Bantuan</button>
+            <button onClick={() => navigate("terms")}>Syarat &amp; Ketentuan</button>
+            <button onClick={() => navigate("privacy")}>Kebijakan Privasi</button>
+            <button onClick={() => navigate("refund")}>Kebijakan Refund</button>
+            <button onClick={() => navigate("disclaimer")}>Disclaimer</button>
+          </div>
+          <p className="cx-footer-copy">© {new Date().getFullYear()} Akun Instan. Seluruh transaksi tunduk pada Syarat &amp; Ketentuan.</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
    APP ROOT
 ════════════════════════════════════════════════════ */
 const PAGE_PATHS = ["admin", "katalog", "orders", "help", "account", "topup", "custom-email", "terms", "privacy", "refund", "disclaimer"];
@@ -893,6 +1032,19 @@ function App() {
   /* ── admin page ── */
   if (activePage === "admin") {
     return <AdminPage onBack={() => navigate("store")} onNotice={showNotice} />;
+  }
+
+  /* ── landing publik di "/" untuk pengunjung yang belum login ── */
+  if (activePage === "store" && !auth.user && authScreen !== "login" && authScreen !== "register") {
+    return (
+      <PublicLanding
+        navigate={navigate}
+        onLogin={() => goAuthScreen("login")}
+        onRegister={() => goAuthScreen("register")}
+        totalAccounts={totalAccounts}
+        loading={data.loading}
+      />
+    );
   }
 
   /* ── auth gate: wajib login sebelum akses Akun Instan ── */
