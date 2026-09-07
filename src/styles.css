@@ -2166,7 +2166,7 @@ html { scroll-behavior: smooth; }
   position: relative; min-height: 100dvh; overflow: hidden;
   display: grid; place-items: center; padding: 24px;
   background:
-    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--indigo) 26%, var(--bg)) 0%, var(--bg) 62%);
+    radial-gradient(130% 100% at 50% 0%, #4c1d95 0%, #240b63 22%, #0a0218 55%, #000000 100%);
 }
 .cx-splash-grid {
   position: absolute; inset: -40% 0 -10%; pointer-events: none; opacity: .16;
