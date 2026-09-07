@@ -5,6 +5,7 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /account
 Disallow: /orders
+Disallow: /topup
 Disallow: /login
 Disallow: /register
 
@@ -15,6 +16,17 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /account
 Disallow: /orders
+Disallow: /topup
+Disallow: /login
+Disallow: /register
+
+User-agent: Bingbot
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /account
+Disallow: /orders
+Disallow: /topup
 Disallow: /login
 Disallow: /register
 

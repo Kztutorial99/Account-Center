@@ -139,7 +139,7 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 
 /* ── SECTION HEADER ─────────────────────────── */
 .cx-section-header { display: flex; align-items: center; justify-content: space-between; margin: 32px 0 18px; }
-.cx-section-header h2 { margin: 0; font: 600 18px Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: -.03em; }
+.cx-section-header h1, .cx-section-header h2 { margin: 0; font: 600 18px Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: -.03em; }
 .cx-section-sub { color: var(--muted); font-size: 11px; }
 
 /* ── SEARCH BOX ─────────────────────────────── */
@@ -468,7 +468,7 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
   .cx-hero-actions { gap: 10px; }
   .cx-hero-actions .cx-btn { flex: 1 1 140px; height: 42px; }
   .cx-grid { grid-template-columns: 1fr; }
-  .cx-section-header h2 { font-size: 17px; }
+  .cx-section-header h1, .cx-section-header h2 { font-size: 17px; }
   .cx-btn { padding: 10px 14px; }
   .cx-btn-sm { padding: 7px 10px; }
   .cx-simple-page h1 { font-size: 24px; }
@@ -1188,7 +1188,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
   body { font-size: 15px; line-height: 1.6; letter-spacing: -.005em; }
   .cx-kicker, .cx-section-sub, .cx-product-type { letter-spacing: .04em; }
   h1, h2, h3 { letter-spacing: -.03em; }
-  .cx-section-header h2 { font-size: 20px; }
+  .cx-section-header h1, .cx-section-header h2 { font-size: 20px; }
   .cx-product-title { font-size: 16px; letter-spacing: -.02em; }
   .cx-product-desc { font-size: 13px; color: var(--muted); }
 

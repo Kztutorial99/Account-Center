@@ -36,6 +36,7 @@ const PAGE_SEO = {
     description:
       "Isi saldo Akun Instan lewat QRIS, e-wallet (DANA, OVO, GoPay, ShopeePay) atau transfer bank. Saldo langsung bisa dipakai untuk membeli akun digital.",
     keywords: "top up saldo akun instan, bayar qris, e-wallet, transfer bank",
+    noindex: true,
   },
   help: {
     path: "/help",

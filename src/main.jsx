@@ -566,6 +566,8 @@ function SessionSplash({ title = "Menyiapkan Akun Instan", subtitle = "Memeriksa
    APP ROOT
 ════════════════════════════════════════════════════ */
 const PAGE_PATHS = ["admin", "katalog", "orders", "help", "account", "topup", "custom-email", "terms", "privacy", "refund", "disclaimer"];
+// Halaman publik: bisa dibuka tanpa login dan boleh di-crawl Google.
+export const PUBLIC_PAGES = ["store", "katalog", "custom-email", "help", "terms", "privacy", "refund", "disclaimer"];
 const pageFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
   return PAGE_PATHS.includes(slug) ? slug : "store";
@@ -772,7 +774,14 @@ function App() {
     noticeTimer.current = window.setTimeout(() => { setNotice(""); noticeTimer.current = null; }, 2800);
   };
   useEffect(() => () => { if (noticeTimer.current) window.clearTimeout(noticeTimer.current); }, []);
+  const requireLogin = () => {
+    if (auth.user) return false;
+    showNotice("Masuk dulu untuk melanjutkan pembelian");
+    goAuthScreen("login");
+    return true;
+  };
   const addToCart  = (product, selected) => {
+    if (requireLogin()) return;
     const picks = (product.accounts || []).filter((a) => selected.includes(a.index));
     const total = sumSelected(product, selected);
     setCart((c) => {
@@ -803,6 +812,7 @@ function App() {
     && !customBlocked && customQuotaLeft > 0;
 
   const addCustomEmail = () => {
+    if (requireLogin()) return;
     const value = String(emailCheck.normalized || emailDraft).trim().toLowerCase();
     if (!value) return;
     if (emailCheck.state !== "available" && emailCheck.state !== "unknown") {
@@ -833,6 +843,7 @@ function App() {
   };
   const doCheckout = async () => {
     if (checkout.loading) return;
+    if (requireLogin()) return;
     const wantCustom = customEmails.length;
     const items = cart.map((item) => ({
       id: item.id,
@@ -885,18 +896,23 @@ function App() {
   }
 
   /* ── auth gate: wajib login sebelum akses Akun Instan ── */
-  if (auth.loading) return <SessionSplash />;
-  if (!auth.user) {
-    if (authScreen === "welcome") {
+  if (auth.loading && !PUBLIC_PAGES.includes(activePage)) return <SessionSplash />;
+  if (!auth.user && !auth.loading) {
+    // /login dan /register tetap punya layar autentikasi sendiri.
+    if (authScreen === "login" || authScreen === "register") {
+      return (
+        <AuthPage
+          initialMode={authScreen}
+          onAuthenticated={(user) => { setAuth({ user, loading: false }); navigate("store"); }}
+          onBackToWelcome={() => goAuthScreen("welcome")}
+        />
+      );
+    }
+    // Halaman privat (pesanan, profil, saldo, top up) tetap wajib login.
+    if (!PUBLIC_PAGES.includes(activePage)) {
       return <WelcomePage onLogin={() => goAuthScreen("login")} onRegister={() => goAuthScreen("register")} />;
     }
-    return (
-      <AuthPage
-        initialMode={authScreen}
-        onAuthenticated={(user) => { setAuth({ user, loading: false }); navigate("store"); }}
-        onBackToWelcome={() => goAuthScreen("welcome")}
-      />
-    );
+    // Halaman publik lanjut dirender apa adanya untuk pengunjung & Googlebot.
   }
 
   const topbar = (
@@ -904,6 +920,7 @@ function App() {
       activePage={activePage} navigate={navigate} cart={cart}
       onCartOpen={() => setCartOpen(true)}
       user={auth.user} menuOpen={menuOpen} setMenuOpen={setMenuOpen} onLogout={logout}
+      onLogin={() => goAuthScreen("login")}
     />
   );
 
@@ -1205,7 +1222,7 @@ function App() {
             <main className="cx-container" id="catalog" style={{ paddingTop: 20, paddingBottom: 64 }}>
         <div className="cx-section-header cx-section-header-stack">
           <div>
-            <h2>Akun yang tersedia.</h2>
+            <h1>Akun yang tersedia.</h1>
             <p className="cx-section-sub">{data.loading ? "Memuat..." : `${products.length} produk ditemukan`}</p>
           </div>
           <div className="cx-search">
@@ -1749,7 +1766,7 @@ function NotificationBell({ navigate, activePage }) {
   );
 }
 
-function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, setMenuOpen, onLogout }) {
+function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, setMenuOpen, onLogout, onLogin }) {
   const accountRef = useRef(null);
   // Klik/tap di mana pun di luar kartu profil harus menutup menunya.
   useEffect(() => {
@@ -1808,15 +1825,19 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
             <span className="cx-cart-label">Keranjang</span>
           </button>
           <div className="cx-account-menu" ref={accountRef}>
-            <button className="cx-account-trigger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Akun saya">
+            <button
+              className="cx-account-trigger"
+              onClick={() => (user ? setMenuOpen(!menuOpen) : onLogin && onLogin())}
+              aria-label={user ? "Akun saya" : "Masuk ke Akun Instan"}
+            >
               <UserAvatar user={user} />
               <div className="cx-account-trigger-copy">
-                <strong>{user ? user.name : "Akun"}</strong>
-                <small>{formatPrice(user ? user.balance : 0)}</small>
+                <strong>{user ? user.name : "Masuk"}</strong>
+                <small>{user ? formatPrice(user.balance) : "Daftar gratis"}</small>
               </div>
               <ChevronDown size={12} />
             </button>
-            {menuOpen && (
+            {menuOpen && user && (
               <>
                 <div className="cx-account-overlay" onClick={() => setMenuOpen(false)} />
                 <div className="cx-account-dropdown">
