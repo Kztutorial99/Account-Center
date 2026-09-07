@@ -2598,6 +2598,112 @@ function AccountPicker({ product, accounts, selected, onToggle, pageSize = 3, si
   );
 }
 
+/* ─── Popup detail produk/akun ───
+   Membuka info lengkap produk dalam modal premium, menggantikan
+   expand inline "Lihat detail akun" agar card lebih ringkas dan
+   pengalaman membaca detail lebih fokus di mobile maupun desktop. */
+function ProductDetailModal({ product, color, open, onClose }) {
+  const accounts = Array.isArray(product.accounts) ? product.accounts : [];
+  const stock = Number(product.stock) || accounts.length;
+  const prices = accounts.map((a) => accountPriceOf(a, product)).filter((p) => p > 0);
+  const minPrice = prices.length ? Math.min(...prices) : Number(product.price) || 0;
+  const maxPrice = prices.length ? Math.max(...prices) : Number(product.price) || 0;
+  const hasRange = minPrice !== maxPrice && maxPrice > 0;
+  const sections = useMemo(() => parseProductDescription(product.description || ""), [product.description]);
+  const featureItems = useMemo(() => {
+    const items = [];
+    for (const sec of sections) {
+      for (const b of sec.blocks) {
+        if (b.type === "li") items.push(b.text);
+      }
+    }
+    return items.slice(0, 6);
+  }, [sections]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return createPortal(
+    <div className="cx-pd-backdrop" onClick={onClose} role="presentation">
+      <div
+        className="cx-pd-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cx-pd-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="cx-pd-glow" aria-hidden="true" style={{ background: `radial-gradient(circle at 70% 0%, ${color}22, transparent 55%)` }} />
+        <button className="cx-pd-close" aria-label="Tutup" onClick={onClose}><X size={18} /></button>
+
+        <div className="cx-pd-body">
+          <div className="cx-pd-head">
+            <span className="cx-pd-plat" style={{ color }}>
+              <ProviderIcon type={product.loginType} size={18} />
+              {product.loginType}
+            </span>
+            <span className={`cx-pd-stock${stock > 0 ? "" : " is-out"}`}>
+              {stock > 0 ? `${stock} tersedia` : "Stok habis"}
+            </span>
+          </div>
+
+          <h2 id="cx-pd-title" className="cx-pd-title">{product.title}</h2>
+
+          {featureItems.length > 0 && (
+            <ul className="cx-pd-features">
+              {featureItems.map((item, i) => (
+                <li key={i}><Check size={14} style={{ color }} /> <span>{item}</span></li>
+              ))}
+            </ul>
+          )}
+
+          <div className="cx-pd-desc">
+            <ProductDescription text={product.description} compact={false} />
+          </div>
+
+          {product.deliveryDetails && (
+            <div className="cx-pd-delivery">
+              <h4><ShieldCheck size={14} /> Panduan &amp; keamanan</h4>
+              <DeliveryNote text={product.deliveryDetails} />
+            </div>
+          )}
+
+          <div className="cx-pd-summary">
+            <div className="cx-pd-summary-row">
+              <span>Jumlah akun</span>
+              <strong>{accounts.length || stock} akun</strong>
+            </div>
+            <div className="cx-pd-summary-row">
+              <span>Kisaran harga</span>
+              <strong style={{ color }}>
+                {minPrice > 0
+                  ? (hasRange ? `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}` : formatPrice(minPrice))
+                  : "Pilih akun untuk melihat harga"}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="cx-pd-foot">
+          <button className="cx-btn cx-btn-ghost" onClick={onClose}>Tutup</button>
+          <button className="cx-btn cx-btn-primary" onClick={onClose}>
+            Pilih akun <ArrowRight size={14} />
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function ProductCard({ product, colorIdx, onBuy }) {
   const color = ACCENT_COLORS[colorIdx % ACCENT_COLORS.length];
   const accounts = Array.isArray(product.accounts) ? product.accounts : [];
@@ -2619,15 +2725,8 @@ function ProductCard({ product, colorIdx, onBuy }) {
 
       <h3 className="cx-pc-title">{product.title}</h3>
 
-      <div className={`cx-pc-detail${detailOpen ? " is-open" : ""}`}>
-        <ProductDescription
-          className="cx-pc-desc"
-          compact={!detailOpen}
-          text={product.description || "Akun digital siap digunakan. Detail dikirim setelah pembayaran."}
-        />
-      </div>
-      <button type="button" className="cx-pc-detail-toggle" onClick={() => setDetailOpen((v) => !v)}>
-        {detailOpen ? "Sembunyikan detail" : "Lihat detail akun"}
+      <button type="button" className="cx-pc-detail-toggle" onClick={() => setDetailOpen(true)}>
+        Lihat detail akun
       </button>
 
       {accounts.length > 0 && (
@@ -2655,6 +2754,13 @@ function ProductCard({ product, colorIdx, onBuy }) {
           <ArrowRight size={16} />
         </button>
       </div>
+
+      <ProductDetailModal
+        product={product}
+        color={color}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+      />
     </article>
   );
 }
