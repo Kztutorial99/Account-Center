@@ -2870,3 +2870,59 @@ html { scroll-behavior: smooth; }
   }
 }
 .cx-topup-guide-list + .nk-pop-actions { width: 100%; margin-top: 6px; }
+
+/* ─── Profil: compact + hierarchy (mobile first) ─── */
+.cx-account-page:not(.cx-topup-page) { padding: 22px 0 30px; overflow-x: clip; }
+.cx-account-page:not(.cx-topup-page) .cx-account-grid { margin-top: 0; gap: 14px; }
+.cx-account-page:not(.cx-topup-page) .cx-profile-card { padding: 16px; }
+.cx-account-page:not(.cx-topup-page) .cx-profile-head {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: 12px; margin-bottom: 12px;
+}
+.cx-account-page:not(.cx-topup-page) .cx-profile-head-copy { min-width: 0; }
+.cx-account-page:not(.cx-topup-page) .cx-profile-head h2 {
+  font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cx-account-page:not(.cx-topup-page) .cx-profile-head p { font-size: 10.5px; margin-top: 2px; }
+.cx-account-page:not(.cx-topup-page) .cx-profile-edit-btn { white-space: nowrap; }
+.cx-account-page:not(.cx-topup-page) .cx-profile-list { gap: 0; }
+.cx-account-page:not(.cx-topup-page) .cx-profile-list li {
+  padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--b1) 62%, transparent);
+}
+.cx-account-page:not(.cx-topup-page) .cx-profile-list li:last-child { border-bottom: 0; }
+.cx-role-tag {
+  display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px;
+  font: 600 9px Inter, system-ui, sans-serif; letter-spacing: .04em;
+  background: rgba(99,102,241,.14); color: var(--indigo3, #a5b4fc);
+}
+.cx-role-tag.is-user { background: rgba(255,255,255,.07); color: var(--muted); }
+.cx-account-page:not(.cx-topup-page) .cx-balance-card {
+  margin-top: 12px; padding: 12px 14px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px;
+}
+.cx-account-page:not(.cx-topup-page) .cx-balance-card strong {
+  grid-column: 2; grid-row: 1; margin-top: 0; font-size: 20px; text-align: right;
+}
+.cx-account-page:not(.cx-topup-page) .cx-balance-card small { grid-column: 1 / -1; margin-top: 0; }
+.cx-account-page:not(.cx-topup-page) .cx-profile-activity .cx-panel-header { padding: 12px 14px; }
+.cx-account-page:not(.cx-topup-page) .cx-profile-activity-row { padding: 10px 14px; gap: 8px 10px; }
+.cx-account-page:not(.cx-topup-page) .cx-profile-activity-row:last-child { border-bottom: 0; }
+
+@media (max-width: 560px) {
+  .cx-account-page:not(.cx-topup-page) { padding: 16px 0 22px; }
+  .cx-account-page:not(.cx-topup-page) .cx-profile-card { padding: 14px; }
+  .cx-account-page:not(.cx-topup-page) .cx-avatar-xl { width: 44px; height: 44px; font-size: 15px; }
+  .cx-account-page:not(.cx-topup-page) .cx-profile-head { gap: 10px; }
+  .cx-account-page:not(.cx-topup-page) .cx-profile-head h2 { font-size: 15px; }
+  .cx-account-page:not(.cx-topup-page) .cx-profile-list li { font-size: 11px; gap: 7px; }
+  .cx-account-page:not(.cx-topup-page) .cx-profile-list li span { min-width: 66px; }
+  .cx-account-page:not(.cx-topup-page) .cx-balance-card strong { font-size: 18px; }
+  .cx-account-page:not(.cx-topup-page) .cx-profile-activity-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "info status" "date date"; padding: 10px 14px;
+  }
+  .cx-account-page:not(.cx-topup-page) .cx-profile-activity-row > div:first-child { grid-area: info; min-width: 0; }
+  .cx-account-page:not(.cx-topup-page) .cx-profile-activity-row .cx-topup-badge { grid-area: status; align-self: center; }
+  .cx-account-page:not(.cx-topup-page) .cx-profile-activity-row .cx-topup-date { grid-area: date; margin-left: 0; }
+  .cx-account-page:not(.cx-topup-page) + .cx-footer { padding: 12px 0; }
+}
