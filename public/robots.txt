@@ -14,4 +14,4 @@ Disallow: /api/
 Disallow: /account
 Disallow: /orders
 
-Sitemap: https://accounter.my.id/sitemap.xml
+Sitemap: https://akuninstan.com/sitemap.xml
