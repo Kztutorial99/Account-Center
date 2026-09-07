@@ -4483,10 +4483,14 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
 
 
       <div className="cx-account-grid">
-        <div className="cx-panel">
-          <div className="cx-panel-header">
-            <h3>Top Up Saldo</h3>
-            <span className="cx-panel-sub">QRIS otomatis · saldo masuk seketika</span>
+        <section className="cx-panel cx-topup-selection">
+          <div className="cx-nominal-head">
+            <div>
+              <h2>Pilih Nominal</h2>
+              <p>Min {formatPrice(500)} · Max {formatPrice(10000000)}</p>
+            </div>
+            <div className="cx-nominal-actions">
+              <span className="cx-nominal-tag"><Sparkles size={11} /> QRIS instan</span>
             <button
               type="button"
               className="cx-icon-btn cx-topup-help-btn"
@@ -4496,17 +4500,10 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
             >
               <CircleHelp size={15} />
             </button>
+            </div>
           </div>
 
           <div className="cx-topup-form">
-            <div className="cx-nominal-head">
-              <div>
-                <strong>Pilih Nominal</strong>
-                <small>Min {formatPrice(500)} · Max {formatPrice(10000000)}</small>
-              </div>
-              <span className="cx-nominal-tag"><Sparkles size={11} /> QRIS instan</span>
-            </div>
-
             <div className="cx-nominal-grid">
               {TOPUP_PRESETS.map((v) => (
                 <button
@@ -4554,9 +4551,9 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
             </div>
             {formError && <p className="cx-form-error">{formError}</p>}
           </div>
-        </div>
+        </section>
 
-        <div className="cx-panel">
+        <section className="cx-panel cx-topup-history">
           <div className="cx-panel-header">
             <h3>Riwayat Top Up</h3>
             <span className="cx-panel-sub">saldo {formatPrice(state.balance)}{pendingTotal > 0 ? ` · ${formatPrice(pendingTotal)} belum dibayar` : ""}</span>
@@ -4584,7 +4581,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                 )}
               </div>
             ))}
-        </div>
+        </section>
       </div>
 
       {showGuide && createPortal(
