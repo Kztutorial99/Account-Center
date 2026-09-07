@@ -1034,37 +1034,20 @@ function App() {
     return <AdminPage onBack={() => navigate("store")} onNotice={showNotice} />;
   }
 
-  /* ── landing publik di "/" untuk pengunjung yang belum login ── */
-  if (activePage === "store" && !auth.user && authScreen !== "login" && authScreen !== "register") {
-    return (
-      <PublicLanding
-        navigate={navigate}
-        onLogin={() => goAuthScreen("login")}
-        onRegister={() => goAuthScreen("register")}
-        totalAccounts={totalAccounts}
-        loading={data.loading}
-      />
-    );
-  }
-
-  /* ── auth gate: wajib login sebelum akses Akun Instan ── */
-  if (auth.loading && !PUBLIC_PAGES.includes(activePage)) return <SessionSplash />;
+  /* ── auth gate: cek sesi dulu sebelum merender halaman internal ── */
+  if (auth.loading && (!PUBLIC_PAGES.includes(activePage) || activePage === "store")) return <SessionSplash />;
   if (!auth.user && !auth.loading) {
-    // /login dan /register tetap punya layar autentikasi sendiri.
-    if (authScreen === "login" || authScreen === "register") {
+    const needsAuth = activePage === "store" || !PUBLIC_PAGES.includes(activePage);
+    if (needsAuth || authScreen === "login" || authScreen === "register") {
       return (
         <AuthPage
-          initialMode={authScreen}
+          initialMode={authScreen === "register" ? "register" : "login"}
           onAuthenticated={(user) => { setAuth({ user, loading: false }); navigate("store"); }}
-          onBackToWelcome={() => goAuthScreen("welcome")}
+          onBackToWelcome={() => navigate("katalog")}
         />
       );
     }
-    // Halaman privat (pesanan, profil, saldo, top up) tetap wajib login.
-    if (!PUBLIC_PAGES.includes(activePage)) {
-      return <WelcomePage onLogin={() => goAuthScreen("login")} onRegister={() => goAuthScreen("register")} />;
-    }
-    // Halaman publik lanjut dirender apa adanya untuk pengunjung & Googlebot.
+    // Halaman publik SEO (katalog, custom-email, help, legal) tetap dirender apa adanya.
   }
 
   const topbar = (
