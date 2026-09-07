@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import {
   ArrowRight, ArrowUpRight, ArrowDownRight, BadgeCheck, Bell, Check,
   CircleHelp, Command, Copy, CreditCard, Eye, EyeOff, ChevronDown,
-  FileText, LayoutDashboard, LockKeyhole, LogIn, LogOut, Menu,
+  FileText, Home, LayoutDashboard, LockKeyhole, LogIn, LogOut, Menu,
   MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw,
   Search, Settings, ShieldCheck, ShoppingBag, Trash2, X,
   User, Wallet, Mail, Phone, Clock, Sparkles, Send,
@@ -2011,27 +2011,54 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
 ════════════════════════════════════════════════════ */
 function MobileTabBar({ activePage, navigate, cart, onCartOpen, cartOpen }) {
   const items = [
-    { key: "store",   label: "Store",    Icon: Sparkles },
-    { key: "katalog", label: "Katalog",  Icon: Package },
-    { key: "cart",    label: "Keranjang",Icon: ShoppingBag },
+    { key: "store",   label: "Beranda", Icon: Home },
+    { key: "katalog", label: "Katalog", Icon: Package },
     { key: "custom-email", label: "Email", Icon: Mail },
-    { key: "orders",  label: "Pesanan",  Icon: BadgeCheck },
-    { key: "account", label: "Akun",     Icon: User },
+    { key: "account", label: "Profil",  Icon: User },
   ];
+  const isTopupActive = activePage === "topup";
   return (
     <nav className="cx-tabbar" aria-label="Navigasi utama">
-      {items.map(({ key, label, Icon }) => {
-        const active = key === "cart" ? !!cartOpen : (activePage === key && !cartOpen);
+      {items.slice(0, 2).map(({ key, label, Icon }) => {
+        const active = activePage === key && !cartOpen;
         return (
           <button
             key={key}
             className={`cx-tabbar-item${active ? " is-active" : ""}`}
             aria-current={active ? "page" : undefined}
-            onClick={() => (key === "cart" ? onCartOpen() : navigate(key))}
+            onClick={() => navigate(key)}
           >
             <span className="cx-tabbar-icon">
-              <Icon size={19} strokeWidth={active ? 2.4 : 1.9} />
-              {key === "cart" && cart.length > 0 && <b>{cart.length}</b>}
+              <Icon size={20} strokeWidth={active ? 2.4 : 1.9} />
+            </span>
+            {label}
+          </button>
+        );
+      })}
+
+      <button
+        className={`cx-tabbar-center${isTopupActive ? " is-active" : ""}`}
+        aria-current={isTopupActive ? "page" : undefined}
+        onClick={() => navigate("topup")}
+        aria-label="Top Up"
+      >
+        <span className="cx-tabbar-center-btn">
+          <Plus size={22} strokeWidth={2.6} />
+        </span>
+        <span className="cx-tabbar-center-label">Top Up</span>
+      </button>
+
+      {items.slice(2).map(({ key, label, Icon }) => {
+        const active = activePage === key && !cartOpen;
+        return (
+          <button
+            key={key}
+            className={`cx-tabbar-item${active ? " is-active" : ""}`}
+            aria-current={active ? "page" : undefined}
+            onClick={() => navigate(key)}
+          >
+            <span className="cx-tabbar-icon">
+              <Icon size={20} strokeWidth={active ? 2.4 : 1.9} />
             </span>
             {label}
           </button>
