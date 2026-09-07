@@ -4377,15 +4377,51 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   };
 
   /* Simpan gambar QR ke galeri / unduhan. */
-  const saveQr = () => {
-    if (!payment || !payment.qrImage) return;
+  const triggerDownload = (href, name) => {
     const a = document.createElement("a");
-    a.href = payment.qrImage;
-    a.download = `qris-${payment.refId || "topup"}.png`;
+    a.href = href;
+    a.download = name;
+    a.rel = "noopener";
     document.body.appendChild(a);
     a.click();
     a.remove();
   };
+
+  const saveQr = async () => {
+    if (!payment || !payment.qrImage) return;
+    const name = `qris-${payment.refId || "topup"}.png`;
+    const src = payment.qrImage;
+    if (src.startsWith("data:")) { triggerDownload(src, name); onNotice("QR tersimpan di perangkat"); return; }
+    try {
+      const res = await fetch(src, { mode: "cors" });
+      if (!res.ok) throw new Error("gagal");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      triggerDownload(url, name);
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      onNotice("QR tersimpan di perangkat");
+    } catch (_) {
+      /* Cadangan: unduh langsung, kalau diblokir buka di tab baru agar bisa ditahan-simpan. */
+      try { triggerDownload(src, name); } catch (_e) { window.open(src, "_blank", "noopener"); }
+    }
+  };
+
+  /* Buka kembali QR untuk top up yang masih menunggu pembayaran. */
+  const [openingQr, setOpeningQr] = useState("");
+  const openExistingQr = async (ref) => {
+    if (!ref || openingQr) return;
+    setOpeningQr(ref);
+    try {
+      const res = await jsonRequest(`/api/topup?resource=qr&ref=${encodeURIComponent(ref)}`, { method: "GET" });
+      setPayment(res.payment);
+      setAmount(String(res.payment.totalBayar || 0));
+      setPayStatus("pending");
+      setNow(Date.now());
+      setStep("pay");
+    } catch (err) { onNotice(err.message); load(); }
+    finally { setOpeningQr(""); }
+  };
+
 
   const checkStatus = async () => {
     if (!payment || checking) return;
@@ -4426,11 +4462,24 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
             <strong>Deposit menunggu pembayaran</strong>
             <small>{formatPrice(pendingTopup.amount)}{pendingTopup.reference ? ` · Ref ${pendingTopup.reference}` : ""}</small>
           </div>
-          <button type="button" className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => openConfirm(pendingTopup.amount)}>
-            <CreditCard size={12} /> Pakai nominal ini
-          </button>
+          <div className="cx-pending-actions">
+            {pendingTopup.reference && (
+              <button
+                type="button"
+                className="cx-btn cx-btn-primary cx-btn-sm"
+                onClick={() => openExistingQr(pendingTopup.reference)}
+                disabled={openingQr === pendingTopup.reference}
+              >
+                {openingQr === pendingTopup.reference ? <Spinner size={12} /> : <QrCode size={12} />} Lihat QR
+              </button>
+            )}
+            <button type="button" className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => openConfirm(pendingTopup.amount)}>
+              <CreditCard size={12} /> Top up lagi
+            </button>
+          </div>
         </section>
       )}
+
 
       <div className="cx-account-grid">
         <div className="cx-panel">
@@ -4509,8 +4558,19 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                 </div>
                 <span className="cx-topup-date">{formatDate(t.createdAt)}</span>
                 {topupStatusBadge(t.status)}
+                {t.status === "pending" && t.reference && (
+                  <button
+                    type="button"
+                    className="cx-btn cx-btn-outline cx-btn-sm cx-topup-qr-btn"
+                    onClick={() => openExistingQr(t.reference)}
+                    disabled={openingQr === t.reference}
+                  >
+                    {openingQr === t.reference ? <Spinner size={11} /> : <QrCode size={11} />} Lihat QR
+                  </button>
+                )}
               </div>
             ))}
+
 
           <div className="cx-topup-guide">
             <strong><CircleHelp size={13} /> Cara Top Up</strong>
