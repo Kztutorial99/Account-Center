@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { createPortal } from "react-dom";
 import {
   ArrowRight, ArrowUpRight, ArrowDownRight, BadgeCheck, Bell, Check,
   CircleHelp, Command, Copy, CreditCard, Eye, EyeOff, ChevronDown,
@@ -1832,7 +1833,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
         </div>
       </div>
 
-      {drawerOpen && (
+      {drawerOpen && createPortal(
         <div className="cx-drawer-root">
           <div className="cx-drawer-backdrop" onClick={() => setDrawerOpen(false)} />
           <aside className="cx-drawer" role="dialog" aria-label="Menu layanan">
@@ -1885,7 +1886,8 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
               <button className="cx-icon-btn" onClick={onLogout} aria-label="Keluar"><LogOut size={13} /></button>
             </div>
           </aside>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );
