@@ -2610,15 +2610,8 @@ function ProductDetailModal({ product, color, open, onClose }) {
   const maxPrice = prices.length ? Math.max(...prices) : Number(product.price) || 0;
   const hasRange = minPrice !== maxPrice && maxPrice > 0;
   const sections = useMemo(() => parseProductDescription(product.description || ""), [product.description]);
-  const featureItems = useMemo(() => {
-    const items = [];
-    for (const sec of sections) {
-      for (const b of sec.blocks) {
-        if (b.type === "li") items.push(b.text);
-      }
-    }
-    return items.slice(0, 6);
-  }, [sections]);
+  void sections;
+
 
   useEffect(() => {
     if (!open) return undefined;
@@ -2657,13 +2650,8 @@ function ProductDetailModal({ product, color, open, onClose }) {
 
           <h2 id="cx-pd-title" className="cx-pd-title">{product.title}</h2>
 
-          {featureItems.length > 0 && (
-            <ul className="cx-pd-features">
-              {featureItems.map((item, i) => (
-                <li key={i}><Check size={14} style={{ color }} /> <span>{item}</span></li>
-              ))}
-            </ul>
-          )}
+
+
 
           <div className="cx-pd-desc">
             <ProductDescription text={product.description} compact={false} />
