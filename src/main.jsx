@@ -895,6 +895,20 @@ function App() {
   );
 
   const navigate = (page) => {
+    // Untuk tamu, simpan menu publik yang sedang dibuka sebelum mengarahkan
+    // menu terkunci ke Login. Tombol "Kembali" lalu pulang ke menu asal,
+    // bukan selalu ke halaman utama.
+    if (!auth.user && !PUBLIC_PAGES.includes(page) && page !== "admin") {
+      setAuthReturn(PUBLIC_PAGES.includes(activePage) ? activePage : "store");
+      setAuthScreen("login");
+      window.history.pushState({}, "", "/login");
+      setCartOpen(false);
+      setBuyItem(null);
+      setMenuOpen(false);
+      setCheckout({ loading: false, error: "", order: null });
+      scrollTop();
+      return;
+    }
     window.history.pushState({}, "", page === "store" ? "/" : `/${page}`);
     setActivePage(page);
     // Pindah menu harus menutup semua panel yang sedang terbuka.
