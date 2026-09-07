@@ -2581,14 +2581,23 @@ html { scroll-behavior: smooth; }
 .cx-topup-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "info date" "status action";
+  grid-template-areas: "info side" "action action";
   align-items: center;
-  gap: 6px 10px;
+  gap: 4px 12px;
 }
-.cx-topup-row > div { grid-area: info; min-width: 0; }
-.cx-topup-row > div small { overflow-wrap: anywhere; }
-.cx-topup-row .cx-topup-date { grid-area: date; margin-left: 0; text-align: right; }
-.cx-topup-row .cx-topup-badge { grid-area: status; justify-self: start; }
+.cx-topup-info { grid-area: info; min-width: 0; }
+.cx-topup-info strong { display: block; font-size: 13.5px; letter-spacing: .1px; }
+.cx-topup-info small {
+  display: block; margin-top: 2px;
+  font-size: 10.5px; color: var(--muted); line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.cx-topup-side {
+  grid-area: side;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 5px;
+  flex: 0 0 auto;
+}
+.cx-topup-side .cx-topup-date { margin-left: 0; text-align: right; white-space: nowrap; }
 .cx-topup-qr-btn {
   grid-area: action;
   justify-self: end;
@@ -2723,11 +2732,20 @@ html { scroll-behavior: smooth; }
   white-space: nowrap;
 }
 .cx-topup-selection .nk-custom {
-  margin-top: 16px;
+  margin-top: 14px;
+  padding-top: 13px;
+}
+.cx-topup-selection .nk-custom .cx-field-label {
+  font-size: 11px;
+}
+.cx-topup-selection .nk-custom .cx-field-hint {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--faint);
 }
 .cx-topup-selection .cx-pay-apps {
-  margin-top: 16px;
-  padding-top: 14px;
+  margin-top: 14px;
+  padding-top: 12px;
 }
 .cx-topup-selection .cx-app-grid {
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -2745,9 +2763,9 @@ html { scroll-behavior: smooth; }
   border-radius: 12px;
 }
 .cx-topup-history .cx-panel-header {
-  align-items: flex-start;
+  align-items: center;
   min-height: 0;
-  padding: 13px 14px 11px;
+  padding: 12px 14px 10px;
 }
 .cx-topup-history .cx-panel-header h3 {
   font-size: 13px;
@@ -2756,21 +2774,16 @@ html { scroll-behavior: smooth; }
   margin-left: auto;
   max-width: 56%;
   text-align: right;
+  font-size: 10px;
   line-height: 1.35;
   white-space: normal;
 }
 .cx-topup-history .cx-topup-row {
-  padding: 12px 14px;
-}
-.cx-topup-history .cx-topup-row strong {
-  font-size: 13px;
-}
-.cx-topup-history .cx-topup-row small {
-  margin-top: 3px;
-  line-height: 1.35;
+  padding: 10px 14px;
 }
 .cx-topup-history .cx-topup-date {
-  white-space: nowrap;
+  font-size: 10px;
+  color: var(--faint);
 }
 
 @media (max-width: 860px) {

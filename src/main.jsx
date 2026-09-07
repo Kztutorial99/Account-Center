@@ -4562,12 +4562,14 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
             : state.topups.length === 0 ? <div className="cx-topup-empty">Belum ada permintaan top up.</div>
             : state.topups.map((t) => (
               <div key={t.id} className="cx-topup-row">
-                <div>
+                <div className="cx-topup-info">
                   <strong>{formatPrice(t.amount)}</strong>
                   <small>{t.method}{t.reference ? ` · Ref ${t.reference}` : ""}</small>
                 </div>
-                <span className="cx-topup-date">{formatDate(t.createdAt)}</span>
-                {topupStatusBadge(t.status)}
+                <div className="cx-topup-side">
+                  {topupStatusBadge(t.status)}
+                  <span className="cx-topup-date">{formatDate(t.createdAt)}</span>
+                </div>
                 {t.status === "pending" && t.reference && (
                   <button
                     type="button"
