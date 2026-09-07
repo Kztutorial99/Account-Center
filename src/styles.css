@@ -2500,3 +2500,60 @@ html { scroll-behavior: smooth; }
 .cx-drawer-user-copy{ flex:1; min-width:0; }
 .cx-drawer-user-copy strong{ display:block; font:600 13px Inter; }
 .cx-drawer-user-copy small{ display:block; font-size:11px; color:var(--faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ═══ Popup Top Up (konfirmasi, loading, bayar QRIS) ═══ */
+.nk-pop-backdrop { background: rgba(4,2,12,.82); backdrop-filter: blur(4px); z-index: 140; }
+.nk-pop, .nk-pay {
+  width: min(430px, 100%); background: linear-gradient(180deg, #150e24, #0f0a1a);
+  border: 1px solid var(--b2); border-radius: 22px; overflow: hidden;
+  box-shadow: 0 28px 80px rgba(0,0,0,.7);
+}
+.nk-pop-body { padding: 30px 22px 24px; text-align: center; display: grid; justify-items: center; gap: 10px; }
+.nk-pop-icon {
+  width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center;
+  color: var(--indigo2); border: 2px solid var(--indigo); background: rgba(168,85,247,.08); margin-bottom: 4px;
+}
+.nk-pop-icon.is-ok { color: var(--green); border-color: var(--green); background: rgba(134,239,172,.08); }
+.nk-pop-body h2 { margin: 0; font: 700 21px Inter, system-ui, sans-serif; letter-spacing: -.02em; }
+.nk-pop-amount { font: 800 30px Inter, system-ui, sans-serif; color: var(--indigo2); letter-spacing: -.03em; }
+.nk-pop-body p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 30ch; }
+.nk-pop-actions { display: flex; gap: 10px; margin-top: 14px; width: 100%; }
+.nk-pop-actions .cx-btn { flex: 1; justify-content: center; padding: 12px 14px; border-radius: 14px; font-size: 14px; }
+.nk-pop-loading { padding: 46px 22px; gap: 14px; }
+
+.nk-pay-head {
+  display: flex; align-items: center; gap: 12px; padding: 16px 16px;
+  background: linear-gradient(100deg, #6d28d9, #4f46e5);
+}
+.nk-pay-head-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(255,255,255,.16); color: #fff; }
+.nk-pay-head > div { flex: 1; min-width: 0; display: grid; }
+.nk-pay-head strong { color: #fff; font: 700 17px Inter, system-ui, sans-serif; }
+.nk-pay-head small { color: rgba(255,255,255,.78); font-size: 12px; }
+.nk-pay-close { background: none; border: 0; color: #fff; cursor: pointer; padding: 4px; border-radius: 8px; }
+.nk-pay-close:hover { background: rgba(255,255,255,.16); }
+.nk-pay-body { padding: 18px 18px 20px; display: grid; justify-items: center; gap: 10px; }
+.nk-pay-cap { font: 600 11px Inter, system-ui, sans-serif; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.nk-pay-amount { font: 800 30px Inter, system-ui, sans-serif; color: var(--indigo2); letter-spacing: -.03em; }
+.nk-pay-qr { background: var(--s1); border: 1px solid var(--b1); border-radius: 18px; padding: 14px; }
+.nk-pay-qr img { display: block; width: min(240px, 62vw); height: auto; background: #fff; border-radius: 8px; }
+.nk-pay-timer {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 999px;
+  background: rgba(168,85,247,.14); color: var(--indigo3); font: 700 14px ui-monospace, monospace;
+}
+.nk-pay-timer.is-out { background: rgba(253,164,175,.14); color: var(--red); }
+.nk-pay-actions { display: flex; gap: 10px; width: 100%; margin-top: 4px; }
+.nk-pay-actions .cx-btn { flex: 1; justify-content: center; border-radius: 14px; padding: 11px 12px; }
+.cx-btn-outline { background: transparent; color: var(--indigo2); border: 1px solid var(--indigo); }
+.cx-btn-outline:hover { background: rgba(168,85,247,.12); }
+.nk-pay-guide { width: 100%; background: var(--s1); border: 1px solid var(--b1); border-radius: 14px; padding: 10px 14px; }
+.nk-pay-guide summary { cursor: pointer; display: flex; align-items: center; gap: 8px; font: 600 13px Inter, system-ui, sans-serif; color: var(--ink2); }
+.nk-pay-guide ol { margin: 10px 0 2px; padding-left: 18px; display: grid; gap: 5px; font-size: 12.5px; color: var(--muted); }
+.nk-pay-id { margin: 0; font: 500 11.5px ui-monospace, monospace; color: var(--faint); word-break: break-all; text-align: center; }
+
+.nk-custom-go { flex: 0 0 auto; white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .nk-pop-backdrop { padding: 12px; align-items: center; bottom: 0; }
+  .nk-pop, .nk-pay { border-radius: 22px; max-height: 92vh; }
+  .nk-pop-amount, .nk-pay-amount { font-size: 27px; }
+}
