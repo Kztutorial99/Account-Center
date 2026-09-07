@@ -1185,6 +1185,8 @@ html, body { max-width: 100%; overflow-x: hidden; }
 
   /* ruang supaya konten tidak tertutup tab bar */
   .cx-app { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)); }
+  /* Landing page tidak punya tab bar; hapus ruang kosong berlebih di bawah footer. */
+  .cx-app.cx-land { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
   .cx-ai-fab { bottom: calc(var(--tab-h) + 16px + env(safe-area-inset-bottom)) !important; }
   .cx-toast { bottom: calc(var(--tab-h) + 18px + env(safe-area-inset-bottom)); }
 
