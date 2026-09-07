@@ -570,6 +570,11 @@ const pageFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
   return PAGE_PATHS.includes(slug) ? slug : "store";
 };
+// /login dan /register punya URL sendiri agar bisa dibagikan & dikenali crawler.
+const authScreenFromPath = (pathname) => {
+  const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
+  return slug === "login" || slug === "register" ? slug : "welcome";
+};
 
 function App() {
   const [activePage, setActivePage] = useState(() => pageFromPath(window.location.pathname));
@@ -588,7 +593,13 @@ function App() {
   const [buySel, setBuySel]     = useState([]);
   const [data, setData]         = useState({ products: [], loading: true, error: "" });
   const [auth, setAuth]         = useState({ user: null, loading: true });
-  const [authScreen, setAuthScreen] = useState("welcome"); // welcome | login | register
+  const [authScreen, setAuthScreen] = useState(() => authScreenFromPath(window.location.pathname)); // welcome | login | register
+  const goAuthScreen = (screen) => {
+    setAuthScreen(screen);
+    if (typeof window !== "undefined") {
+      window.history.pushState({}, "", screen === "welcome" ? "/" : `/${screen}`);
+    }
+  };
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkout, setCheckout] = useState({ loading: false, error: "", order: null });
   const [customEmails, setCustomEmails] = useState([]);
@@ -703,7 +714,10 @@ function App() {
   };
 
   useEffect(() => {
-    const pop = () => setActivePage(pageFromPath(window.location.pathname));
+    const pop = () => {
+      setActivePage(pageFromPath(window.location.pathname));
+      setAuthScreen(authScreenFromPath(window.location.pathname));
+    };
     window.addEventListener("popstate", pop);
     loadSession();
     loadCatalog();
@@ -723,7 +737,10 @@ function App() {
     if (document.body) document.body.scrollTop = 0;
   };
   // SEO: judul/meta/canonical mengikuti halaman aktif (SPA).
-  useEffect(() => { applySeo(activePage); }, [activePage]);
+  useEffect(() => {
+    const guestScreen = !auth.user && !auth.loading && authScreen !== "welcome" ? authScreen : null;
+    applySeo(guestScreen || activePage);
+  }, [activePage, authScreen, auth.user, auth.loading]);
   useEffect(() => { applyProductSchema(data.products); }, [data.products]);
 
   useEffect(() => {
@@ -871,13 +888,13 @@ function App() {
   if (auth.loading) return <SessionSplash />;
   if (!auth.user) {
     if (authScreen === "welcome") {
-      return <WelcomePage onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
+      return <WelcomePage onLogin={() => goAuthScreen("login")} onRegister={() => goAuthScreen("register")} />;
     }
     return (
       <AuthPage
         initialMode={authScreen}
         onAuthenticated={(user) => { setAuth({ user, loading: false }); navigate("store"); }}
-        onBackToWelcome={() => setAuthScreen("welcome")}
+        onBackToWelcome={() => goAuthScreen("welcome")}
       />
     );
   }
@@ -3932,20 +3949,22 @@ function WelcomePage({ onLogin, onRegister }) {
       <div className="cx-welcome-glow" aria-hidden="true" />
       <div className="cx-welcome-grid" aria-hidden="true" />
 
-      <div className="cx-welcome-content">
-        <div className="cx-welcome-brand cx-rise cx-rise-1">
-          <img src="/brand-logo.png" alt="" className="cx-welcome-logo" />
-          <img src="/akun-instan-wordmark.png" alt="Akun Instan" className="cx-welcome-wordmark" />
-        </div>
+      <main className="cx-welcome-content">
+        <header className="cx-welcome-brand cx-rise cx-rise-1">
+          <img src="/brand-logo.png" alt="Logo Akun Instan" className="cx-welcome-logo" width="56" height="56" decoding="async" />
+          <img src="/akun-instan-wordmark.png" alt="Akun Instan" className="cx-welcome-wordmark" width="150" height="28" decoding="async" />
+        </header>
 
-        <div className="cx-welcome-hero cx-rise cx-rise-2">
+        <section className="cx-welcome-hero cx-rise cx-rise-2">
           <h1>
-            Selamat Datang di <span>AkunInstan</span>
+            Beli Akun Google, Gmail &amp; Akun Digital di <span>Akun Instan</span>
           </h1>
           <p className="cx-welcome-sub">
-            Kelola saldo, katalog, dan transaksi dalam satu tempat.
+            Akun Instan adalah tempat beli akun Google/Gmail siap pakai, pesan custom email sesuai
+            nama sendiri, serta akun game dan social media. Isi saldo lewat QRIS, e-wallet, atau
+            transfer bank, lalu akun dikirim otomatis setelah pembayaran.
           </p>
-        </div>
+        </section>
 
         <div className="cx-welcome-visual cx-rise cx-rise-3" aria-hidden="true">
           <div className="cx-welcome-card cx-welcome-card-front">
@@ -3961,10 +3980,10 @@ function WelcomePage({ onLogin, onRegister }) {
         </div>
 
         <div className="cx-welcome-actions cx-rise cx-rise-4">
-          <button className="cx-welcome-btn cx-welcome-btn-primary" onClick={onLogin}>
+          <button type="button" className="cx-welcome-btn cx-welcome-btn-primary" onClick={onLogin} aria-label="Masuk ke akun Akun Instan">
             <LogIn size={15} /> Masuk ke Akun
           </button>
-          <button className="cx-welcome-btn cx-welcome-btn-secondary" onClick={onRegister}>
+          <button type="button" className="cx-welcome-btn cx-welcome-btn-secondary" onClick={onRegister} aria-label="Daftar akun baru di Akun Instan">
             <UserPlus size={15} /> Daftar Sekarang
           </button>
         </div>
@@ -3972,7 +3991,37 @@ function WelcomePage({ onLogin, onRegister }) {
         <p className="cx-welcome-trust cx-rise cx-rise-4">
           <ShieldCheck size={11} /> Aman <span className="cx-welcome-dot" /> <Zap size={11} /> Cepat <span className="cx-welcome-dot" /> <Sparkles size={11} /> Praktis
         </p>
-      </div>
+
+        <section className="cx-welcome-info cx-rise cx-rise-4" aria-labelledby="cx-welcome-info-title">
+          <h2 id="cx-welcome-info-title">Layanan Akun Instan</h2>
+          <ul className="cx-welcome-info-list">
+            <li>
+              <h3>Akun Google &amp; Gmail siap pakai</h3>
+              <p>Akun fresh dengan data login lengkap, dikirim otomatis ke halaman pesanan setelah pembayaran berhasil.</p>
+            </li>
+            <li>
+              <h3>Custom email sesuai nama</h3>
+              <p>Cek ketersediaan nama yang kamu mau, lalu tim Akun Instan membuatkan alamat Gmail-nya.</p>
+            </li>
+            <li>
+              <h3>Akun game &amp; social media</h3>
+              <p>Katalog akun digital lain dengan stok dan harga yang terlihat langsung sebelum membeli.</p>
+            </li>
+            <li>
+              <h3>Saldo &amp; pembayaran fleksibel</h3>
+              <p>Top up saldo lewat QRIS, DANA, OVO, GoPay, ShopeePay, atau transfer bank untuk semua pembelian.</p>
+            </li>
+          </ul>
+        </section>
+
+        <nav className="cx-welcome-links" aria-label="Halaman informasi Akun Instan">
+          <a href="/help">Bantuan</a>
+          <a href="/terms">Syarat &amp; Ketentuan</a>
+          <a href="/privacy">Kebijakan Privasi</a>
+          <a href="/refund">Refund</a>
+          <a href="/disclaimer">Disclaimer</a>
+        </nav>
+      </main>
     </div>
   );
 }
