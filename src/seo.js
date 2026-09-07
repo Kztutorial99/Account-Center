@@ -51,6 +51,8 @@ const PAGE_SEO = {
   orders: { path: "/orders", title: "Pesanan Saya | Akun Instan", description: "Riwayat pesanan akun digital kamu di Akun Instan.", noindex: true },
   account: { path: "/account", title: "Akun Saya | Akun Instan", description: "Kelola profil dan saldo akun Akun Instan kamu.", noindex: true },
   admin: { path: "/admin", title: "Admin | Akun Instan", description: "Panel admin Akun Instan.", noindex: true },
+  login: { path: "/login", title: "Masuk ke Akun Instan", description: "Masuk ke akun Akun Instan untuk mengakses katalog, saldo, dan riwayat pesanan kamu.", noindex: true },
+  register: { path: "/register", title: "Daftar Akun Instan", description: "Buat akun Akun Instan untuk membeli akun digital dan mengisi saldo.", noindex: true },
 };
 
 const setMeta = (attr, key, content) => {
