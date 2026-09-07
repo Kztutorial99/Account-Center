@@ -7,7 +7,7 @@ import {
   FileText, Home, LayoutDashboard, LockKeyhole, LogIn, LogOut, Menu,
   MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw, QrCode, Download,
   Search, Settings, ShieldCheck, ShoppingBag, Trash2, X,
-  User, Wallet, Mail, Phone, Clock, Sparkles, Send,
+  User, UserPlus, Wallet, Mail, Phone, Clock, Sparkles, Send, Zap,
 } from "lucide-react";
 import "./styles.css";
 import { applySeo, applyProductSchema } from "./seo.js";
@@ -588,6 +588,7 @@ function App() {
   const [buySel, setBuySel]     = useState([]);
   const [data, setData]         = useState({ products: [], loading: true, error: "" });
   const [auth, setAuth]         = useState({ user: null, loading: true });
+  const [authScreen, setAuthScreen] = useState("welcome"); // welcome | login | register
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkout, setCheckout] = useState({ loading: false, error: "", order: null });
   const [customEmails, setCustomEmails] = useState([]);
@@ -685,6 +686,7 @@ function App() {
   const logout = async () => {
     try { await jsonRequest("/api/auth", { method: "DELETE" }); } catch (_) {}
     setAuth({ user: null, loading: false });
+    setAuthScreen("welcome");
     setMenuOpen(false);
     setCart([]);
     setCustomEmails([]);
@@ -867,9 +869,18 @@ function App() {
 
   /* ── auth gate: wajib login sebelum akses Akun Instan ── */
   if (auth.loading) return <SessionSplash />;
-  if (!auth.user) return (
-    <AuthPage onAuthenticated={(user) => { setAuth({ user, loading: false }); navigate("store"); }} />
-  );
+  if (!auth.user) {
+    if (authScreen === "welcome") {
+      return <WelcomePage onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
+    }
+    return (
+      <AuthPage
+        initialMode={authScreen}
+        onAuthenticated={(user) => { setAuth({ user, loading: false }); navigate("store"); }}
+        onBackToWelcome={() => setAuthScreen("welcome")}
+      />
+    );
+  }
 
   const topbar = (
     <StoreTopbar
@@ -3913,14 +3924,69 @@ function AdminPage({ onBack, onNotice }) {
 }
 
 /* ═══════════════════════════════════════════════════
+   WELCOME / LANDING PAGE (entry point untuk guest)
+════════════════════════════════════════════════════ */
+function WelcomePage({ onLogin, onRegister }) {
+  return (
+    <div className="cx-welcome">
+      <div className="cx-welcome-glow" aria-hidden="true" />
+      <div className="cx-welcome-grid" aria-hidden="true" />
+
+      <div className="cx-welcome-content">
+        <div className="cx-welcome-brand cx-rise cx-rise-1">
+          <img src="/brand-logo.png" alt="" className="cx-welcome-logo" />
+          <img src="/akun-instan-wordmark.png" alt="Akun Instan" className="cx-welcome-wordmark" />
+        </div>
+
+        <div className="cx-welcome-hero cx-rise cx-rise-2">
+          <h1>
+            Selamat Datang di <span>AkunInstan</span>
+          </h1>
+          <p className="cx-welcome-sub">
+            Kelola saldo, katalog, dan transaksi dalam satu tempat.
+          </p>
+        </div>
+
+        <div className="cx-welcome-visual cx-rise cx-rise-3" aria-hidden="true">
+          <div className="cx-welcome-card cx-welcome-card-front">
+            <div className="cx-welcome-card-chip" />
+            <div className="cx-welcome-card-lines">
+              <span /><span /><span />
+            </div>
+            <div className="cx-welcome-card-brand">AI</div>
+          </div>
+          <div className="cx-welcome-card cx-welcome-card-back" />
+          <div className="cx-welcome-orb cx-welcome-orb-a" />
+          <div className="cx-welcome-orb cx-welcome-orb-b" />
+        </div>
+
+        <div className="cx-welcome-actions cx-rise cx-rise-4">
+          <button className="cx-welcome-btn cx-welcome-btn-primary" onClick={onLogin}>
+            <LogIn size={15} /> Masuk ke Akun
+          </button>
+          <button className="cx-welcome-btn cx-welcome-btn-secondary" onClick={onRegister}>
+            <UserPlus size={15} /> Daftar Sekarang
+          </button>
+        </div>
+
+        <p className="cx-welcome-trust cx-rise cx-rise-4">
+          <ShieldCheck size={11} /> Aman <span className="cx-welcome-dot" /> <Zap size={11} /> Cepat <span className="cx-welcome-dot" /> <Sparkles size={11} /> Praktis
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
    AUTH PAGE (daftar / masuk)
 ════════════════════════════════════════════════════ */
-function AuthPage({ onAuthenticated }) {
-  const [mode, setMode]         = useState("login");
+function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome }) {
+  const [mode, setMode]         = useState(initialMode);
   const [form, setForm]         = useState({ name: "", email: "", phone: "", password: "" });
   const [showPass, setShowPass] = useState(false);
   const [error, setError]       = useState("");
   const [busy, setBusy]         = useState(false);
+  useEffect(() => { setMode(initialMode); }, [initialMode]);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const submit = async (e) => {
@@ -3938,6 +4004,11 @@ function AuthPage({ onAuthenticated }) {
   return (
     <div className="cx-login-wrap">
       <div className="cx-login-box cx-auth-box">
+        {onBackToWelcome && (
+          <button type="button" className="cx-auth-back" onClick={onBackToWelcome}>
+            <ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali
+          </button>
+        )}
         <div className="cx-login-mark">AI</div>
         <h1>{mode === "register" ? "Daftar Akun Instan" : "Masuk ke Akun Instan"}</h1>
         <p>{mode === "register" ? "Buat akun untuk mulai belanja dan isi saldo." : "Masuk dulu untuk mengakses katalog dan saldo kamu."}</p>
