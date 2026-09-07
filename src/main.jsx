@@ -1383,19 +1383,20 @@ function App() {
   );
 
   if (activePage === "katalog") return (
-    <div className="cx-app">
+    <div className="cx-app cx-catv2">
       {topbar}
-            <main className="cx-container" id="catalog" style={{ paddingTop: 20, paddingBottom: 64 }}>
-        <div className="cx-section-header cx-section-header-stack">
+            <main className="cx-container cx-cat-main" id="catalog" style={{ paddingTop: 20, paddingBottom: 64 }}>
+        <div className="cx-section-header cx-section-header-stack cx-cat-header">
           <div>
-            <h1>Akun yang tersedia.</h1>
-            <p className="cx-section-sub">{data.loading ? "Memuat..." : `${products.length} produk ditemukan`}</p>
+            <h1>Katalog akun</h1>
+            <p className="cx-section-sub">{data.loading ? "Memuat..." : `${products.length} produk tersedia`}</p>
           </div>
           <div className="cx-search">
             <Search size={13} />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari akun atau tipe login..." />
           </div>
         </div>
+
 
         {data.loading && (
           <div className="cx-grid">
@@ -2559,12 +2560,12 @@ function StoreFooter({ navigate }) {
    PRODUCT CARD
 ════════════════════════════════════════════════════ */
 /* Daftar akun dengan Load More supaya tidak memanjang ke bawah di mobile. */
-function AccountPicker({ product, accounts, selected, onToggle, pageSize = 3, size }) {
+function AccountPicker({ product, accounts, selected, onToggle, pageSize = 3, size, variant }) {
   const [shown, setShown] = useState(pageSize);
   const visible = accounts.slice(0, shown);
   const rest = accounts.length - visible.length;
   return (
-    <div className={`cx-cred-preview${size === "lg" ? " cx-cred-preview-lg" : ""}`}>
+    <div className={`cx-cred-preview${size === "lg" ? " cx-cred-preview-lg" : ""}${variant === "v2" ? " cx-pc-picker" : ""}`}>
       <div className="cx-cred-head">Ceklis akun yang mau dibeli ({selected.length}/{accounts.length})</div>
       <div className="cx-cred-list">
         {visible.map((account) => {
@@ -2601,38 +2602,63 @@ function ProductCard({ product, colorIdx, onBuy }) {
   const color = ACCENT_COLORS[colorIdx % ACCENT_COLORS.length];
   const accounts = Array.isArray(product.accounts) ? product.accounts : [];
   const [selected, setSelected] = useState([]);
+  const [detailOpen, setDetailOpen] = useState(false);
   const toggle = (index) =>
     setSelected((prev) => prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]);
   const total = selected.length ? sumSelected(product, selected) : 0;
+  const stock = Number(product.stock) || accounts.length;
   return (
-    <article className="cx-product-card">
-      <div className="cx-product-body">
-        <div className="cx-product-head">
-          <p className="cx-product-type" style={{ color, display: "flex", alignItems: "center", gap: 6 }}>
-            <ProviderIcon type={product.loginType} size={15} />
-            {product.loginType}
-          </p>
-          <span className="cx-product-badge">{product.stock} stok</span>
-        </div>
-        <h3 className="cx-product-title">{product.title}</h3>
+    <article className="cx-pc">
+      <div className="cx-pc-head">
+        <span className="cx-pc-plat" style={{ color }}>
+          <ProviderIcon type={product.loginType} size={15} />
+          {product.loginType}
+        </span>
+        <span className={`cx-pc-stock${stock > 0 ? "" : " is-out"}`}>{stock > 0 ? `${stock} stok` : "Kosong"}</span>
+      </div>
+
+      <h3 className="cx-pc-title">{product.title}</h3>
+
+      <div className={`cx-pc-detail${detailOpen ? " is-open" : ""}`}>
         <ProductDescription
-          className="cx-product-desc"
+          className="cx-pc-desc"
+          compact={!detailOpen}
           text={product.description || "Akun digital siap digunakan. Detail dikirim setelah pembayaran."}
         />
-        {accounts.length > 0 && (
-          <AccountPicker product={product} accounts={accounts} selected={selected} onToggle={toggle} pageSize={3} />
+      </div>
+      <button type="button" className="cx-pc-detail-toggle" onClick={() => setDetailOpen((v) => !v)}>
+        {detailOpen ? "Sembunyikan detail" : "Lihat detail akun"}
+      </button>
+
+      {accounts.length > 0 && (
+        <AccountPicker product={product} accounts={accounts} selected={selected} onToggle={toggle} pageSize={3} variant="v2" />
+      )}
+
+      <div className="cx-pc-foot">
+        {selected.length ? (
+          <div className="cx-pc-price">
+            <span className="cx-pc-amount">{formatPrice(total)}</span>
+            <small>{selected.length} akun dipilih</small>
+          </div>
+        ) : (
+          <div className="cx-pc-price is-empty">
+            <span className="cx-pc-hint">Pilih akun untuk melihat harga</span>
+          </div>
         )}
-        <div className="cx-product-bottom">
-          <span className="cx-product-price">
-            {formatPrice(total)}
-            <small className="cx-product-price-note">{selected.length ? `${selected.length} akun dipilih` : "pilih akun dulu"}</small>
-          </span>
-          <button className="cx-product-buy" disabled={selected.length === 0} onClick={() => onBuy(selected)} aria-label={`Beli ${product.title}`}><span>{selected.length ? "Beli sekarang" : "Pilih akun"}</span><ArrowRight size={15} /></button>
-        </div>
+        <button
+          className={`cx-pc-cta${selected.length ? " is-ready" : ""}`}
+          disabled={selected.length === 0}
+          onClick={() => onBuy(selected)}
+          aria-label={`Beli ${product.title}`}
+        >
+          <span>{selected.length ? "Beli sekarang" : "Pilih akun"}</span>
+          <ArrowRight size={16} />
+        </button>
       </div>
     </article>
   );
 }
+
 
 /* ═══════════════════════════════════════════════════
    ADMIN PAGE  —  LinearPro sidebar layout
