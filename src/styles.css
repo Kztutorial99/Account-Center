@@ -82,6 +82,9 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 .cx-brand { display: inline-flex; align-items: center; gap: 8px; font: 600 14px Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: -.03em; color: var(--ink); padding: 0; }
 .cx-brand-mark { width: 24px; height: 24px; display: grid; place-items: center; overflow: hidden; flex-shrink: 0; }
 .cx-brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.cx-brand-wordmark { width: auto; height: 24px; max-width: 164px; object-fit: contain; display: block; }
+.cx-brand-wordmark-footer { height: 20px; max-width: 137px; }
+.cx-brand-wordmark-sidebar { height: 19px; max-width: 130px; }
 .cx-brand-dot { color: var(--indigo2); }
 
 /* ── TOPBAR NAV ─────────────────────────────── */

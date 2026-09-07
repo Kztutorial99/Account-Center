@@ -1742,8 +1742,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
     <header className="cx-topbar">
       <div className="cx-container cx-topbar-inner">
         <button className="cx-brand" onClick={() => navigate("store")}>
-          <span className="cx-brand-mark"><img src="/brand-logo.png" alt="" /></span>
-          <span>Akun<span className="cx-brand-dot">Instan</span></span>
+          <img className="cx-brand-wordmark" src="/akun-instan-wordmark.png" alt="Akun Instan" />
         </button>
         <nav className="cx-nav">
           {[["store","Store"],["katalog","Katalog"],["orders","Pesanan"],["help","Bantuan"]].map(([page, label]) => (
@@ -2226,8 +2225,7 @@ function StoreFooter({ navigate }) {
     <footer className="cx-footer">
       <div className="cx-container cx-footer-inner">
         <button className="cx-brand" onClick={() => navigate("store")} style={{ fontSize: 13 }}>
-          <span className="cx-brand-mark" style={{ width: 20, height: 20 }}><img src="/brand-logo.png" alt="" /></span>
-          Akun<span className="cx-brand-dot">Instan</span>
+          <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.png" alt="Akun Instan" />
         </button>
         <p>Stok dan katalog terhubung ke Neon Database.</p>
         <div className="cx-footer-links">
@@ -2865,8 +2863,7 @@ function AdminPage({ onBack, onNotice }) {
       {/* ── Sidebar ── */}
       <aside className={`cx-sidebar${navOpen ? " open" : ""}`}>
         <div className="cx-sidebar-brand">
-          <span className="cx-brand-mark" style={{ width: 24, height: 24 }}><img src="/brand-logo.png" alt="" /></span>
-          <span>Akun Instan</span>
+          <img className="cx-brand-wordmark cx-brand-wordmark-sidebar" src="/akun-instan-wordmark.png" alt="Akun Instan" />
           <ChevronDown size={12} color="var(--faint)" />
           <button className="cx-sidebar-close" onClick={() => setNavOpen(false)} aria-label="Tutup menu"><X size={14} /></button>
         </div>
