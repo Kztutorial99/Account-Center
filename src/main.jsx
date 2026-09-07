@@ -1174,12 +1174,7 @@ function App() {
   if (activePage === "katalog") return (
     <div className="cx-app">
       {topbar}
-      <div className="cx-container" style={{ paddingTop: 18 }}>
-        <button className="cx-back-link" onClick={() => navigate("store")}>
-          <ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali
-        </button>
-      </div>
-      <main className="cx-container" id="catalog" style={{ paddingTop: 20, paddingBottom: 64 }}>
+            <main className="cx-container" id="catalog" style={{ paddingTop: 20, paddingBottom: 64 }}>
         <div className="cx-section-header cx-section-header-stack">
           <div>
             <h2>Akun yang tersedia.</h2>
@@ -1433,7 +1428,6 @@ function OrdersPage({ onBack, onNotice, navigate }) {
 
   return (
     <div className="cx-orders-page cx-container">
-      <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
       <header className="cx-orders-hero">
         <span className="cx-orders-kicker">Riwayat pembelian</span>
         <h1>Pesanan Saya</h1>
@@ -1900,9 +1894,6 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
   return (
     <main className="cx-page cx-custom-page">
       <div className="cx-container cx-ce-wrap">
-        <button className="cx-back-link" onClick={onBack}>
-          <ArrowRight size={12} style={{ transform: "rotate(180deg)" }} /> Kembali
-        </button>
 
         <header className="cx-ce-hero">
           <div className="cx-ce-hero-icon"><Mail size={18} /></div>
@@ -2094,9 +2085,7 @@ function HelpPage({ navigate, onAskAssistant }) {
   return (
     <main className="cx-help">
       <div className="cx-container">
-        <button className="cx-back-link" onClick={() => navigate("store")}>
-          <ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali
-        </button>
+        
 
         <section className="cx-help-hero">
           <span className="cx-help-badge"><CircleHelp size={12} /> Pusat Bantuan</span>
@@ -2294,7 +2283,6 @@ function LegalPage({ kind, onBack, navigate }) {
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [kind]);
   return (
     <div className="cx-legal-page cx-container">
-      <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
       <header className="cx-legal-hero">
         <span className="cx-orders-kicker">{doc.kicker}</span>
         <h1>{doc.title}</h1>
@@ -2947,9 +2935,6 @@ function AdminPage({ onBack, onNotice }) {
             <LogIn size={13} /> Masuk
           </button>
         </form>
-        <button className="cx-back-link" style={{ marginTop: 20 }} onClick={onBack}>
-          <ArrowRight size={12} style={{ transform: "rotate(180deg)" }} /> Kembali
-        </button>
       </div>
     </div>
   );
@@ -4169,7 +4154,6 @@ function ProfilePage({ user, onBack, onTopup, onSaved, onNotice }) {
 
   return (
     <div className="cx-container cx-account-page">
-      <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
 
       <div className="cx-account-grid">
         <div className="cx-panel cx-profile-card">
@@ -4403,7 +4387,6 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
 
   return (
     <div className="cx-container cx-account-page cx-topup-page">
-      <button className="cx-back-link" onClick={onBack}><ArrowRight size={13} style={{ transform: "rotate(180deg)" }} /> Kembali</button>
 
       <header className="cx-topup-hero-head">
         <h1>Top Up Saldo</h1>
