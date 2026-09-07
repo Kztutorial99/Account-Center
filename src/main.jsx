@@ -5,7 +5,7 @@ import {
   ArrowRight, ArrowUpRight, ArrowDownRight, BadgeCheck, Bell, Check,
   CircleHelp, Command, Copy, CreditCard, Eye, EyeOff, ChevronDown,
   FileText, Home, LayoutDashboard, LockKeyhole, LogIn, LogOut, Menu,
-  MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw,
+  MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw, QrCode, Download,
   Search, Settings, ShieldCheck, ShoppingBag, Trash2, X,
   User, Wallet, Mail, Phone, Clock, Sparkles, Send,
 } from "lucide-react";
@@ -4282,29 +4282,20 @@ function formatCountdown(ms) {
 function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   const [state, load] = useTopupData(user);
   const [amount, setAmount]     = useState("");
-  const [note, setNote]         = useState("");
+  const [custom, setCustom]     = useState("");
   const [busy, setBusy]         = useState(false);
   const [formError, setFormError] = useState("");
   const [step, setStep]         = useState("form");
-  const [agreed, setAgreed]     = useState(false);
   const [payment, setPayment]   = useState(null);
   const [payStatus, setPayStatus] = useState("pending");
   const [now, setNow]           = useState(Date.now());
   const [copied, setCopied]     = useState(false);
-  const formPanelRef            = useRef(null);
+  const [checking, setChecking] = useState(false);
 
   const amountNumber = Math.round(Number(amount) || 0);
   const pendingTotal = Number(state.pendingTotal) || 0;
   const expiredAt = payment && payment.expired ? new Date(payment.expired).getTime() : 0;
   const remaining = expiredAt ? expiredAt - now : 0;
-
-  /* Saat pindah ke konfirmasi/pembayaran/selesai, gulirkan panel form ke
-     bagian atas supaya user langsung melihat konten langkah tersebut,
-     bukan terscroll ke bawah halaman. */
-  useEffect(() => {
-    if (step === "form" || !formPanelRef.current) return;
-    formPanelRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [step]);
 
   /* Timer countdown masa berlaku QRIS. */
   useEffect(() => {
@@ -4312,6 +4303,14 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [step, expiredAt]);
+
+  /* Kunci scroll body saat popup terbuka. */
+  useEffect(() => {
+    if (step === "form") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [step]);
 
   /* Polling status pembayaran — saldo ditambah otomatis oleh server. */
   useEffect(() => {
@@ -4337,12 +4336,13 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
     return () => { stop = true; clearInterval(timer); };
   }, [step, payment, payStatus]);
 
-  const goConfirm = (e) => {
-    e.preventDefault(); setFormError("");
-    if (!Number.isFinite(amountNumber) || amountNumber < 500) {
-      setFormError("Minimal top up Rp500."); return;
-    }
-    setAgreed(false); setStep("confirm");
+  /* Klik nominal → langsung buka popup konfirmasi singkat. */
+  const openConfirm = (value) => {
+    const v = Math.round(Number(value) || 0);
+    if (!Number.isFinite(v) || v < 500) { setFormError("Minimal top up Rp500."); return; }
+    setFormError("");
+    setAmount(String(v));
+    setStep("confirm");
   };
 
   const createPayment = async () => {
@@ -4350,7 +4350,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
     try {
       const res = await jsonRequest("/api/topup", {
         method: "POST",
-        body: JSON.stringify({ amount: amountNumber, note: note.trim() }),
+        body: JSON.stringify({ amount: amountNumber }),
       });
       setPayment(res.payment);
       setPayStatus("pending");
@@ -4358,13 +4358,13 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
       setStep("pay");
       load(); onRefresh();
       window.dispatchEvent(new Event("codexa:notify"));
-    } catch (err) { setFormError(err.message); }
+    } catch (err) { setFormError(err.message); setStep("confirm"); }
     finally { setBusy(false); }
   };
 
   const resetFlow = () => {
-    setPayment(null); setPayStatus("pending"); setAmount(""); setNote("");
-    setAgreed(false); setStep("form"); setFormError("");
+    setPayment(null); setPayStatus("pending"); setAmount(""); setCustom("");
+    setStep("form"); setFormError(""); setBusy(false);
   };
 
   const copyQrString = async () => {
@@ -4376,14 +4376,34 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
     } catch (_) { /* clipboard tidak tersedia */ }
   };
 
-  const summaryRows = [
-    ["Nominal", formatPrice(amountNumber)],
-    ["Metode", "QRIS (semua e-wallet & bank)"],
-    ["Nama", user.name],
-    ["Email", user.email],
-  ];
+  /* Simpan gambar QR ke galeri / unduhan. */
+  const saveQr = () => {
+    if (!payment || !payment.qrImage) return;
+    const a = document.createElement("a");
+    a.href = payment.qrImage;
+    a.download = `qris-${payment.refId || "topup"}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const checkStatus = async () => {
+    if (!payment || checking) return;
+    setChecking(true);
+    try {
+      const res = await jsonRequest(`/api/topup?resource=status&ref=${encodeURIComponent(payment.refId)}`, { method: "GET" });
+      if (res.status === "paid") {
+        setPayStatus("paid"); setStep("done");
+        onNotice("Pembayaran diterima, saldo kamu sudah bertambah");
+        load(); onRefresh();
+      } else if (res.status === "expired") { setPayStatus("expired"); }
+      else { onNotice("Pembayaran belum terdeteksi, coba lagi sebentar."); }
+    } catch (e) { onNotice(e.message); }
+    finally { setChecking(false); }
+  };
 
   const pendingTopup = state.topups.find((t) => t.status === "pending");
+  const payAmount = payment ? (payment.totalBayar || amountNumber) : amountNumber;
 
   return (
     <div className="cx-container cx-account-page cx-topup-page">
@@ -4406,32 +4426,20 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
             <strong>Deposit menunggu pembayaran</strong>
             <small>{formatPrice(pendingTopup.amount)}{pendingTopup.reference ? ` · Ref ${pendingTopup.reference}` : ""}</small>
           </div>
-          <button type="button" className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => setAmount(String(pendingTopup.amount))}>
+          <button type="button" className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => openConfirm(pendingTopup.amount)}>
             <CreditCard size={12} /> Pakai nominal ini
           </button>
         </section>
       )}
 
       <div className="cx-account-grid">
-        <div className="cx-panel" ref={formPanelRef}>
+        <div className="cx-panel">
           <div className="cx-panel-header">
             <h3>Top Up Saldo</h3>
             <span className="cx-panel-sub">QRIS otomatis · saldo masuk seketika</span>
           </div>
 
-          <div className="cx-steps-bar">
-            {["Nominal", "Konfirmasi", "Scan & bayar"].map((s, i) => {
-              const idx = step === "form" ? 0 : step === "confirm" ? 1 : 2;
-              return (
-                <span key={s} className={`cx-step${i === idx ? " active" : ""}${i < idx ? " done" : ""}`}>
-                  <b>{i + 1}</b>{s}
-                </span>
-              );
-            })}
-          </div>
-
-          {step === "form" ? (
-          <form className="cx-topup-form" onSubmit={goConfirm}>
+          <div className="cx-topup-form">
             <div className="cx-nominal-head">
               <div>
                 <strong>Pilih Nominal</strong>
@@ -4445,13 +4453,12 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                 <button
                   type="button"
                   key={v}
-                  className={`cx-nominal-tile${Number(amount) === v ? " active" : ""}`}
-                  onClick={() => setAmount(String(v))}
+                  className="cx-nominal-tile"
+                  onClick={() => openConfirm(v)}
                 >
                   <span className="cx-nominal-cap">Top up</span>
                   <strong>{formatPrice(v)}</strong>
                   <small>Saldo masuk otomatis</small>
-                  {Number(amount) === v && <span className="nk-tile-check"><Check size={10} /></span>}
                 </button>
               ))}
             </div>
@@ -4460,7 +4467,14 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
               <span className="cx-field-label">Atau nominal custom</span>
               <div className="nk-custom-input">
                 <span className="nk-custom-rp">Rp</span>
-                <input type="number" min="500" step="100" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="500" inputMode="numeric" required />
+                <input
+                  type="number" min="500" step="100" value={custom} inputMode="numeric" placeholder="500"
+                  onChange={(e) => setCustom(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); openConfirm(custom); } }}
+                />
+                <button type="button" className="cx-btn cx-btn-primary cx-btn-sm nk-custom-go" disabled={Math.round(Number(custom) || 0) < 500} onClick={() => openConfirm(custom)}>
+                  Lanjut <ArrowRight size={12} />
+                </button>
               </div>
               <small className="cx-field-hint">Minimal Rp500 · Maksimal Rp10.000.000. QRIS dibuat otomatis sesuai nominal ini.</small>
             </div>
@@ -4474,107 +4488,9 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                 </div>
               ))}
             </div>
-            <p className="cx-field-hint">Cukup scan QRIS yang muncul, saldo bertambah otomatis tanpa unggah bukti.</p>
-
-            <Field label="Catatan (opsional)" hint="Kalau ada keterangan tambahan untuk admin.">
-              <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Contoh: top up untuk order Netflix" />
-            </Field>
-
+            <p className="cx-field-hint">Cukup pilih nominal, scan QRIS yang muncul, saldo bertambah otomatis.</p>
             {formError && <p className="cx-form-error">{formError}</p>}
-            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full nk-cta" disabled={amountNumber < 500}>
-              {amountNumber >= 500
-                ? <>Buat Kode QRIS — {formatPrice(amountNumber)} <ArrowRight size={13} /></>
-                : <>Pilih nominal dulu <ArrowRight size={13} /></>}
-            </button>
-          </form>
-          ) : step === "confirm" ? (
-          <div className="cx-topup-form">
-            <div className="cx-confirm-hero">
-              <span className="cx-confirm-cap">Cek &amp; konfirmasi nominal</span>
-              <strong className="cx-confirm-amount">{formatPrice(amountNumber)}</strong>
-              <div className="cx-confirm-app"><span>QRIS otomatis</span></div>
-            </div>
-
-            <ul className="cx-summary-list">
-              {summaryRows.map(([k, v]) => (
-                <li key={k}><span>{k}</span><strong>{v}</strong></li>
-              ))}
-            </ul>
-
-            <label className="cx-confirm-check">
-              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-              <span>Saya sudah memeriksa, nominal <strong>{formatPrice(amountNumber)}</strong> sudah benar.</span>
-            </label>
-            {formError && <p className="cx-form-error">{formError}</p>}
-            <div className="cx-confirm-actions">
-              <button type="button" className="cx-btn cx-btn-ghost" onClick={() => setStep("form")}>Ubah nominal</button>
-              <button type="button" className="cx-btn cx-btn-primary" disabled={!agreed || busy} onClick={createPayment}>
-                {busy ? <><Spinner size={12} /> Membuat QRIS...</> : <>Buat QRIS pembayaran <ArrowRight size={13} /></>}
-              </button>
-            </div>
           </div>
-          ) : step === "pay" && payment ? (
-          <div className="cx-topup-form">
-            <div className="cx-confirm-hero">
-              <span className="cx-confirm-cap">Bayar QRIS sejumlah</span>
-              <strong className="cx-confirm-amount">{formatPrice(payment.totalBayar || amountNumber)}</strong>
-              <div className="cx-confirm-app"><span>Ref {payment.refId}</span></div>
-            </div>
-
-            {payStatus === "expired" ? (
-              <div className="cx-topup-empty">QRIS sudah kedaluwarsa. Buat QRIS baru untuk melanjutkan.</div>
-            ) : (
-              <>
-                <div className="cx-qris-wrap">
-                  {payment.qrImage
-                    ? <img src={payment.qrImage} alt="QRIS pembayaran" />
-                    : <div className="cx-topup-empty">QR tidak tersedia, gunakan kode QRIS di bawah.</div>}
-                </div>
-                <p className="cx-qris-meta">
-                  {QRIS_NAME}
-                  {expiredAt ? <> · berlaku {formatCountdown(remaining)}</> : null}
-                </p>
-                <ol className="cx-qris-steps">
-                  <li>Buka aplikasi e-wallet / m-banking, pilih menu <strong>QRIS / Scan</strong>.</li>
-                  <li>Scan QR di atas, nominal <strong>{formatPrice(payment.totalBayar || amountNumber)}</strong> sudah terisi otomatis.</li>
-                  <li>Selesaikan pembayaran, halaman ini akan otomatis mendeteksi pembayaranmu.</li>
-                </ol>
-                {payment.qrString && (
-                  <button type="button" className="cx-btn cx-btn-secondary cx-btn-full" onClick={copyQrString}>
-                    {copied ? <><Check size={12} /> Kode QRIS tersalin</> : <><FileText size={12} /> Salin kode QRIS</>}
-                  </button>
-                )}
-                <div className="cx-topup-empty" style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
-                  <Spinner size={12} /> Menunggu pembayaran... saldo bertambah otomatis.
-                </div>
-              </>
-            )}
-
-            <ul className="cx-summary-list">
-              <li><span>Metode</span><strong>QRIS · WijayaPay</strong></li>
-              <li><span>Ref ID</span><strong className="cx-mono">{payment.refId}</strong></li>
-              {payment.trxReference ? <li><span>No. transaksi</span><strong className="cx-mono">{payment.trxReference}</strong></li> : null}
-              <li><span>Status</span><strong>{payStatus === "expired" ? "Kedaluwarsa" : "Menunggu pembayaran"}</strong></li>
-            </ul>
-
-            <button type="button" className="cx-btn cx-btn-ghost cx-btn-full" onClick={resetFlow}>
-              {payStatus === "expired" ? "Buat QRIS baru" : "Batalkan & kembali"}
-            </button>
-          </div>
-          ) : (
-          <div className="cx-topup-form">
-            <div className="cx-confirm-hero">
-              <span className="cx-confirm-cap">Pembayaran berhasil</span>
-              <strong className="cx-confirm-amount">{formatPrice(state.balance)}</strong>
-              <div className="cx-confirm-app"><span>Saldo terbaru kamu</span></div>
-            </div>
-            <p className="cx-field-hint">Pembayaran QRIS sudah diterima dan saldo langsung ditambahkan. Admin juga sudah dapat notifikasinya.</p>
-            <div className="cx-confirm-actions">
-              <button type="button" className="cx-btn cx-btn-primary" onClick={resetFlow}>Top up lagi</button>
-              <button type="button" className="cx-btn cx-btn-ghost" onClick={onBack}>Kembali</button>
-            </div>
-          </div>
-          )}
         </div>
 
         <div className="cx-panel">
@@ -4589,7 +4505,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
               <div key={t.id} className="cx-topup-row">
                 <div>
                   <strong>{formatPrice(t.amount)}</strong>
-                  <small>{t.method}{t.reference ? ` · Ref ${t.reference}` : ""}{t.note ? ` · ${t.note}` : ""}</small>
+                  <small>{t.method}{t.reference ? ` · Ref ${t.reference}` : ""}</small>
                 </div>
                 <span className="cx-topup-date">{formatDate(t.createdAt)}</span>
                 {topupStatusBadge(t.status)}
@@ -4599,13 +4515,108 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
           <div className="cx-topup-guide">
             <strong><CircleHelp size={13} /> Cara Top Up</strong>
             <ol>
-              <li>Pilih atau isi nominal top up.</li>
-              <li>Konfirmasi, lalu scan QRIS dari aplikasi bank / e-wallet.</li>
+              <li>Pilih nominal top up.</li>
+              <li>Klik Buat QRIS, lalu scan dari aplikasi bank / e-wallet.</li>
               <li>Saldo bertambah otomatis, biasanya di bawah 1 menit.</li>
             </ol>
           </div>
         </div>
       </div>
+
+      {/* ── Popup konfirmasi nominal / loading QRIS ── */}
+      {step === "confirm" && createPortal(
+        <div className="cx-modal-backdrop nk-pop-backdrop" onClick={() => !busy && resetFlow()}>
+          <div className="cx-modal nk-pop" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            {busy ? (
+              <div className="nk-pop-body nk-pop-loading">
+                <h2>Membuat QRIS...</h2>
+                <p>Tunggu sebentar</p>
+                <Spinner size={26} />
+              </div>
+            ) : (
+              <div className="nk-pop-body">
+                <span className="nk-pop-icon"><CircleHelp size={44} /></span>
+                <h2>Buat Top Up</h2>
+                <strong className="nk-pop-amount">{formatPrice(amountNumber)}</strong>
+                <p>QRIS akan otomatis dibuat. Bayar pakai bank atau e-wallet apapun.</p>
+                {formError && <p className="cx-form-error">{formError}</p>}
+                <div className="nk-pop-actions">
+                  <button type="button" className="cx-btn cx-btn-ghost" onClick={resetFlow}>Batal</button>
+                  <button type="button" className="cx-btn cx-btn-primary" onClick={createPayment}>
+                    <QrCode size={14} /> Buat QRIS
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>, document.body)}
+
+      {/* ── Popup scan & bayar QRIS ── */}
+      {step === "pay" && payment && createPortal(
+        <div className="cx-modal-backdrop nk-pop-backdrop" onClick={() => resetFlow()}>
+          <div className="cx-modal nk-pay" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="nk-pay-head">
+              <span className="nk-pay-head-icon"><QrCode size={20} /></span>
+              <div>
+                <strong>Bayar QRIS</strong>
+                <small>{payStatus === "expired" ? "QRIS expired — buat baru" : "Scan & bayar sekarang"}</small>
+              </div>
+              <button type="button" className="nk-pay-close" onClick={resetFlow} aria-label="Tutup"><X size={20} /></button>
+            </div>
+
+            <div className="nk-pay-body">
+              <span className="nk-pay-cap">Total bayar</span>
+              <strong className="nk-pay-amount">{formatPrice(payAmount)}</strong>
+
+              <div className="nk-pay-qr">
+                {payment.qrImage
+                  ? <img src={payment.qrImage} alt="QRIS pembayaran" />
+                  : <div className="cx-topup-empty">QR tidak tersedia, salin kode QRIS di bawah.</div>}
+              </div>
+
+              <span className={`nk-pay-timer${remaining <= 0 || payStatus === "expired" ? " is-out" : ""}`}>
+                <Clock size={13} /> {formatCountdown(remaining)}
+              </span>
+
+              <div className="nk-pay-actions">
+                <button type="button" className="cx-btn cx-btn-secondary" onClick={payment.qrImage ? saveQr : copyQrString}>
+                  {payment.qrImage ? <><Download size={13} /> Simpan QR</> : (copied ? <><Check size={13} /> Tersalin</> : <><FileText size={13} /> Salin kode</>)}
+                </button>
+                <button type="button" className="cx-btn cx-btn-outline nk-pay-check" onClick={checkStatus} disabled={checking}>
+                  {checking ? <Spinner size={13} /> : <RefreshCw size={13} />} Cek Status
+                </button>
+              </div>
+
+              <details className="nk-pay-guide">
+                <summary><CircleHelp size={13} /> Cara Bayar</summary>
+                <ol>
+                  <li>Buka aplikasi e-wallet / m-banking, pilih menu QRIS / Scan.</li>
+                  <li>Scan QR di atas — nominal sudah terisi otomatis.</li>
+                  <li>Selesaikan pembayaran, saldo bertambah otomatis.</li>
+                </ol>
+              </details>
+
+              <p className="nk-pay-id">ID: {payment.refId}</p>
+            </div>
+          </div>
+        </div>, document.body)}
+
+      {/* ── Popup pembayaran berhasil ── */}
+      {step === "done" && createPortal(
+        <div className="cx-modal-backdrop nk-pop-backdrop" onClick={resetFlow}>
+          <div className="cx-modal nk-pop" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="nk-pop-body">
+              <span className="nk-pop-icon is-ok"><BadgeCheck size={44} /></span>
+              <h2>Pembayaran Berhasil</h2>
+              <strong className="nk-pop-amount">{formatPrice(state.balance)}</strong>
+              <p>Saldo terbaru kamu sudah bertambah otomatis.</p>
+              <div className="nk-pop-actions">
+                <button type="button" className="cx-btn cx-btn-ghost" onClick={() => { resetFlow(); onBack(); }}>Tutup</button>
+                <button type="button" className="cx-btn cx-btn-primary" onClick={resetFlow}>Top up lagi</button>
+              </div>
+            </div>
+          </div>
+        </div>, document.body)}
     </div>
   );
 }
