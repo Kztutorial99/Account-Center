@@ -3376,7 +3376,7 @@ html { scroll-behavior: smooth; }
 }
 
 .cx-pd-backdrop {
-  position: fixed; inset: 0; z-index: 60;
+  position: fixed; inset: 0; z-index: 110;
   display: grid; place-items: center; padding: 20px;
   background: rgba(8, 5, 14, .82);
   backdrop-filter: blur(8px);
@@ -3525,10 +3525,10 @@ html { scroll-behavior: smooth; }
 @media (max-width: 640px) {
   .cx-pd-backdrop {
     padding: 0; align-items: flex-end;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    bottom: calc(var(--tab-h) + env(safe-area-inset-bottom));
   }
   .cx-pd-modal {
-    width: 100%; max-height: 90vh;
+    width: 100%; max-height: calc(92vh - var(--tab-h));
     border-radius: 22px 22px 0 0;
     animation: cx-pd-modal-in .22s cubic-bezier(.22,.8,.28,1) both;
   }
