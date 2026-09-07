@@ -2551,6 +2551,22 @@ html { scroll-behavior: smooth; }
 .nk-pay-id { margin: 0; font: 500 11.5px ui-monospace, monospace; color: var(--faint); word-break: break-all; text-align: center; }
 
 .nk-custom-go { flex: 0 0 auto; white-space: nowrap; }
+.nk-custom { min-width: 0; }
+.nk-custom-input {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px;
+  width: 100%; min-width: 0; padding: 5px 6px 5px 12px;
+  border: 1px solid var(--b1); border-radius: 13px; background: var(--s1);
+}
+.nk-custom-rp { color: var(--muted); font-size: 12px; font-weight: 700; }
+.nk-custom-input input {
+  width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink);
+  font: 600 14px ui-monospace, monospace;
+}
+.nk-custom-go { min-width: 108px; min-height: 38px; justify-content: center; }
+.cx-pay-apps { display: grid; gap: 9px; margin-top: 2px; padding-top: 12px; border-top: 1px solid var(--b1); }
+.cx-pay-apps-head { display: grid; gap: 2px; }
+.cx-pay-apps-head strong { color: var(--ink2); font-size: 12px; }
+.cx-pay-apps-head small { color: var(--faint); font-size: 10px; }
 
 @media (max-width: 640px) {
   .nk-pop-backdrop { padding: 12px; align-items: center; bottom: 0; }
@@ -2586,13 +2602,18 @@ html { scroll-behavior: smooth; }
   .cx-pending-banner { flex-wrap: wrap; }
   .cx-pending-actions { margin-left: 0; width: 100%; }
   .cx-pending-actions .cx-btn { flex: 1 1 0; justify-content: center; }
-  .cx-nominal-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
-  .cx-nominal-tag { max-width: 100%; padding-inline: 7px; font-size: 8.5px; letter-spacing: .06em; }
-  .nk-custom-input { gap: 6px; padding-inline: 10px; }
-  .nk-custom-go { padding-inline: 9px; }
-  .cx-app-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cx-nominal-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .cx-nominal-tag { max-width: 100%; padding: 4px 7px; font-size: 8px; letter-spacing: 0; white-space: nowrap; }
+  .nk-custom-input { grid-template-columns: auto minmax(0, 1fr); gap: 7px; padding: 7px; }
+  .nk-custom-rp { padding-left: 4px; }
+  .nk-custom-go { grid-column: 1 / -1; width: 100%; min-width: 0; min-height: 42px; padding-inline: 12px; }
+  .cx-pay-apps { gap: 8px; padding-top: 10px; }
+  .cx-app-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+  .cx-app-tile { gap: 4px; min-height: 62px; padding: 7px 2px; border-radius: 9px; font-size: 8px; }
+  .cx-app-tile span { text-overflow: clip; }
   .cx-topup-row { padding: 10px 12px; }
   .cx-topup-qr-btn { width: auto; justify-content: center; font-size: 10.5px; }
+  .cx-topup-page > .cx-topup-guide { margin-top: 10px; }
 }
 
 @media (max-width: 640px) {

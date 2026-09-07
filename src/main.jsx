@@ -4522,22 +4522,26 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); openConfirm(custom); } }}
                 />
                 <button type="button" className="cx-btn cx-btn-primary cx-btn-sm nk-custom-go" disabled={Math.round(Number(custom) || 0) < 500} onClick={() => openConfirm(custom)}>
-                  Lanjut <ArrowRight size={12} />
+                  <span>Lanjutkan</span> <ArrowRight size={12} />
                 </button>
               </div>
               <small className="cx-field-hint">Minimal Rp500 · Maksimal Rp10.000.000. QRIS dibuat otomatis sesuai nominal ini.</small>
             </div>
 
-            <div className="cx-field-label">Bisa dibayar dari aplikasi apa saja</div>
-            <div className="cx-app-grid">
-              {QRIS_APPS.map((a) => (
-                <div key={a.id} className="cx-app-tile is-static">
-                  <AppLogo app={a.id} size={30} />
-                  <span>{a.id.replace("QRIS ", "")}</span>
-                </div>
-              ))}
+            <div className="cx-pay-apps">
+              <div className="cx-pay-apps-head">
+                <strong>Bisa Bayar dari Aplikasi</strong>
+                <small>Bank &amp; e-wallet berlogo QRIS</small>
+              </div>
+              <div className="cx-app-grid">
+                {QRIS_APPS.map((a) => (
+                  <div key={a.id} className="cx-app-tile is-static">
+                    <AppLogo app={a.id} size={28} />
+                    <span>{a.id.replace("QRIS ", "")}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="cx-field-hint">Cukup pilih nominal, scan QRIS yang muncul, saldo bertambah otomatis.</p>
             {formError && <p className="cx-form-error">{formError}</p>}
           </div>
         </div>
@@ -4570,17 +4574,16 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                 )}
               </div>
             ))}
-
-
-          <div className="cx-topup-guide">
-            <strong><CircleHelp size={13} /> Cara Top Up</strong>
-            <ol>
-              <li>Pilih nominal top up.</li>
-              <li>Klik Buat QRIS, lalu scan dari aplikasi bank / e-wallet.</li>
-              <li>Saldo bertambah otomatis, biasanya di bawah 1 menit.</li>
-            </ol>
-          </div>
         </div>
+      </div>
+
+      <div className="cx-topup-guide">
+        <strong><CircleHelp size={13} /> Cara Top Up</strong>
+        <ol>
+          <li>Pilih nominal top up.</li>
+          <li>Klik Buat QRIS, lalu scan dari aplikasi bank / e-wallet.</li>
+          <li>Saldo bertambah otomatis, biasanya di bawah 1 menit.</li>
+        </ol>
       </div>
 
       {/* ── Popup konfirmasi nominal / loading QRIS ── */}
