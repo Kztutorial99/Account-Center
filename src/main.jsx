@@ -733,7 +733,7 @@ function App() {
   const [authReturn, setAuthReturn] = useState(null);
   const goAuthScreen = (screen) => {
     if (screen === "login" || screen === "register") {
-      setAuthReturn((prev) => (authScreen === "welcome" ? pageFromPath(window.location.pathname) : prev));
+      setAuthReturn((prev) => (authScreen === "welcome" ? (activePage || pageFromPath(window.location.pathname)) : prev));
     }
     setAuthScreen(screen);
     if (typeof window !== "undefined") {
