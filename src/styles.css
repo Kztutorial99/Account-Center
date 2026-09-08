@@ -3582,3 +3582,20 @@ html { scroll-behavior: smooth; }
   .cx-ga-row { flex-wrap: wrap; }
   .cx-ga-row > span { min-width: 100%; }
 }
+
+/* Buat Akun — CTA rekomendasi terbaik */
+.cx-ga-cta { padding: 4px 14px 10px; }
+.cx-ga-cta-btn { width: 100%; justify-content: center; gap: 8px; height: 42px; font-size: 13px; font-weight: 650; border-radius: 12px; }
+.cx-ga-best { margin: 0 0 2px; border: 1px solid color-mix(in srgb, var(--green) 40%, transparent); background: color-mix(in srgb, var(--green) 8%, transparent); border-radius: 14px; padding: 12px 14px; display: grid; gap: 10px; }
+.cx-ga-best-top { display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 650; color: var(--green); }
+.cx-ga-best-top em { margin-left: auto; font-style: normal; font-size: 10.5px; color: var(--faint); }
+.cx-ga-best-body { display: flex; align-items: center; gap: 10px; }
+.cx-ga-best-mail { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.cx-ga-best-mail strong { font-size: 13.5px; overflow-wrap: anywhere; color: var(--ink2); }
+.cx-ga-best-mail small { font-size: 10.5px; color: var(--faint); }
+.cx-ga-best-skeleton { height: 38px; border-radius: 10px; background: linear-gradient(90deg, color-mix(in srgb, var(--ink2) 8%, transparent), color-mix(in srgb, var(--ink2) 16%, transparent), color-mix(in srgb, var(--ink2) 8%, transparent)); background-size: 200% 100%; animation: cx-ga-shine 1.1s linear infinite; }
+@keyframes cx-ga-shine { to { background-position: -200% 0; } }
+@media (max-width: 520px) {
+  .cx-ga-best-body { flex-wrap: wrap; }
+  .cx-ga-best-body .cx-btn { width: 100%; justify-content: center; }
+}
