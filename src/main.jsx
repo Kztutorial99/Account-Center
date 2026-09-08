@@ -2821,13 +2821,22 @@ function makeBirthday() {
   return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
 }
 
-// Cek satu username ke API yang sama dengan halaman publik.
-async function gaCheckOnce(value) {
+// Cek satu username ke API yang sama dengan halaman publik (cepat, ada timeout).
+async function gaCheckOnce(value, timeoutMs = 4500) {
+  const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
   try {
-    const res = await fetch(`/api/orders?scope=admin&resource=check-email&value=${encodeURIComponent(value)}`, { credentials: "same-origin" });
+    const res = await fetch(`/api/orders?scope=admin&resource=check-email&value=${encodeURIComponent(value)}`, {
+      credentials: "same-origin",
+      signal: ctrl ? ctrl.signal : undefined,
+    });
     const data = await res.json();
     return data.state || (data.available ? "available" : "taken");
-  } catch (_) { return "unknown"; }
+  } catch (_) {
+    return "unknown";
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 // Semakin pendek & tanpa angka = semakin bagus.
 function gaScore(u) {
@@ -2837,6 +2846,7 @@ function gaScore(u) {
   if (!u.includes(".")) score += 4;
   return score;
 }
+
 
 function GoogleAccountMaker({ onNotice }) {
   const [first, setFirst]       = useState("");
@@ -2897,33 +2907,50 @@ function GoogleAccountMaker({ onNotice }) {
 
   const bundle = `Email: ${email}\nPassword: ${password}\nNama: ${first || "-"} ${last || ""}\nTanggal lahir: ${profile.birthday}\nGender: ${profile.gender}`;
 
-  // Cari 1 rekomendasi username terbaik yang lolos pengecekan ketersediaan.
+  // Cari 1 rekomendasi terbaik — kandidat dicek PARALEL biar super cepat.
   const findRecommendations = async () => {
     setRecBusy(true);
     setRecs([]);
     const gender = profile.gender;
-    const found = [];
     const tried = new Set();
-    for (let i = 0; i < 22 && found.length < 1; i++) {
-      const f = first.trim() ? first.trim() : pickFirstByGender(gender);
-      const l = i < 4 && last.trim() ? last.trim() : pickLastByGender(gender);
-      const u = makeGoogleUsername(f, l, useNumber);
-      if (tried.has(u)) continue;
-      tried.add(u);
-      const state = await gaCheckOnce(u);
-      if (state === "available") {
-        found.push({ username: u, email: `${u}@gmail.com`, name: `${f} ${l}`, score: gaScore(u) });
+    const makeBatch = (size) => {
+      const batch = [];
+      let guard = 0;
+      while (batch.length < size && guard++ < size * 6) {
+        const f = first.trim() ? first.trim() : pickFirstByGender(gender);
+        const l = last.trim() && batch.length < 2 ? last.trim() : pickLastByGender(gender);
+        const u = makeGoogleUsername(f, l, useNumber);
+        if (tried.has(u)) continue;
+        tried.add(u);
+        batch.push({ username: u, name: `${f} ${l}` });
       }
+      return batch;
+    };
+
+    let best = null;
+    // 2 gelombang, masing-masing 8 kandidat dicek serentak.
+    for (let wave = 0; wave < 2 && !best; wave++) {
+      const batch = makeBatch(8);
+      const results = await Promise.all(
+        batch.map(async (c) => ({ ...c, state: await gaCheckOnce(c.username, 4000) }))
+      );
+      const ok = results
+        .filter((r) => r.state === "available")
+        .map((r) => ({ username: r.username, email: `${r.username}@gmail.com`, name: r.name, score: gaScore(r.username) }))
+        .sort((a, b) => b.score - a.score);
+      if (ok.length) best = ok[0];
     }
-    if (found.length) {
-      const best = found.sort((a, b) => b.score - a.score)[0];
+
+    if (best) {
       setRecs([best]);
-      onNotice("Rekomendasi email terbaik siap dipakai");
+      setUsername(best.username);
+      onNotice("Rekomendasi terbaik siap dipakai");
     } else {
       onNotice("Belum ada yang lolos, coba lagi");
     }
     setRecBusy(false);
   };
+
 
   const saveToHistory = () => {
     if (!email) return;
@@ -2961,9 +2988,10 @@ function GoogleAccountMaker({ onNotice }) {
             <InputWrap icon={Mail}>
               <input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))} placeholder="bayupratama123" />
             </InputWrap>
-            <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => setUsername(makeGoogleUsername(first, last, useNumber))}>
-              <Sparkles size={11} /> Saran
+            <button className="cx-btn cx-btn-ghost cx-btn-sm" title="Acak ulang username" onClick={() => setUsername(makeGoogleUsername(first, last, useNumber))}>
+              <RefreshCw size={11} />
             </button>
+
             <button
               className={`cx-btn cx-btn-sm ${useNumber ? "cx-btn-primary" : "cx-btn-ghost"}`}
               title="Tambah angka acak pendek (2 digit) di akhir username"
@@ -3023,37 +3051,44 @@ function GoogleAccountMaker({ onNotice }) {
             }} aria-label="Ganti gender"><RefreshCw size={11} /></button></div>
         </div>
 
-        <div className="cx-ga-actions">
-          <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => copy(bundle, "Data akun")} disabled={!email}><Copy size={11} /> Salin semua</button>
-          <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={saveToHistory} disabled={!email}><Plus size={11} /> Simpan ke daftar</button>
-          <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={findRecommendations} disabled={recBusy}>
-            {recBusy ? <RefreshCw size={11} className="cx-spin" /> : <Sparkles size={11} />} {recBusy ? "Mencari..." : "Cari rekomendasi terbaik"}
+        <div className="cx-ga-cta">
+          <button className="cx-btn cx-btn-primary cx-ga-cta-btn" onClick={findRecommendations} disabled={recBusy}>
+            {recBusy ? <RefreshCw size={13} className="cx-spin" /> : <Sparkles size={13} />}
+            {recBusy ? "Mencari..." : "Cari Rekomendasi Terbaik"}
           </button>
+        </div>
+
+        <div className="cx-ga-actions">
+          <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => copy(bundle, "Data akun")} disabled={!email}><Copy size={11} /> Salin semua</button>
+          <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={saveToHistory} disabled={!email}><Plus size={11} /> Simpan ke daftar</button>
           <a className="cx-btn cx-btn-ghost cx-btn-sm" href="https://accounts.google.com/signup" target="_blank" rel="noreferrer"><ArrowUpRight size={11} /> Buka pendaftaran Google</a>
         </div>
+
       </div>
 
       {(recs.length > 0 || recBusy) && (
-        <div className="cx-panel cx-panel-plain">
-          <div className="cx-panel-header">
-            <h3>Rekomendasi email</h3>
-            <span className="cx-panel-sub">{recBusy ? "Mengecek kandidat..." : "1 rekomendasi terbaik yang tersedia"}</span>
+        <div className="cx-ga-best">
+          <div className="cx-ga-best-top">
+            <Sparkles size={12} />
+            <span>Rekomendasi terbaik</span>
+            {recBusy && <em>mengecek serentak...</em>}
           </div>
-          <div className="cx-ga-history">
-            {recs.map((r) => (
-              <div key={r.username} className="cx-ga-hist-row">
-                <div>
+          {recBusy && recs.length === 0 ? (
+            <div className="cx-ga-best-skeleton" />
+          ) : (
+            recs.map((r) => (
+              <div key={r.username} className="cx-ga-best-body">
+                <div className="cx-ga-best-mail">
                   <strong className="cx-mono">{r.email}</strong>
-                  <small>{r.name} · tersedia</small>
+                  <small>{r.name} · sudah lolos pengecekan</small>
                 </div>
-                <button className="cx-row-btn" onClick={() => { setUsername(r.username); onNotice("Dipakai sebagai username"); }} aria-label="Pakai"><Check size={11} /></button>
-                <button className="cx-row-btn" onClick={() => copy(r.email, "Email")} aria-label="Salin"><Copy size={11} /></button>
+                <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => copy(r.email, "Email")}><Copy size={11} /> Salin</button>
               </div>
-            ))}
-            {recBusy && recs.length === 0 && <div className="cx-ga-hist-row"><div><small>Mencari kandidat terbaik...</small></div></div>}
-          </div>
+            ))
+          )}
         </div>
       )}
+
 
       {history.length > 0 && (
         <div className="cx-panel cx-panel-plain">
