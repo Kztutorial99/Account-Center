@@ -585,6 +585,8 @@ function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }
             <button onClick={() => navigate("katalog")}>Katalog</button>
             <button onClick={() => navigate("custom-email")}>Custom Email</button>
             <button onClick={() => navigate("help")}>Bantuan</button>
+            <button onClick={() => navigate("faq")}>FAQ</button>
+            <button onClick={() => navigate("cara-beli")}>Cara Beli</button>
           </nav>
           <div className="cx-land-top-auth">
             <button className="cx-btn cx-btn-ghost" onClick={onLogin}><LogIn size={13} /> Masuk</button>
@@ -698,9 +700,9 @@ function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }
 /* ═══════════════════════════════════════════════════
    APP ROOT
 ════════════════════════════════════════════════════ */
-const PAGE_PATHS = ["admin", "katalog", "orders", "help", "account", "topup", "custom-email", "terms", "privacy", "refund", "disclaimer"];
+const PAGE_PATHS = ["admin", "katalog", "orders", "help", "faq", "cara-beli", "account", "topup", "custom-email", "terms", "privacy", "refund", "disclaimer"];
 // Halaman publik: bisa dibuka tanpa login dan boleh di-crawl Google.
-export const PUBLIC_PAGES = ["store", "katalog", "custom-email", "help", "terms", "privacy", "refund", "disclaimer"];
+export const PUBLIC_PAGES = ["store", "katalog", "custom-email", "help", "faq", "cara-beli", "terms", "privacy", "refund", "disclaimer"];
 const pageFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
   return PAGE_PATHS.includes(slug) ? slug : "store";
@@ -1376,6 +1378,26 @@ function App() {
     <div className="cx-app">
       {topbar}
       <HelpPage navigate={navigate} onAskAssistant={() => setAiOpen(true)} />
+      <StoreFooter navigate={navigate} />
+      {tabbar}
+      {overlays}
+    </div>
+  );
+
+  if (activePage === "faq") return (
+    <div className="cx-app">
+      {topbar}
+      <FaqPage navigate={navigate} onAskAssistant={() => setAiOpen(true)} />
+      <StoreFooter navigate={navigate} />
+      {tabbar}
+      {overlays}
+    </div>
+  );
+
+  if (activePage === "cara-beli") return (
+    <div className="cx-app">
+      {topbar}
+      <CaraBeliPage navigate={navigate} />
       <StoreFooter navigate={navigate} />
       {tabbar}
       {overlays}
@@ -2323,6 +2345,8 @@ function HelpPage({ navigate, onAskAssistant }) {
             { icon: ShoppingBag, label: "Belanja akun", desc: "Lihat katalog & stok", page: "katalog" },
             { icon: Package, label: "Pesanan saya", desc: "Detail akun yang dibeli", page: "orders" },
             { icon: User, label: "Akun saya", desc: "Profil & keamanan", page: "account" },
+            { icon: CircleHelp, label: "FAQ", desc: "Pertanyaan umum", page: "faq" },
+            { icon: ShoppingBag, label: "Cara beli", desc: "Panduan langkah demi langkah", page: "cara-beli" },
           ].map((item) => (
             <button key={item.page} className="cx-help-quick-card" onClick={() => navigate(item.page)}>
               <span className="cx-help-quick-icon"><item.icon size={15} /></span>
@@ -2375,6 +2399,161 @@ function HelpPage({ navigate, onAskAssistant }) {
           </div>
           <button className="cx-btn cx-btn-primary" onClick={onAskAssistant}>
             <Send size={13} /> Kirim laporan
+          </button>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   HALAMAN FAQ (SEO: /faq)
+════════════════════════════════════════════════════ */
+const FAQ_PAGE_ITEMS = [
+  { q: "Bagaimana cara membeli akun di Akun Instan?", a: "Isi saldo lewat menu Top Up, pilih akun di katalog, klik Beli sekarang, lalu detail login langsung terbuka di menu Pesanan. Panduan lengkapnya ada di halaman Cara Beli." },
+  { q: "Metode pembayaran apa yang tersedia?", a: "Pembayaran memakai QRIS, e-wallet (DANA, OVO, GoPay, ShopeePay) dan transfer bank melalui saldo Akun Instan." },
+  { q: "Berapa lama top up diproses?", a: "Umumnya di bawah 1x24 jam pada jam kerja. Status top up bisa dipantau di menu Top Up." },
+  { q: "Kapan akun saya dikirim?", a: "Setelah pembayaran terverifikasi, detail login langsung terbuka di akun kamu tanpa menunggu admin." },
+  { q: "Apakah akun yang dijual bergaransi?", a: "Ya, setiap akun bergaransi login. Segera ganti password setelah menerima detail akun. Jika akun gagal dipakai, admin mengganti akun atau mengembalikan saldo sesuai Kebijakan Refund." },
+  { q: "Bisa pesan Gmail dengan nama sendiri?", a: "Bisa. Gunakan menu Custom Email untuk memesan nama Gmail/username sesuai keinginan, lalu tim kami yang membuatkan akunnya." },
+  { q: "Di mana melihat detail akun saya?", a: "Menu Pesanan menyimpan semua pembelian beserta kredensial akunnya dan bisa disalin kapan saja." },
+  { q: "Bisa refund saldo?", a: "Saldo yang sudah masuk dipakai untuk pembelian akun. Untuk kasus akun gagal dipakai, admin akan mengganti akun atau mengembalikan saldo." },
+  { q: "Kenapa notifikasi tidak muncul?", a: "Tarik ulang halaman atau buka lonceng notifikasi di kanan atas. Pesan dari admin masuk ke situ." },
+  { q: "Akun yang saya beli bermasalah, bagaimana?", a: "Buka Assisten Akun Instan dan laporkan kendalanya. Laporan tersimpan dan dibalas admin lewat notifikasi." },
+];
+
+function FaqPage({ navigate, onAskAssistant }) {
+  const [openFaq, setOpenFaq] = useState(0);
+  return (
+    <main className="cx-help">
+      <div className="cx-container">
+        <section className="cx-help-hero">
+          <span className="cx-help-badge"><CircleHelp size={12} /> FAQ</span>
+          <h1>Pertanyaan yang sering ditanyakan</h1>
+          <p>Jawaban lengkap seputar pembelian akun, pembayaran, garansi, dan custom email di Akun Instan.</p>
+          <div className="cx-help-cta">
+            <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
+              <ShoppingBag size={13} /> Lihat katalog
+            </button>
+            <button className="cx-btn cx-btn-ghost" onClick={() => navigate("cara-beli")}>
+              <CircleHelp size={13} /> Cara beli
+            </button>
+          </div>
+        </section>
+
+        <section className="cx-help-section">
+          <h2>Semua pertanyaan</h2>
+          <div className="cx-help-faq">
+            {FAQ_PAGE_ITEMS.map((item, i) => {
+              const open = openFaq === i;
+              return (
+                <div className={`cx-help-faq-item${open ? " is-open" : ""}`} key={item.q}>
+                  <button onClick={() => setOpenFaq(open ? -1 : i)} aria-expanded={open}>
+                    <span>{item.q}</span>
+                    <ChevronDown size={15} />
+                  </button>
+                  {open && <p>{item.a}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="cx-help-contact">
+          <div>
+            <strong>Pertanyaanmu belum terjawab?</strong>
+            <p>Kirim pertanyaan lewat Assisten Akun Instan. Pesan langsung masuk ke admin dan dibalas lewat notifikasi.</p>
+          </div>
+          <button className="cx-btn cx-btn-primary" onClick={onAskAssistant}>
+            <Send size={13} /> Tanya admin
+          </button>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   HALAMAN CARA BELI (SEO: /cara-beli)
+════════════════════════════════════════════════════ */
+function CaraBeliPage({ navigate }) {
+  return (
+    <main className="cx-help">
+      <div className="cx-container">
+        <section className="cx-help-hero">
+          <span className="cx-help-badge"><ShoppingBag size={12} /> Panduan</span>
+          <h1>Cara beli akun di Akun Instan</h1>
+          <p>Empat langkah mudah dari isi saldo sampai detail akun ada di tanganmu. Semua serba instan.</p>
+          <div className="cx-help-cta">
+            <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
+              <ShoppingBag size={13} /> Mulai belanja
+            </button>
+            <button className="cx-btn cx-btn-ghost" onClick={() => navigate("faq")}>
+              <CircleHelp size={13} /> Baca FAQ
+            </button>
+          </div>
+        </section>
+
+        <section className="cx-help-section">
+          <h2>Langkah pembelian</h2>
+          <ol className="cx-help-steps">
+            {HELP_STEPS.map((step, i) => (
+              <li key={step.title}>
+                <span className="cx-help-step-no">{i + 1}</span>
+                <div>
+                  <strong>{step.title}</strong>
+                  <p>{step.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="cx-help-section">
+          <h2>Metode pembayaran</h2>
+          <ol className="cx-help-steps">
+            {[
+              { title: "QRIS", body: "Scan satu kode QR dari aplikasi apa pun: m-banking, DANA, OVO, GoPay, ShopeePay, dan lainnya." },
+              { title: "E-Wallet", body: "Transfer langsung ke dompet digital resmi Akun Instan, lalu unggah bukti pembayaran." },
+              { title: "Transfer bank", body: "Tersedia BCA, BNI, BRI, Mandiri, dan SeaBank. Saldo masuk setelah admin verifikasi bukti transfer." },
+            ].map((step, i) => (
+              <li key={step.title}>
+                <span className="cx-help-step-no">{i + 1}</span>
+                <div>
+                  <strong>{step.title}</strong>
+                  <p>{step.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="cx-help-section">
+          <h2>Tips penting setelah membeli</h2>
+          <ol className="cx-help-steps">
+            {[
+              { title: "Ganti password segera", body: "Setelah menerima detail login di menu Pesanan, langsung ganti password akun agar keamanan sepenuhnya di tanganmu." },
+              { title: "Simpan kredensial baik-baik", body: "Detail akun tersimpan permanen di menu Pesanan, tapi sebaiknya catat juga di tempat aman milikmu." },
+              { title: "Ada masalah? Lapor", body: "Gunakan Assisten Akun Instan untuk melapor. Laporan dibalas admin dan akun bermasalah diganti sesuai garansi." },
+            ].map((step, i) => (
+              <li key={step.title}>
+                <span className="cx-help-step-no">{i + 1}</span>
+                <div>
+                  <strong>{step.title}</strong>
+                  <p>{step.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="cx-help-contact">
+          <div>
+            <strong>Siap mulai belanja?</strong>
+            <p>Stok akun diperbarui real-time dari database. Pilih akunmu sekarang sebelum kehabisan.</p>
+          </div>
+          <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
+            <ArrowRight size={13} /> Buka katalog
           </button>
         </section>
       </div>
@@ -2543,6 +2722,8 @@ function StoreFooter({ navigate }) {
           </div>
           <div className="cx-footer-links">
             <button onClick={() => navigate("help")}>Bantuan</button>
+            <button onClick={() => navigate("faq")}>FAQ</button>
+            <button onClick={() => navigate("cara-beli")}>Cara Beli</button>
             <button onClick={() => navigate("orders")}>Pesanan</button>
             <button onClick={() => navigate("terms")}>Syarat &amp; Ketentuan</button>
             <button onClick={() => navigate("privacy")}>Kebijakan Privasi</button>
