@@ -1350,7 +1350,13 @@ function App() {
         </div>
       )}
 
-      <AssistantWidget open={aiOpen} onOpenChange={setAiOpen} />
+      <AssistantWidget
+        open={aiOpen}
+        onOpenChange={setAiOpen}
+        guest={guest}
+        onLogin={() => goAuthScreen("login")}
+        onRegister={() => goAuthScreen("register")}
+      />
 
       {checkout.order && (
         <div className="cx-modal-backdrop" onClick={() => setCheckout({ loading: false, error: "", order: null })}>
@@ -4499,7 +4505,7 @@ function AdminPage({ onBack, onNotice }) {
         </div>
       )}
 
-      <AssistantWidget open={asstOpen} onOpenChange={setAsstOpen} hideFab />
+      <AssistantWidget open={asstOpen} onOpenChange={setAsstOpen} hideFab scope="admin" />
       {confirmDialog}
     </div>
   );
@@ -5544,7 +5550,8 @@ function toolLabel(name) {
     .replace(/_/g, " ");
 }
 
-function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
+function AssistantWidget({ open: openProp, onOpenChange, hideFab = false, scope = "", guest = false, onLogin, onRegister }) {
+  const apiUrl = scope === "admin" ? "/api/assistant?scope=admin" : "/api/assistant";
   const controlled = typeof openProp === "boolean";
   const [openState, setOpenState] = useState(false);
   const open = controlled ? openProp : openState;
@@ -5565,7 +5572,7 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
 
   const loadInfo = () => {
     setInfo((s) => ({ ...s, loading: true, error: "" }));
-    fetch("/api/assistant", { credentials: "same-origin" })
+    fetch(apiUrl, { credentials: "same-origin" })
       .then(async (r) => {
         const p = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(p.error || "Assisten tidak tersedia");
@@ -5575,7 +5582,11 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
       .catch((e) => setInfo({ loading: false, role: "", available: false, model: "", reason: "", error: e.message }));
   };
 
-  useEffect(() => { if (open) loadInfo(); }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    if (guest) { setInfo({ loading: false, role: "", available: false, model: "", reason: "guest", error: "" }); return; }
+    loadInfo();
+  }, [open, guest]);
   useEffect(() => {
     if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
   }, [messages, busy]);
@@ -5605,7 +5616,7 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
       }));
 
     try {
-      const res = await fetch("/api/assistant", {
+      const res = await fetch(apiUrl, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
@@ -5685,13 +5696,15 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
             <div className="cx-ai-head-copy">
               <strong>Assisten Akun Instan</strong>
               <small>
-                {info.loading ? "Menyiapkan..."
+                {guest ? "Masuk dulu untuk mulai ngobrol"
+                  : info.loading ? "Menyiapkan..."
                   : info.error ? "Perlu masuk dulu"
                   : isAdminMode ? "Mode admin · akses penuh"
                   : "Mode user · data akun kamu"}
               </small>
             </div>
-            {!info.loading && !info.error && (
+            {guest && <span className="cx-ai-badge"><LockKeyhole size={10} />Tamu</span>}
+            {!guest && !info.loading && !info.error && (
               <span className={`cx-ai-badge${isAdminMode ? " admin" : ""}`}>
                 {isAdminMode ? <ShieldCheck size={10} /> : <User size={10} />}
                 {isAdminMode ? "Admin" : "User"}
@@ -5701,9 +5714,31 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
           </div>
 
           <div className="cx-ai-body" ref={scroller}>
-            {info.loading && <div className="cx-ai-empty"><RefreshCw size={18} /><p>Menghubungkan ke Assisten...</p></div>}
+            {guest ? (
+              <div className="cx-ai-gate">
+                <div className="cx-ai-gate-icon"><LockKeyhole size={20} /></div>
+                <strong>Masuk dulu untuk pakai Assisten</strong>
+                <p>Assisten butuh akunmu supaya bisa cek pesanan, saldo, status akun, dan meneruskan kendala ke admin dengan aman.</p>
+                <ul className="cx-ai-gate-list">
+                  <li><Check size={11} /> Cek status pesanan & detail akun</li>
+                  <li><Check size={11} /> Lihat saldo dan riwayat top up</li>
+                  <li><Check size={11} /> Lapor kendala langsung ke admin</li>
+                </ul>
+                <div className="cx-ai-gate-cta">
+                  <button className="cx-btn cx-btn-primary cx-btn-full" onClick={() => { setOpen(false); if (onLogin) onLogin(); }}>
+                    <LogIn size={14} /> Masuk
+                  </button>
+                  <button className="cx-btn cx-btn-secondary cx-btn-full" onClick={() => { setOpen(false); if (onRegister) onRegister(); }}>
+                    <UserPlus size={14} /> Daftar gratis
+                  </button>
+                </div>
+                <small className="cx-ai-gate-note">Gratis, cuma butuh email aktif.</small>
+              </div>
+            ) : null}
 
-            {!info.loading && info.error && (
+            {!guest && info.loading && <div className="cx-ai-empty"><RefreshCw size={18} /><p>Menghubungkan ke Assisten...</p></div>}
+
+            {!guest && !info.loading && info.error && (
               <div className="cx-ai-empty">
                 <LockKeyhole size={18} />
                 <p>{info.error}</p>
@@ -5711,7 +5746,7 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
               </div>
             )}
 
-            {!info.loading && !info.error && !info.available && (
+            {!guest && !info.loading && !info.error && !info.available && (
               <div className="cx-ai-empty">
                 <LockKeyhole size={18} />
                 <p>
@@ -5725,7 +5760,7 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
               </div>
             )}
 
-            {!info.loading && !info.error && info.available && messages.length === 0 && (
+            {!guest && !info.loading && !info.error && info.available && messages.length === 0 && (
               <div className="cx-ai-intro">
                 <p>
                   {isAdminMode
@@ -5781,7 +5816,7 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
             {error && <div className="cx-ai-error">{error}</div>}
           </div>
 
-          {!info.loading && !info.error && info.available && (
+          {!guest && !info.loading && !info.error && info.available && (
             <div className="cx-ai-composer-wrap">
               <form
                 className="cx-ai-composer"
@@ -5802,7 +5837,7 @@ function AssistantWidget({ open: openProp, onOpenChange, hideFab = false }) {
             </div>
           )}
 
-          {!info.loading && !info.error && info.available && !isAdminMode && (
+          {!guest && !info.loading && !info.error && info.available && !isAdminMode && (
             <p className="cx-ai-foot"><ShieldCheck size={9} /> Assisten hanya bisa mengakses data akunmu sendiri.</p>
           )}
         </div>
