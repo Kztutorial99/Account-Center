@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import "./styles.css";
 import { applySeo, applyProductSchema } from "./seo.js";
+import { signInWithGoogle, consumeGoogleRedirect, signOutGoogle } from "./firebase.js";
 
 /* ─── helpers ─── */
 const formatPrice = (v) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(v) || 0);
@@ -857,14 +858,31 @@ function App() {
   const loadSession = () =>
     fetch("/api/auth", { credentials: "same-origin" })
       .then((r) => r.json())
-      .then((p) => {
-        setAuth({ user: p.user || null, loading: false });
-        if (p.user) loadCustomStatus();
+      .then(async (p) => {
+        if (p.user) {
+          setAuth({ user: p.user, loading: false });
+          loadCustomStatus();
+          return;
+        }
+        /* Baru kembali dari halaman login Google (mode redirect)? Tukar token ke sesi. */
+        const idToken = await consumeGoogleRedirect();
+        if (idToken) {
+          try {
+            const res = await jsonRequest("/api/auth", {
+              method: "POST", body: JSON.stringify({ action: "google", idToken }),
+            });
+            setAuth({ user: res.user, loading: false });
+            loadCustomStatus();
+            return;
+          } catch (_) {}
+        }
+        setAuth({ user: null, loading: false });
       })
       .catch(() => setAuth({ user: null, loading: false }));
 
   const logout = async () => {
     try { await jsonRequest("/api/auth", { method: "DELETE" }); } catch (_) {}
+    signOutGoogle();
     setAuth({ user: null, loading: false });
     setAuthScreen("welcome");
     setMenuOpen(false);
@@ -4559,6 +4577,17 @@ function WelcomePage({ onLogin, onRegister }) {
 /* ═══════════════════════════════════════════════════
    AUTH PAGE (daftar / masuk)
 ════════════════════════════════════════════════════ */
+function GoogleGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 .5 24 .5 14.6.5 6.4 5.9 2.5 13.8l7.8 6.1C12.2 13.6 17.6 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.9 7.2l7.6 5.9c4.4-4.1 7.1-10.2 7.1-17.6z"/>
+      <path fill="#FBBC05" d="M10.3 28.1a14.6 14.6 0 0 1 0-8.2l-7.8-6.1a23.9 23.9 0 0 0 0 20.4l7.8-6.1z"/>
+      <path fill="#34A853" d="M24 47.5c6.5 0 11.9-2.1 15.9-5.9l-7.6-5.9c-2.1 1.4-4.8 2.3-8.3 2.3-6.4 0-11.8-4.1-13.7-9.9l-7.8 6.1C6.4 42.1 14.6 47.5 24 47.5z"/>
+    </svg>
+  );
+}
+
 function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome }) {
   const [mode, setMode]         = useState(initialMode);
   const [form, setForm]         = useState({ name: "", email: "", phone: "", password: "" });
@@ -4567,6 +4596,20 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome }) {
   const [busy, setBusy]         = useState(false);
   useEffect(() => { setMode(initialMode); }, [initialMode]);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const googleSignIn = async () => {
+    setError(""); setBusy(true);
+    try {
+      const idToken = await signInWithGoogle();
+      if (!idToken) return; // redirect flow: hasil diproses saat halaman kembali
+      const res = await jsonRequest("/api/auth", {
+        method: "POST", body: JSON.stringify({ action: "google", idToken }),
+      });
+      onAuthenticated(res.user);
+    } catch (err) {
+      if (!err.silent) setError(err.message || "Login Google gagal");
+    } finally { setBusy(false); }
+  };
 
   const submit = async (e) => {
     e.preventDefault(); setError(""); setBusy(true);
@@ -4615,6 +4658,12 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome }) {
             <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); }}>Masuk</button>
             <button type="button" className={mode === "register" ? "active" : ""} onClick={() => { setMode("register"); setError(""); }}>Daftar</button>
           </div>
+
+          <button type="button" className="cx-google-btn" onClick={googleSignIn} disabled={busy}>
+            <GoogleGlyph />
+            <span>{mode === "register" ? "Daftar dengan Google" : "Lanjut dengan Google"}</span>
+          </button>
+          <div className="cx-auth-or"><span>atau pakai email</span></div>
 
           <form onSubmit={submit} className="cx-auth-form">
             {mode === "register" && (

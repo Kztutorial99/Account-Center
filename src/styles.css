@@ -3623,3 +3623,16 @@ html { scroll-behavior: smooth; }
   background: linear-gradient(135deg, var(--indigo2), #818cf8);
 }
 @media (min-width: 720px) { .cx-pub-subnav { display: none; } }
+
+
+/* ── Tombol login Google ── */
+.cx-google-btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  padding:11px 14px;border-radius:12px;cursor:pointer;font-size:13.5px;font-weight:600;
+  border:1px solid var(--line,rgba(255,255,255,.14));
+  background:#fff;color:#1f1f1f;transition:transform .12s ease,box-shadow .12s ease,opacity .12s ease;
+}
+.cx-google-btn:hover{box-shadow:0 6px 18px rgba(0,0,0,.18);transform:translateY(-1px);}
+.cx-google-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.cx-auth-or{display:flex;align-items:center;gap:10px;margin:14px 0 4px;color:var(--muted,#8b93a7);font-size:11.5px;}
+.cx-auth-or::before,.cx-auth-or::after{content:"";flex:1;height:1px;background:var(--line,rgba(255,255,255,.12));}

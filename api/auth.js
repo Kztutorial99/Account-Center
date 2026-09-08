@@ -5,7 +5,15 @@ const {
   clientIp, rateLimit, resetRateLimit,
 } = require("./_users");
 
+const { verifyFirebaseIdToken } = require("./_firebase");
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const shapeUser = (row) => ({
+  id: row.id, name: row.name, email: row.email, phone: row.phone || "",
+  avatar: row.avatar || "", balance: Number(row.balance) || 0,
+  createdAt: row.createdAt, role: row.role === "admin" ? "admin" : "user",
+});
 
 module.exports = async function handler(request, response) {
   try {
@@ -60,6 +68,55 @@ module.exports = async function handler(request, response) {
 
     const body = bodyOf(request);
     const action = text(body.action, 20) || "login";
+
+    /* Login/daftar lewat Google (Firebase). Akun dicocokkan berdasarkan email,
+       jadi user lama tetap dapat saldo & riwayat pesanannya. */
+    if (action === "google") {
+      const gate = await rateLimit(sql, {
+        key: `auth:google:${clientIp(request)}`, limit: 20, windowSec: 300,
+      });
+      if (!gate.allowed) {
+        response.setHeader("Retry-After", String(gate.retryAfter));
+        return response.status(429).json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${gate.retryAfter} detik.` });
+      }
+
+      let profile;
+      try {
+        profile = await verifyFirebaseIdToken(body.idToken);
+      } catch (err) {
+        return response.status(401).json({ error: err.message || "Login Google gagal" });
+      }
+
+      const existing = await sql`
+        SELECT id, name, email, phone, balance, status, role, avatar, created_at AS "createdAt"
+        FROM codexa_users WHERE email = ${profile.email} LIMIT 1
+      `;
+
+      if (existing.length) {
+        const row = existing[0];
+        if (row.status && row.status !== "active") {
+          return response.status(403).json({ error: "Akun kamu dinonaktifkan. Hubungi admin." });
+        }
+        /* Lengkapi foto profil kalau masih kosong. */
+        if (!row.avatar && profile.picture) {
+          await sql`UPDATE codexa_users SET avatar = ${profile.picture} WHERE id = ${row.id}`;
+          row.avatar = profile.picture;
+        }
+        setSession(response, row.id);
+        return response.status(200).json({ user: shapeUser(row) });
+      }
+
+      const id = crypto.randomUUID();
+      const name = profile.name || profile.email.split("@")[0];
+      /* Akun Google tidak punya password lokal: isi hash acak yang tidak bisa dipakai login. */
+      const randomPass = crypto.randomBytes(24).toString("hex");
+      const created = await sql`
+        INSERT INTO codexa_users (id, name, email, phone, password_hash, balance, avatar)
+        VALUES (${id}, ${name}, ${profile.email}, '', ${hashPassword(randomPass)}, 0, ${profile.picture || ""})
+        RETURNING id, name, email, phone, balance, role, avatar, created_at AS "createdAt"
+      `;
+      return setSession(response, id), response.status(201).json({ user: shapeUser(created[0]) });
+    }
     const email = text(body.email, 160).toLowerCase();
     const password = typeof body.password === "string" ? body.password : "";
 
