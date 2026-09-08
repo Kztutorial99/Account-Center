@@ -731,6 +731,12 @@ function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }
 const PAGE_PATHS = ["admin", "katalog", "orders", "help", "faq", "cara-beli", "account", "topup", "custom-email", "terms", "privacy", "refund", "disclaimer"];
 // Halaman publik: bisa dibuka tanpa login dan boleh di-crawl Google.
 export const PUBLIC_PAGES = ["store", "katalog", "custom-email", "help", "faq", "cara-beli", "terms", "privacy", "refund", "disclaimer"];
+const PAGE_LABELS = {
+  store: "Beranda", katalog: "Katalog", "custom-email": "Custom Email", help: "Bantuan",
+  faq: "FAQ", "cara-beli": "Cara Beli", orders: "Pesanan", account: "Akun", topup: "Top Up",
+  terms: "Syarat & Ketentuan", privacy: "Kebijakan Privasi", refund: "Kebijakan Refund",
+  disclaimer: "Disclaimer", admin: "Admin Panel",
+};
 const pageFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
   return PAGE_PATHS.includes(slug) ? slug : "store";
@@ -768,6 +774,13 @@ function App() {
     const t = window.setTimeout(() => setWelcomeSplash(false), 1100);
     return () => window.clearTimeout(t);
   }, [welcomeSplash]);
+  // Animasi singkat setiap pindah menu (bukan hanya beranda).
+  const [pageSplash, setPageSplash] = useState(null);
+  useEffect(() => {
+    if (!pageSplash) return;
+    const t = window.setTimeout(() => setPageSplash(null), 520);
+    return () => window.clearTimeout(t);
+  }, [pageSplash]);
   const goAuthScreen = (screen) => {
     if (screen === "login" || screen === "register") {
       setAuthReturn((prev) => (authScreen === "welcome" ? (activePage || pageFromPath(window.location.pathname)) : prev));
@@ -909,7 +922,9 @@ function App() {
 
   useEffect(() => {
     const pop = () => {
-      setActivePage(pageFromPath(window.location.pathname));
+      const next = pageFromPath(window.location.pathname);
+      setPageSplash((prev) => prev || next);
+      setActivePage(next);
       setAuthScreen(authScreenFromPath(window.location.pathname));
     };
     window.addEventListener("popstate", pop);
@@ -964,6 +979,7 @@ function App() {
       return;
     }
     window.history.pushState({}, "", page === "store" ? "/" : `/${page}`);
+    if (page !== activePage) setPageSplash(page);
     setActivePage(page);
     // Pindah menu harus menutup semua panel yang sedang terbuka.
     setCartOpen(false);
@@ -1106,6 +1122,9 @@ function App() {
   if (auth.loading) return <SessionSplash />;
   if (welcomeSplash) {
     return <SessionSplash title="Berhasil masuk" subtitle="Mengarahkan kamu ke beranda..." />;
+  }
+  if (pageSplash) {
+    return <SessionSplash title={`Membuka ${PAGE_LABELS[pageSplash] || "halaman"}`} subtitle="Sebentar ya, halaman sedang disiapkan..." />;
   }
   if (!auth.user && !auth.loading) {
     // Layar Masuk/Daftar hanya muncul saat diminta (klik tombol yang butuh login).
