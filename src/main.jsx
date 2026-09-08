@@ -2832,17 +2832,16 @@ function GoogleAccountMaker({ onNotice }) {
     if (navigator.clipboard) navigator.clipboard.writeText(value).then(() => onNotice(`${label} disalin`)).catch(() => {});
   };
 
+  // Acak baru: semua diacak ulang — nama depan/belakang, gender, username, password, tanggal lahir.
   const regenerate = () => {
-    const typedGender = detectGenderFromName(first);
-    const gender = typedGender || (Math.random() > 0.5 ? "Pria" : "Wanita");
-    const f = first || pickFirstByGender(gender);
-    const l = last || gaPick(GA_LAST);
-    const g = typedGender || detectGenderFromName(f) || gender;
-    if (!first) setFirst(f);
-    if (!last) setLast(l);
+    const gender = Math.random() > 0.5 ? "Pria" : "Wanita";
+    const f = pickFirstByGender(gender);
+    const l = gaPick(GA_LAST);
+    setFirst(f);
+    setLast(l);
     setUsername(makeGoogleUsername(f, l));
     setPassword(makeStrongPassword());
-    setProfile({ birthday: makeBirthday(), gender: g });
+    setProfile({ birthday: makeBirthday(), gender });
   };
 
   // Cek ketersediaan otomatis (debounce) memakai API yang sudah ada.
