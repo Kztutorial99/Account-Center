@@ -607,3 +607,33 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   }
   .cx-auth-points svg { color: var(--indigo2); flex: none; }
 }
+
+
+/* ─── Assisten: gerbang untuk tamu (belum login) ─── */
+.cx-ai-gate {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  text-align: center; padding: 18px 16px 14px;
+  animation: cx-splash-in .32s ease both;
+}
+.cx-ai-gate-icon {
+  width: 46px; height: 46px; border-radius: 16px;
+  display: grid; place-items: center;
+  background: linear-gradient(140deg, rgba(139,92,246,.28), rgba(59,130,246,.18));
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 10px 26px rgba(88,28,135,.28);
+}
+.cx-ai-gate strong { font-size: 15px; letter-spacing: -.01em; }
+.cx-ai-gate > p { font-size: 12.5px; line-height: 1.55; opacity: .78; max-width: 320px; margin: 0; }
+.cx-ai-gate-list {
+  list-style: none; margin: 4px 0 2px; padding: 0;
+  display: grid; gap: 6px; width: 100%; max-width: 320px;
+}
+.cx-ai-gate-list li {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; padding: 8px 10px; border-radius: 12px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+  text-align: left;
+}
+.cx-ai-gate-list li svg { flex: 0 0 auto; opacity: .9; }
+.cx-ai-gate-cta { display: grid; gap: 8px; width: 100%; max-width: 320px; margin-top: 4px; }
+.cx-ai-gate-note { font-size: 11px; opacity: .6; }
