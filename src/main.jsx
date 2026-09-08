@@ -2897,14 +2897,14 @@ function GoogleAccountMaker({ onNotice }) {
 
   const bundle = `Email: ${email}\nPassword: ${password}\nNama: ${first || "-"} ${last || ""}\nTanggal lahir: ${profile.birthday}\nGender: ${profile.gender}`;
 
-  // Cari 5 username terbaik yang lolos pengecekan ketersediaan.
+  // Cari 1 rekomendasi username terbaik yang lolos pengecekan ketersediaan.
   const findRecommendations = async () => {
     setRecBusy(true);
     setRecs([]);
     const gender = profile.gender;
     const found = [];
     const tried = new Set();
-    for (let i = 0; i < 22 && found.length < 5; i++) {
+    for (let i = 0; i < 22 && found.length < 1; i++) {
       const f = first.trim() ? first.trim() : pickFirstByGender(gender);
       const l = i < 4 && last.trim() ? last.trim() : pickLastByGender(gender);
       const u = makeGoogleUsername(f, l, useNumber);
@@ -2913,11 +2913,16 @@ function GoogleAccountMaker({ onNotice }) {
       const state = await gaCheckOnce(u);
       if (state === "available") {
         found.push({ username: u, email: `${u}@gmail.com`, name: `${f} ${l}`, score: gaScore(u) });
-        setRecs([...found].sort((a, b) => b.score - a.score));
       }
     }
+    if (found.length) {
+      const best = found.sort((a, b) => b.score - a.score)[0];
+      setRecs([best]);
+      onNotice("Rekomendasi email terbaik siap dipakai");
+    } else {
+      onNotice("Belum ada yang lolos, coba lagi");
+    }
     setRecBusy(false);
-    onNotice(found.length ? `${found.length} rekomendasi email siap dipakai` : "Belum ada yang lolos, coba lagi");
   };
 
   const saveToHistory = () => {
@@ -3022,7 +3027,7 @@ function GoogleAccountMaker({ onNotice }) {
           <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => copy(bundle, "Data akun")} disabled={!email}><Copy size={11} /> Salin semua</button>
           <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={saveToHistory} disabled={!email}><Plus size={11} /> Simpan ke daftar</button>
           <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={findRecommendations} disabled={recBusy}>
-            {recBusy ? <RefreshCw size={11} className="cx-spin" /> : <Sparkles size={11} />} {recBusy ? "Mencari..." : "Cari 5 rekomendasi"}
+            {recBusy ? <RefreshCw size={11} className="cx-spin" /> : <Sparkles size={11} />} {recBusy ? "Mencari..." : "Cari rekomendasi terbaik"}
           </button>
           <a className="cx-btn cx-btn-ghost cx-btn-sm" href="https://accounts.google.com/signup" target="_blank" rel="noreferrer"><ArrowUpRight size={11} /> Buka pendaftaran Google</a>
         </div>
@@ -3032,7 +3037,7 @@ function GoogleAccountMaker({ onNotice }) {
         <div className="cx-panel cx-panel-plain">
           <div className="cx-panel-header">
             <h3>Rekomendasi email</h3>
-            <span className="cx-panel-sub">{recBusy ? "Mengecek kandidat..." : `${recs.length} email tersedia, urut dari yang terbaik`}</span>
+            <span className="cx-panel-sub">{recBusy ? "Mengecek kandidat..." : "1 rekomendasi terbaik yang tersedia"}</span>
           </div>
           <div className="cx-ga-history">
             {recs.map((r) => (
