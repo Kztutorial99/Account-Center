@@ -6,6 +6,7 @@ const {
 } = require("./_users");
 
 const { verifyFirebaseIdToken } = require("./_firebase");
+const { verifyGoogleAccessToken } = require("./_google");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -82,7 +83,9 @@ module.exports = async function handler(request, response) {
 
       let profile;
       try {
-        profile = await verifyFirebaseIdToken(body.idToken);
+        profile = body.accessToken
+          ? await verifyGoogleAccessToken(body.accessToken)
+          : await verifyFirebaseIdToken(body.idToken);
       } catch (err) {
         return response.status(401).json({ error: err.message || "Login Google gagal" });
       }
