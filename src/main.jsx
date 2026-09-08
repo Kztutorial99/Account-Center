@@ -761,6 +761,13 @@ function App() {
   const [authScreen, setAuthScreen] = useState(() => authScreenFromPath(window.location.pathname)); // welcome | login | register
   // Halaman terakhir sebelum masuk ke layar Masuk/Daftar, dipakai tombol "Kembali".
   const [authReturn, setAuthReturn] = useState(null);
+  // Animasi transisi singkat setelah login sukses sebelum masuk beranda.
+  const [welcomeSplash, setWelcomeSplash] = useState(false);
+  useEffect(() => {
+    if (!welcomeSplash) return;
+    const t = window.setTimeout(() => setWelcomeSplash(false), 1100);
+    return () => window.clearTimeout(t);
+  }, [welcomeSplash]);
   const goAuthScreen = (screen) => {
     if (screen === "login" || screen === "register") {
       setAuthReturn((prev) => (authScreen === "welcome" ? (activePage || pageFromPath(window.location.pathname)) : prev));
@@ -1094,15 +1101,25 @@ function App() {
     return <AdminPage onBack={() => navigate("store")} onNotice={showNotice} />;
   }
 
-  /* ── auth gate: cek sesi dulu sebelum merender halaman internal ── */
-  if (auth.loading && !PUBLIC_PAGES.includes(activePage)) return <SessionSplash />;
+  /* ── auth gate: tampilkan splash sampai sesi diketahui (cegah kedip
+     halaman internal saat refresh, baik tamu maupun user login) ── */
+  if (auth.loading) return <SessionSplash />;
+  if (welcomeSplash) {
+    return <SessionSplash title="Berhasil masuk" subtitle="Mengarahkan kamu ke beranda..." />;
+  }
   if (!auth.user && !auth.loading) {
     // Layar Masuk/Daftar hanya muncul saat diminta (klik tombol yang butuh login).
     if (authScreen === "login" || authScreen === "register" || !PUBLIC_PAGES.includes(activePage)) {
       return (
         <AuthPage
           initialMode={authScreen === "register" ? "register" : "login"}
-          onAuthenticated={(user) => { setAuth({ user, loading: false }); setAuthScreen("welcome"); setAuthReturn(null); navigate("store"); }}
+          onAuthenticated={(user) => {
+            setAuth({ user, loading: false });
+            setAuthScreen("welcome");
+            setAuthReturn(null);
+            navigate("store");
+            setWelcomeSplash(true);
+          }}
           onBackToWelcome={() => {
             // Kembali ke halaman sebelumnya (bukan selalu beranda).
             const target = PUBLIC_PAGES.includes(authReturn) ? authReturn : "store";
