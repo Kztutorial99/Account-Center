@@ -2228,29 +2228,57 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
   const max = status.max || CUSTOM_EMAIL_MAX;
   // Slot penuh atau tugas lama belum selesai → input & tombol dikunci.
   const locked = blocked || quotaLeft === 0;
+  const total = list.length * CUSTOM_EMAIL_FEE;
+  const pct = Math.min(100, Math.round((list.length / max) * 100));
+  const steps = [
+    { icon: Pencil, label: "Masukkan nama" },
+    { icon: ShieldCheck, label: "Cek ketersediaan" },
+    { icon: Plus, label: "Tambahkan" },
+    { icon: Wallet, label: "Bayar" },
+    { icon: Zap, label: "Proses pembuatan" },
+  ];
+  const notes = [
+    "Nama dicek otomatis ke pendaftaran Google.",
+    `Maksimal ${max} nama dalam satu transaksi.`,
+    "Proses pembuatan dimulai setelah pembayaran berhasil.",
+    "Password & info akun dikirim lewat menu Pesanan.",
+  ];
   return (
     <main className="cx-page cx-custom-page">
-      <div className="cx-container cx-ce-wrap">
+      <div className="cx-container cx-cev2">
 
-        <header className="cx-ce-hero">
-          <div className="cx-ce-hero-icon"><Mail size={18} /></div>
-          <div className="cx-ce-hero-copy">
-            <h1>Custom Email</h1>
-            <p>Pesan nama email/username sendiri. Maksimal <strong>{max} nama</strong> per tugas · {formatPrice(CUSTOM_EMAIL_FEE)} per nama.</p>
+        {/* 1 ── HEADER PRODUK */}
+        <header className="cx-cev2-hero">
+          <div className="cx-cev2-hero-top">
+            <span className="cx-cev2-hero-icon"><Mail size={18} /></span>
+            <div className="cx-cev2-hero-copy">
+              <div className="cx-cev2-hero-kicker"><Sparkles size={10} /> Layanan Premium</div>
+              <h1>Custom Email</h1>
+              <p>Pesan nama Gmail/username pilihanmu, dibuatkan tim Akun Instan.</p>
+            </div>
           </div>
-          <div className="cx-ce-hero-quota">
-            <b>{list.length}/{max}</b>
-            <small>di keranjang</small>
+          <div className="cx-cev2-hero-meta">
+            <div className="cx-cev2-price-tag">
+              <b>{formatPrice(CUSTOM_EMAIL_FEE)}</b><small>/ nama</small>
+            </div>
+            <div className="cx-cev2-hero-limit"><ShieldCheck size={11} /> Maks {max} nama / transaksi</div>
+          </div>
+          <div className="cx-cev2-progress">
+            <div className="cx-cev2-progress-head">
+              <span>{list.length}/{max} nama ditambahkan</span>
+              <b>{pct}%</b>
+            </div>
+            <div className="cx-cev2-bar"><i style={{ width: `${pct}%` }} /></div>
           </div>
         </header>
 
         {blocked && (
-          <div className="cx-ce-alert">
+          <div className="cx-cev2-alert">
             <ShieldCheck size={14} />
             <div>
               <strong>Tugas sebelumnya belum selesai</strong>
               <p>Selesaikan dulu {status.open.length} permintaan ini sebelum pesan custom email baru.</p>
-              <ul className="cx-ce-open-list">
+              <ul className="cx-cev2-open-list">
                 {status.open.map((r) => (
                   <li key={r.id}>
                     <span>{r.requested}</span>
@@ -2262,73 +2290,122 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
           </div>
         )}
 
+        {/* 2 ── TAMBAH NAMA */}
         {locked ? (
-          <div className="cx-panel cx-ce-panel cx-ce-panel-locked">
-            <div className="cx-ce-locked-card">
-              <span className="cx-ce-locked-icon"><LockKeyhole size={18} /></span>
-              <div>
-                <strong>{blocked ? "Pesanan baru terkunci" : `Slot penuh (${max}/${max})`}</strong>
-                <p>{blocked
-                  ? "Selesaikan dulu permintaan custom email sebelumnya. Form input disembunyikan sampai admin menandai selesai."
-                  : `Batas ${max} nama per tugas sudah tercapai, jadi form input disembunyikan. Lanjut bayar dulu daftar di bawah.`}</p>
-              </div>
+          <section className="cx-cev2-card cx-cev2-locked">
+            <span className="cx-cev2-locked-icon"><LockKeyhole size={16} /></span>
+            <div>
+              <strong>{blocked ? "Pesanan baru terkunci" : `Slot penuh (${max}/${max})`}</strong>
+              <p>{blocked
+                ? "Selesaikan dulu permintaan custom email sebelumnya."
+                : `Batas ${max} nama per transaksi sudah tercapai. Lanjut ke pembayaran.`}</p>
             </div>
-          </div>
+          </section>
         ) : (
-        <div className="cx-panel cx-ce-panel">
-          <div className="cx-panel-header">
-            <h3><Plus size={14} /> Tambah nama</h3>
-            <span className="cx-panel-sub">Sisa {quotaLeft} slot</span>
-          </div>
-          <div className="cx-ce-panel-body">
-            <CustomEmailChecker
-              draft={draft}
-              setDraft={setDraft}
-              check={check}
-              onVerify={onVerify}
-              onAdd={onAdd}
-              canAdd={canAdd}
-              quotaLeft={quotaLeft}
-              addLabel={`Tambah ke daftar · ${formatPrice(CUSTOM_EMAIL_FEE)}`}
-            />
-          </div>
-        </div>
+          <section className="cx-cev2-card">
+            <div className="cx-cev2-card-head">
+              <h2><Plus size={13} /> Tambah Nama Email</h2>
+              <span className="cx-cev2-slot">Sisa {quotaLeft} slot</span>
+            </div>
+            <div className="cx-cev2-card-body">
+              <CustomEmailChecker
+                draft={draft}
+                setDraft={setDraft}
+                check={check}
+                onVerify={onVerify}
+                onAdd={onAdd}
+                canAdd={canAdd}
+                quotaLeft={quotaLeft}
+                addLabel={`Tambahkan nama · ${formatPrice(CUSTOM_EMAIL_FEE)}`}
+              />
+              <ul className="cx-cev2-rules">
+                <li><Check size={10} /> 3–30 karakter, huruf kecil & angka.</li>
+                <li><Check size={10} /> Boleh titik (.), tanpa spasi & simbol lain.</li>
+                <li><Check size={10} /> Boleh tulis polos atau lengkap @gmail.com.</li>
+              </ul>
+            </div>
+          </section>
         )}
 
-        <div className="cx-panel cx-ce-panel">
-          <div className="cx-panel-header">
-            <h3><ShoppingBag size={14} /> Daftar tugas ini</h3>
-            <span className="cx-panel-sub">{list.length} dari {max} nama</span>
+        {/* 4 ── NAMA YANG DIPILIH */}
+        <section className="cx-cev2-card">
+          <div className="cx-cev2-card-head">
+            <h2><ShoppingBag size={13} /> Nama yang Dipilih</h2>
+            <span className="cx-cev2-counter">{list.length}/{max}</span>
           </div>
-          <div className="cx-ce-panel-body">
+          <div className="cx-cev2-card-body">
             {list.length === 0 ? (
-              <p className="cx-ce-empty">Belum ada nama. Tambahkan maksimal {max} nama, lalu lanjut ke pembayaran.</p>
+              <div className="cx-cev2-empty">
+                <Mail size={14} />
+                <p>Belum ada nama. Cek ketersediaan lalu tambahkan.</p>
+              </div>
             ) : (
-              <>
-                <ul className="cx-ce-chips">
-                  {list.map((v) => (
-                    <li key={v} className="cx-ce-chip">
-                      <Mail size={11} />
-                      <span>{v}</span>
-                      <button onClick={() => onRemove(v)} aria-label={`Hapus ${v}`}><X size={11} /></button>
-                    </li>
-                  ))}
-                </ul>
-                <div className="cx-ce-total">
-                  <span>Total custom email</span>
-                  <strong>{formatPrice(list.length * CUSTOM_EMAIL_FEE)}</strong>
-                </div>
-                <button className="cx-btn cx-btn-primary cx-btn-full" onClick={onCheckout}>
-                  Lanjut ke keranjang <ArrowRight size={13} />
-                </button>
-              </>
+              <ul className="cx-cev2-items">
+                {list.map((v, i) => (
+                  <li key={v} className="cx-cev2-item">
+                    <span className="cx-cev2-item-no">{i + 1}</span>
+                    <div className="cx-cev2-item-main">
+                      <strong>{v}</strong>
+                      <em><Check size={9} /> Tersedia</em>
+                    </div>
+                    <div className="cx-cev2-item-act">
+                      <button type="button" onClick={() => { onRemove(v); setDraft(v); }} aria-label={`Ubah ${v}`}><Pencil size={12} /></button>
+                      <button type="button" className="is-del" onClick={() => onRemove(v)} aria-label={`Hapus ${v}`}><Trash2 size={12} /></button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
-        </div>
+        </section>
 
-        <p className="cx-ce-note">
-          Ketersediaan nama diverifikasi otomatis oleh sistem langsung ke pendaftaran Google. Setelah dibayar, admin yang membuat akunnya dan mengirimkan password serta catatan lewat menu Pesanan Saya.
-        </p>
+        {/* 5 ── RINGKASAN PESANAN */}
+        <section className="cx-cev2-card cx-cev2-summary">
+          <div className="cx-cev2-card-head">
+            <h2><CreditCard size={13} /> Ringkasan Pesanan</h2>
+          </div>
+          <div className="cx-cev2-card-body">
+            <div className="cx-cev2-sum-row"><span>Jumlah nama</span><b>{list.length} nama</b></div>
+            <div className="cx-cev2-sum-row"><span>Harga per nama</span><b>{formatPrice(CUSTOM_EMAIL_FEE)}</b></div>
+            <div className="cx-cev2-sum-row"><span>Status</span>
+              <b className={list.length ? "is-ok" : "is-idle"}>{list.length ? "Siap dibayar" : "Belum ada nama"}</b>
+            </div>
+            <div className="cx-cev2-sum-total">
+              <div>
+                <small>{list.length} nama × {formatPrice(CUSTOM_EMAIL_FEE)}</small>
+                <span>Total pembayaran</span>
+              </div>
+              <strong>{formatPrice(total)}</strong>
+            </div>
+            {/* 6 ── CTA UTAMA */}
+            <button className="cx-btn cx-btn-primary cx-btn-full cx-cev2-cta" disabled={!list.length} onClick={onCheckout}>
+              Lanjut ke Pembayaran <ArrowRight size={13} />
+            </button>
+            <button className="cx-cev2-back" type="button" onClick={onBack}>Kembali ke Beranda</button>
+          </div>
+        </section>
+
+        {/* 7 ── CARA KERJA */}
+        <section className="cx-cev2-card">
+          <div className="cx-cev2-card-head"><h2><Zap size={13} /> Cara Kerja</h2></div>
+          <ol className="cx-cev2-steps">
+            {steps.map((s, i) => (
+              <li key={s.label}>
+                <span className="cx-cev2-step-ic"><s.icon size={12} /></span>
+                <span className="cx-cev2-step-tx"><b>{i + 1}.</b> {s.label}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* 8 ── INFORMASI PENTING */}
+        <section className="cx-cev2-card">
+          <div className="cx-cev2-card-head"><h2><CircleHelp size={13} /> Informasi Penting</h2></div>
+          <ul className="cx-cev2-notes">
+            {notes.map((n) => <li key={n}><BadgeCheck size={11} /><span>{n}</span></li>)}
+          </ul>
+        </section>
+
       </div>
     </main>
   );
