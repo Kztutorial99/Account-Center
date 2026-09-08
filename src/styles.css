@@ -3551,3 +3551,34 @@ html { scroll-behavior: smooth; }
   .cx-pd-desc .cx-desc-p,
   .cx-pd-desc .cx-desc-list li { font-size: 12px; }
 }
+
+/* ══ ADMIN: GENERATOR AKUN GOOGLE ══ */
+.cx-ga-wrap { display: flex; flex-direction: column; gap: 14px; }
+.cx-ga-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 14px; }
+.cx-ga-wrap .cx-panel-plain > .cx-field { padding: 0 14px; }
+.cx-ga-check-row { display: flex; align-items: center; gap: 8px; }
+.cx-ga-check-row .cx-input-wrap { flex: 1; min-width: 0; }
+.cx-ga-status { display: flex; align-items: center; gap: 7px; margin: 8px 14px 0; padding: 9px 11px; border-radius: 9px; font-size: 11.5px; line-height: 1.4; border: 1px solid var(--b3); color: var(--faint); background: var(--bg2, transparent); }
+.cx-ga-status.is-available { border-color: color-mix(in srgb, var(--green) 45%, transparent); color: var(--green); }
+.cx-ga-status.is-taken, .cx-ga-status.is-invalid { border-color: color-mix(in srgb, var(--red, #e5484d) 45%, transparent); color: var(--red, #e5484d); }
+.cx-ga-status.is-unknown, .cx-ga-status.is-checking { color: var(--ink2); }
+.cx-ga-signals { list-style: none; margin: 8px 14px 0; padding: 0; display: grid; gap: 4px; }
+.cx-ga-signals li { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--faint); }
+.cx-ga-preview { margin: 14px; border: 1px solid var(--b3); border-radius: 11px; overflow: hidden; }
+.cx-ga-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--b3); font-size: 12px; }
+.cx-ga-row:last-child { border-bottom: 0; }
+.cx-ga-row > span { min-width: 96px; color: var(--faint); font-size: 11px; }
+.cx-ga-row > strong { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--ink2); font-weight: 600; }
+.cx-ga-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 16px; }
+.cx-ga-actions a.cx-btn { text-decoration: none; }
+.cx-ga-history { display: grid; gap: 8px; padding: 12px 14px 16px; }
+.cx-ga-hist-row { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border: 1px solid var(--b3); border-radius: 10px; }
+.cx-ga-hist-row > div { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.cx-ga-hist-row small { color: var(--faint); font-size: 10.5px; overflow-wrap: anywhere; }
+.cx-spin { animation: cx-ga-spin 0.9s linear infinite; }
+@keyframes cx-ga-spin { to { transform: rotate(360deg); } }
+@media (max-width: 640px) {
+  .cx-ga-grid { grid-template-columns: 1fr; }
+  .cx-ga-row { flex-wrap: wrap; }
+  .cx-ga-row > span { min-width: 100%; }
+}
