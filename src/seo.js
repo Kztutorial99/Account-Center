@@ -45,6 +45,20 @@ const PAGE_SEO = {
       "Panduan lengkap cara membeli akun Google/Gmail dan akun digital lain di Akun Instan, metode pembayaran, garansi, dan cara klaim bantuan.",
     keywords: "cara beli akun gmail, faq akun instan, bantuan akun digital",
   },
+  faq: {
+    path: "/faq",
+    title: "FAQ — Pertanyaan Seputar Beli Akun Google & Gmail | Akun Instan",
+    description:
+      "Kumpulan jawaban lengkap seputar pembelian akun Google/Gmail, pembayaran QRIS & e-wallet, garansi, refund, dan custom email di Akun Instan.",
+    keywords: "faq akun instan, pertanyaan beli akun gmail, garansi akun google, refund akun digital",
+  },
+  "cara-beli": {
+    path: "/cara-beli",
+    title: "Cara Beli Akun Google & Gmail di Akun Instan — Panduan Lengkap",
+    description:
+      "Panduan langkah demi langkah membeli akun Google/Gmail di Akun Instan: isi saldo, pilih akun, bayar pakai saldo, dan ambil detail login secara instan.",
+    keywords: "cara beli akun google, cara beli akun gmail, tutorial beli akun digital",
+  },
   terms: { path: "/terms", title: "Syarat & Ketentuan | Akun Instan", description: "Syarat dan ketentuan penggunaan layanan Akun Instan." },
   privacy: { path: "/privacy", title: "Kebijakan Privasi | Akun Instan", description: "Kebijakan privasi dan perlindungan data pengguna Akun Instan." },
   refund: { path: "/refund", title: "Kebijakan Refund | Akun Instan", description: "Ketentuan pengembalian dana dan garansi produk akun digital Akun Instan." },
