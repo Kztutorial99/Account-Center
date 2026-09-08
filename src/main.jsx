@@ -2761,7 +2761,11 @@ function ProductCard({ product, colorIdx, onBuy }) {
 const GA_FIRST_M = ["aditya", "arif", "bayu", "bima", "danu", "dimas", "fajar", "farel", "galih", "gilang", "hendra", "ilham", "indra", "irfan", "kevin", "lutfi", "nanda", "prasetyo", "rafi", "raihan", "reza", "rizky", "satria", "yoga", "zaki", "agung", "dio", "farhan", "hafiz", "yusuf"];
 const GA_FIRST_F = ["aisyah", "alya", "anisa", "aura", "bella", "citra", "dewi", "dina", "eka", "fitri", "hani", "intan", "kayla", "kirana", "laras", "maya", "nadia", "nabila", "putri", "ratna", "rina", "salsabila", "sari", "tiara", "wulan", "zahra", "amelia", "dinda", "lestari", "nurul"];
 const GA_FIRST = [...GA_FIRST_M, ...GA_FIRST_F];
-const GA_LAST  = ["pratama", "wijaya", "saputra", "nugroho", "hidayat", "permana", "kusuma", "maulana", "ramadhan", "firmansyah", "alfarizi", "prameswari", "anggraini", "salsabila", "prasetyo", "wibowo", "santoso", "laksmana", "maharani", "adiningrum"];
+// Nama belakang dipisah per gender agar kombinasi nama tidak "campur".
+const GA_LAST_M = ["pratama", "saputra", "nugroho", "wibowo", "maulana", "ramadhan", "firmansyah", "alfarizi", "prasetyo", "laksmana", "putra", "hermawan", "kurniawan", "setiawan", "gunawan", "syahputra"];
+const GA_LAST_F = ["prameswari", "anggraini", "maharani", "adiningrum", "wulandari", "safitri", "lestari", "puspita", "andini", "oktaviani", "kusumawati", "rahmawati", "ningsih", "pertiwi", "cahyani", "putri"];
+const GA_LAST_U = ["wijaya", "hidayat", "permana", "kusuma", "santoso", "hakim", "utomo", "nugraha"];
+const GA_LAST  = [...GA_LAST_M, ...GA_LAST_F, ...GA_LAST_U];
 const GA_FEMALE_HINT = new Set([...GA_FIRST_F, "putri", "ayu", "siti", "fitri", "dewi", "sri", "nur", "nia", "desi", "yuni", "rini", "mega", "tania", "cindy"]);
 const GA_MALE_HINT   = new Set([...GA_FIRST_M, "putra", "agus", "budi", "dedi", "eko", "rudi", "andi", "ahmad", "muhammad", "bagus", "asep"]);
 
@@ -2778,19 +2782,22 @@ function detectGenderFromName(name) {
 function pickFirstByGender(gender) {
   return gender === "Wanita" ? gaPick(GA_FIRST_F) : gaPick(GA_FIRST_M);
 }
+function pickLastByGender(gender) {
+  const pool = gender === "Wanita" ? [...GA_LAST_F, ...GA_LAST_U] : [...GA_LAST_M, ...GA_LAST_U];
+  return gaPick(pool);
+}
 const gaPick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const gaSlug = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
-function makeGoogleUsername(first, last) {
+// withNumber = true -> tambahkan angka pendek (2 digit) di belakang username.
+function makeGoogleUsername(first, last, withNumber = false) {
   const f = gaSlug(first) || gaPick(GA_FIRST);
   const l = gaSlug(last) || gaPick(GA_LAST);
-  const n = String(Math.floor(Math.random() * 90) + 10);
-  // Utamakan bentuk bersih tanpa angka; angka hanya dipakai bila terlalu pendek.
+  const n = String(Math.floor(Math.random() * 90) + 10); // 10-99, tidak panjang
   const clean = [`${f}${l}`, `${f}.${l}`, `${f}${l.slice(0, 4)}`, `${l}${f.slice(0, 4)}`].filter((s) => s.replace(/\./g, "").length >= 6);
-  const withNum = [`${f}${l}${n}`, `${f}.${l}${n}`, `${f}${l.slice(0, 4)}${n}`];
-  const pool = Math.random() < 0.75 && clean.length ? clean : [...clean, ...withNum];
-  let out = pool[Math.floor(Math.random() * pool.length)] || `${f}${l}${n}`;
+  let out = clean.length ? clean[Math.floor(Math.random() * clean.length)] : `${f}${l}`;
   while (out.replace(/\./g, "").length < 6) out += String(Math.floor(Math.random() * 10));
+  if (withNumber) out = `${out.slice(0, 27)}${n}`;
   return out.slice(0, 30);
 }
 
@@ -2814,6 +2821,23 @@ function makeBirthday() {
   return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
 }
 
+// Cek satu username ke API yang sama dengan halaman publik.
+async function gaCheckOnce(value) {
+  try {
+    const res = await fetch(`/api/orders?scope=admin&resource=check-email&value=${encodeURIComponent(value)}`, { credentials: "same-origin" });
+    const data = await res.json();
+    return data.state || (data.available ? "available" : "taken");
+  } catch (_) { return "unknown"; }
+}
+// Semakin pendek & tanpa angka = semakin bagus.
+function gaScore(u) {
+  const bare = u.replace(/\./g, "");
+  let score = 100 - bare.length;
+  if (/\d/.test(bare)) score -= 12;
+  if (!u.includes(".")) score += 4;
+  return score;
+}
+
 function GoogleAccountMaker({ onNotice }) {
   const [first, setFirst]       = useState("");
   const [last, setLast]         = useState("");
@@ -2823,6 +2847,9 @@ function GoogleAccountMaker({ onNotice }) {
   const [profile, setProfile]   = useState(() => ({ birthday: makeBirthday(), gender: "Pria" }));
   const [check, setCheck]       = useState({ state: "idle", message: "", signals: [] });
   const [history, setHistory]   = useState([]);
+  const [useNumber, setUseNumber] = useState(false);
+  const [recs, setRecs]         = useState([]);
+  const [recBusy, setRecBusy]   = useState(false);
   const reqRef = useRef(0);
 
   const email = username ? (username.includes("@") ? username.toLowerCase() : `${username.toLowerCase()}@gmail.com`) : "";
@@ -2836,10 +2863,10 @@ function GoogleAccountMaker({ onNotice }) {
   const regenerate = () => {
     const gender = Math.random() > 0.5 ? "Pria" : "Wanita";
     const f = pickFirstByGender(gender);
-    const l = gaPick(GA_LAST);
+    const l = pickLastByGender(gender);
     setFirst(f);
     setLast(l);
-    setUsername(makeGoogleUsername(f, l));
+    setUsername(makeGoogleUsername(f, l, useNumber));
     setPassword(makeStrongPassword());
     setProfile({ birthday: makeBirthday(), gender });
   };
@@ -2869,6 +2896,29 @@ function GoogleAccountMaker({ onNotice }) {
   }, [username]);
 
   const bundle = `Email: ${email}\nPassword: ${password}\nNama: ${first || "-"} ${last || ""}\nTanggal lahir: ${profile.birthday}\nGender: ${profile.gender}`;
+
+  // Cari 5 username terbaik yang lolos pengecekan ketersediaan.
+  const findRecommendations = async () => {
+    setRecBusy(true);
+    setRecs([]);
+    const gender = profile.gender;
+    const found = [];
+    const tried = new Set();
+    for (let i = 0; i < 22 && found.length < 5; i++) {
+      const f = first.trim() ? first.trim() : pickFirstByGender(gender);
+      const l = i < 4 && last.trim() ? last.trim() : pickLastByGender(gender);
+      const u = makeGoogleUsername(f, l, useNumber);
+      if (tried.has(u)) continue;
+      tried.add(u);
+      const state = await gaCheckOnce(u);
+      if (state === "available") {
+        found.push({ username: u, email: `${u}@gmail.com`, name: `${f} ${l}`, score: gaScore(u) });
+        setRecs([...found].sort((a, b) => b.score - a.score));
+      }
+    }
+    setRecBusy(false);
+    onNotice(found.length ? `${found.length} rekomendasi email siap dipakai` : "Belum ada yang lolos, coba lagi");
+  };
 
   const saveToHistory = () => {
     if (!email) return;
@@ -2906,8 +2956,19 @@ function GoogleAccountMaker({ onNotice }) {
             <InputWrap icon={Mail}>
               <input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))} placeholder="bayupratama123" />
             </InputWrap>
-            <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => setUsername(makeGoogleUsername(first, last))}>
+            <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => setUsername(makeGoogleUsername(first, last, useNumber))}>
               <Sparkles size={11} /> Saran
+            </button>
+            <button
+              className={`cx-btn cx-btn-sm ${useNumber ? "cx-btn-primary" : "cx-btn-ghost"}`}
+              title="Tambah angka acak pendek (2 digit) di akhir username"
+              onClick={() => {
+                const next = !useNumber;
+                setUseNumber(next);
+                setUsername(makeGoogleUsername(first, last, next));
+              }}
+            >
+              123
             </button>
           </div>
         </Field>
@@ -2950,17 +3011,44 @@ function GoogleAccountMaker({ onNotice }) {
               const g = profile.gender === "Pria" ? "Wanita" : "Pria";
               setProfile((p) => ({ ...p, gender: g }));
               const f = pickFirstByGender(g);
+              const l = pickLastByGender(g);
               setFirst(f);
-              setUsername(makeGoogleUsername(f, last || gaPick(GA_LAST)));
+              setLast(l);
+              setUsername(makeGoogleUsername(f, l, useNumber));
             }} aria-label="Ganti gender"><RefreshCw size={11} /></button></div>
         </div>
 
         <div className="cx-ga-actions">
           <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => copy(bundle, "Data akun")} disabled={!email}><Copy size={11} /> Salin semua</button>
           <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={saveToHistory} disabled={!email}><Plus size={11} /> Simpan ke daftar</button>
+          <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={findRecommendations} disabled={recBusy}>
+            {recBusy ? <RefreshCw size={11} className="cx-spin" /> : <Sparkles size={11} />} {recBusy ? "Mencari..." : "Cari 5 rekomendasi"}
+          </button>
           <a className="cx-btn cx-btn-ghost cx-btn-sm" href="https://accounts.google.com/signup" target="_blank" rel="noreferrer"><ArrowUpRight size={11} /> Buka pendaftaran Google</a>
         </div>
       </div>
+
+      {(recs.length > 0 || recBusy) && (
+        <div className="cx-panel cx-panel-plain">
+          <div className="cx-panel-header">
+            <h3>Rekomendasi email</h3>
+            <span className="cx-panel-sub">{recBusy ? "Mengecek kandidat..." : `${recs.length} email tersedia, urut dari yang terbaik`}</span>
+          </div>
+          <div className="cx-ga-history">
+            {recs.map((r) => (
+              <div key={r.username} className="cx-ga-hist-row">
+                <div>
+                  <strong className="cx-mono">{r.email}</strong>
+                  <small>{r.name} · tersedia</small>
+                </div>
+                <button className="cx-row-btn" onClick={() => { setUsername(r.username); onNotice("Dipakai sebagai username"); }} aria-label="Pakai"><Check size={11} /></button>
+                <button className="cx-row-btn" onClick={() => copy(r.email, "Email")} aria-label="Salin"><Copy size={11} /></button>
+              </div>
+            ))}
+            {recBusy && recs.length === 0 && <div className="cx-ga-hist-row"><div><small>Mencari kandidat terbaik...</small></div></div>}
+          </div>
+        </div>
+      )}
 
       {history.length > 0 && (
         <div className="cx-panel cx-panel-plain">
