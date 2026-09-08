@@ -3599,3 +3599,27 @@ html { scroll-behavior: smooth; }
   .cx-ga-best-body { flex-wrap: wrap; }
   .cx-ga-best-body .cx-btn { width: 100%; justify-content: center; }
 }
+
+/* ═══════════════════════════════════════════════════
+   NAV PUBLIK (pengunjung belum login)
+════════════════════════════════════════════════════ */
+.cx-land-top-nav button.is-active { color: var(--indigo2); font-weight: 600; }
+.cx-pub-subnav {
+  position: sticky; top: 56px; z-index: 19;
+  background: rgba(16,10,26,.92);
+  border-bottom: 1px solid var(--b1);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.cx-pub-subnav::-webkit-scrollbar { display: none; }
+.cx-pub-subnav-track { display: flex; gap: 6px; padding: 8px 14px; width: max-content; }
+.cx-pub-subnav-track button {
+  white-space: nowrap; font: 500 12.5px Inter; color: var(--ink2);
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--b1); background: var(--s1);
+}
+.cx-pub-subnav-track button.is-active {
+  color: #1a1129; border-color: transparent;
+  background: linear-gradient(135deg, var(--indigo2), #818cf8);
+}
+@media (min-width: 720px) { .cx-pub-subnav { display: none; } }
