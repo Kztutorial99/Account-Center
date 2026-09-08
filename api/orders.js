@@ -419,7 +419,20 @@ function maskEmail(value) {
 }
 
 async function handleAdmin(sql, request, response) {
+  // Admin juga boleh memakai pengecekan ketersediaan email (menu Buat Akun Google).
+  if (String((request.query && request.query.resource) || "") === "check-email") {
+    if (request.method !== "GET") {
+      response.setHeader("Allow", "GET");
+      return response.status(405).json({ error: "Method not allowed" });
+    }
+    const check = normalizeCustomEmail((request.query && request.query.value) || "");
+    if (!check.ok) return response.status(200).json({ available: false, state: "invalid", normalized: "", reason: check.error, signals: [] });
+    if (!check.value) return response.status(200).json({ available: false, state: "idle", normalized: "", reason: "Isi dulu nama yang diinginkan", signals: [] });
+    const result = await inspectCustomEmail(sql, check);
+    return response.status(200).json(result);
+  }
   if (request.method === "GET") {
+
     const rows = await sql`
       SELECT o.id, o.total, o.item_count AS "itemCount", o.status, o.payload_blob AS "payloadBlob",
              o.created_at AS "createdAt",
