@@ -45,7 +45,10 @@ function errorMessage(error) {
 
 module.exports = async function handler(request, response) {
   try {
-    const adminCookie = isAdmin(request);
+    // Cookie admin panel hanya berlaku untuk Assisten di dalam Admin Panel
+    // (?scope=admin). Di situs publik, Assisten selalu butuh sesi user.
+    const wantAdminScope = String((request.query && request.query.scope) || (/[?&]scope=admin(&|$)/.test(String(request.url || "")) ? "admin" : "")) === "admin";
+    const adminCookie = wantAdminScope && isAdmin(request);
     const sql = db();
     await ensureTables(sql);
     const cfg = await assistantConfig(sql);
