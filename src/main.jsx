@@ -2753,6 +2753,205 @@ function ProductCard({ product, colorIdx, onBuy }) {
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   ADMIN — GENERATOR EMAIL & PASSWORD AKUN GOOGLE
+   Admin isi/acak nama, sistem otomatis cek ketersediaan
+   lewat API check-email yang sama dengan halaman publik.
+════════════════════════════════════════════════════ */
+const GA_FIRST = ["adit", "bayu", "citra", "dimas", "eka", "farel", "gilang", "hana", "indra", "joko", "kirana", "lutfi", "maya", "nanda", "oscar", "putra", "rani", "sandi", "tari", "vino", "wulan", "yoga", "zaki"];
+const GA_LAST  = ["pratama", "santoso", "wijaya", "saputra", "nugroho", "hidayat", "permana", "kusuma", "maulana", "ramadhan", "anggara", "firmansyah"];
+const gaPick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const gaSlug = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+function makeGoogleUsername(first, last) {
+  const f = gaSlug(first) || gaPick(GA_FIRST);
+  const l = gaSlug(last) || gaPick(GA_LAST);
+  const n = String(Math.floor(Math.random() * 9000) + 100);
+  const styles = [`${f}${l}${n}`, `${f}.${l}${n}`, `${f}${l.slice(0, 4)}${n}`, `${f}${n}${l.slice(0, 3)}`];
+  let out = styles[Math.floor(Math.random() * styles.length)];
+  while (out.replace(/\./g, "").length < 6) out += String(Math.floor(Math.random() * 10));
+  return out.slice(0, 30);
+}
+
+function makeStrongPassword() {
+  const lower = "abcdefghijkmnpqrstuvwxyz", upper = "ABCDEFGHJKLMNPQRSTUVWXYZ", digit = "23456789", sym = "!@#$%*?";
+  const all = lower + upper + digit + sym;
+  const pick = (s) => s[Math.floor(Math.random() * s.length)];
+  const chars = [pick(lower), pick(upper), pick(digit), pick(sym)];
+  while (chars.length < 14) chars.push(pick(all));
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join("");
+}
+
+function makeBirthday() {
+  const year = 1990 + Math.floor(Math.random() * 15);
+  const month = 1 + Math.floor(Math.random() * 12);
+  const day = 1 + Math.floor(Math.random() * 28);
+  return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+}
+
+function GoogleAccountMaker({ onNotice }) {
+  const [first, setFirst]       = useState("");
+  const [last, setLast]         = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState(() => makeStrongPassword());
+  const [showPass, setShowPass] = useState(true);
+  const [profile, setProfile]   = useState(() => ({ birthday: makeBirthday(), gender: "Pria" }));
+  const [check, setCheck]       = useState({ state: "idle", message: "", signals: [] });
+  const [history, setHistory]   = useState([]);
+  const reqRef = useRef(0);
+
+  const email = username ? (username.includes("@") ? username.toLowerCase() : `${username.toLowerCase()}@gmail.com`) : "";
+
+  const copy = (value, label) => {
+    if (!value) return;
+    if (navigator.clipboard) navigator.clipboard.writeText(value).then(() => onNotice(`${label} disalin`)).catch(() => {});
+  };
+
+  const regenerate = () => {
+    const f = first || gaPick(GA_FIRST);
+    const l = last || gaPick(GA_LAST);
+    if (!first) setFirst(f);
+    if (!last) setLast(l);
+    setUsername(makeGoogleUsername(f, l));
+    setPassword(makeStrongPassword());
+    setProfile({ birthday: makeBirthday(), gender: Math.random() > 0.5 ? "Pria" : "Wanita" });
+  };
+
+  // Cek ketersediaan otomatis (debounce) memakai API yang sudah ada.
+  useEffect(() => {
+    const value = username.trim();
+    if (!value) { setCheck({ state: "idle", message: "", signals: [] }); return; }
+    if (value.replace(/[^a-z0-9]/gi, "").length < 6) {
+      setCheck({ state: "invalid", message: "Username Gmail minimal 6 karakter", signals: [] });
+      return;
+    }
+    const id = ++reqRef.current;
+    setCheck({ state: "checking", message: "Mengecek ketersediaan...", signals: [] });
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/orders?scope=admin&resource=check-email&value=${encodeURIComponent(value)}`, { credentials: "same-origin" });
+        const data = await res.json();
+        if (id !== reqRef.current) return;
+        setCheck({ state: data.state || (data.available ? "available" : "taken"), message: data.reason || "", signals: data.signals || [] });
+      } catch (_) {
+        if (id !== reqRef.current) return;
+        setCheck({ state: "unknown", message: "Gagal menghubungi server pengecekan, coba lagi", signals: [] });
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [username]);
+
+  const bundle = `Email: ${email}\nPassword: ${password}\nNama: ${first || "-"} ${last || ""}\nTanggal lahir: ${profile.birthday}\nGender: ${profile.gender}`;
+
+  const saveToHistory = () => {
+    if (!email) return;
+    setHistory((h) => [{ id: `${Date.now()}`, email, password, at: new Date().toISOString(), state: check.state }, ...h].slice(0, 20));
+    onNotice("Disimpan ke daftar sesi ini");
+  };
+
+  return (
+    <div className="cx-ga-wrap">
+      <div className="cx-panel cx-panel-plain">
+        <div className="cx-panel-header">
+          <h3>Buat Akun Google</h3>
+          <span className="cx-panel-sub">Acak email &amp; password, ketersediaan dicek otomatis</span>
+          <div className="cx-panel-actions">
+            <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={regenerate}><RefreshCw size={11} /> Acak baru</button>
+          </div>
+        </div>
+
+        <div className="cx-ga-grid">
+          <Field label="Nama depan">
+            <InputWrap icon={User}><input value={first} onChange={(e) => setFirst(e.target.value)} placeholder="Contoh: Bayu" /></InputWrap>
+          </Field>
+          <Field label="Nama belakang">
+            <InputWrap icon={User}><input value={last} onChange={(e) => setLast(e.target.value)} placeholder="Contoh: Pratama" /></InputWrap>
+          </Field>
+        </div>
+
+        <Field label="Username Gmail" hint="6-30 karakter, huruf/angka/titik. Otomatis dicek ke Gmail.">
+          <div className={`cx-ga-check-row is-${check.state}`}>
+            <InputWrap icon={Mail}>
+              <input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))} placeholder="bayupratama123" />
+            </InputWrap>
+            <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => setUsername(makeGoogleUsername(first, last))}>
+              <Sparkles size={11} /> Saran
+            </button>
+          </div>
+        </Field>
+
+        <div className={`cx-ga-status is-${check.state}`}>
+          {check.state === "checking" && <><RefreshCw size={12} className="cx-spin" /> <span>Mengecek ketersediaan...</span></>}
+          {check.state === "available" && <><Check size={12} /> <span>{check.message || `${email} tersedia`}</span></>}
+          {(check.state === "taken" || check.state === "invalid") && <><X size={12} /> <span>{check.message}</span></>}
+          {check.state === "unknown" && <><ShieldCheck size={12} /> <span>{check.message}</span></>}
+          {check.state === "idle" && <span>Isi username untuk mulai pengecekan otomatis.</span>}
+        </div>
+
+        {check.signals && check.signals.length > 0 && (
+          <ul className="cx-ga-signals">
+            {check.signals.map((s, i) => <li key={i}><Check size={10} /> <span>{s}</span></li>)}
+          </ul>
+        )}
+
+        <Field label="Password akun">
+          <div className="cx-ga-check-row">
+            <InputWrap icon={LockKeyhole}>
+              <input type={showPass ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} />
+            </InputWrap>
+            <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => setShowPass((v) => !v)} aria-label="Tampilkan password">
+              {showPass ? <EyeOff size={11} /> : <Eye size={11} />}
+            </button>
+            <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => setPassword(makeStrongPassword())}><RefreshCw size={11} /> Baru</button>
+          </div>
+        </Field>
+
+        <div className="cx-ga-preview">
+          <div className="cx-ga-row"><span>Email</span><strong className="cx-mono">{email || "—"}</strong>
+            <button className="cx-row-btn" onClick={() => copy(email, "Email")} aria-label="Salin email"><Copy size={11} /></button></div>
+          <div className="cx-ga-row"><span>Password</span><strong className="cx-mono">{showPass ? password : "••••••••••"}</strong>
+            <button className="cx-row-btn" onClick={() => copy(password, "Password")} aria-label="Salin password"><Copy size={11} /></button></div>
+          <div className="cx-ga-row"><span>Tanggal lahir</span><strong>{profile.birthday}</strong>
+            <button className="cx-row-btn" onClick={() => copy(profile.birthday, "Tanggal lahir")} aria-label="Salin tanggal lahir"><Copy size={11} /></button></div>
+          <div className="cx-ga-row"><span>Gender</span><strong>{profile.gender}</strong>
+            <button className="cx-row-btn" onClick={() => setProfile((p) => ({ ...p, gender: p.gender === "Pria" ? "Wanita" : "Pria" }))} aria-label="Ganti gender"><RefreshCw size={11} /></button></div>
+        </div>
+
+        <div className="cx-ga-actions">
+          <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={() => copy(bundle, "Data akun")} disabled={!email}><Copy size={11} /> Salin semua</button>
+          <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={saveToHistory} disabled={!email}><Plus size={11} /> Simpan ke daftar</button>
+          <a className="cx-btn cx-btn-ghost cx-btn-sm" href="https://accounts.google.com/signup" target="_blank" rel="noreferrer"><ArrowUpRight size={11} /> Buka pendaftaran Google</a>
+        </div>
+      </div>
+
+      {history.length > 0 && (
+        <div className="cx-panel cx-panel-plain">
+          <div className="cx-panel-header">
+            <h3>Daftar sesi ini</h3>
+            <span className="cx-panel-sub">{history.length} akun · hanya tersimpan sementara di browser</span>
+          </div>
+          <div className="cx-ga-history">
+            {history.map((h) => (
+              <div key={h.id} className="cx-ga-hist-row">
+                <div>
+                  <strong className="cx-mono">{h.email}</strong>
+                  <small className="cx-mono">{h.password}</small>
+                </div>
+                <button className="cx-row-btn" onClick={() => copy(`Email: ${h.email}\nPassword: ${h.password}`, "Data akun")} aria-label="Salin"><Copy size={11} /></button>
+                <button className="cx-row-btn danger" onClick={() => setHistory((list) => list.filter((x) => x.id !== h.id))} aria-label="Hapus"><Trash2 size={11} /></button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 /* ═══════════════════════════════════════════════════
    ADMIN PAGE  —  LinearPro sidebar layout
@@ -3283,6 +3482,8 @@ function AdminPage({ onBack, onNotice }) {
     { label: "Pengguna",    shortcut: "⌘U", icon: User,           dot: users.some((u) => u.status !== "active") },
     { label: "Top Up",      shortcut: "⌘T", icon: Wallet,         dot: topups.some((t) => t.status === "pending") },
     { label: "Custom Email",shortcut: "⌘E", icon: Mail,           dot: orders.some((o) => customEmailsOf(o).length) },
+    { label: "Buat Akun",   shortcut: "⌘G", icon: UserPlus },
+
     { label: "Assisten",    shortcut: "⌘I", icon: Sparkles,       dot: !(aiCfg && aiCfg.enabled && aiCfg.hasKey) },
     { label: "Pengaturan",  shortcut: "⌘,", icon: Settings },
   ];
@@ -3771,7 +3972,10 @@ function AdminPage({ onBack, onNotice }) {
           )}
 
           {/* ══ CUSTOM EMAIL ══ */}
+          {activeNav === "Buat Akun" && <GoogleAccountMaker onNotice={onNotice} />}
+
           {activeNav === "Custom Email" && (() => {
+
             const requests = orders.flatMap((o) => customEmailsOf(o).map((r) => ({ ...r, order: o })));
             const openCount = requests.filter((r) => (r.status || "pending") !== "done" && r.status !== "rejected").length;
             return (
