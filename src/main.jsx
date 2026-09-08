@@ -578,6 +578,7 @@ const LANDING_FAQ = [
 /* Header publik untuk pengunjung yang belum login — tanpa saldo,
    pesanan, keranjang, atau elemen internal aplikasi. */
 const PUBLIC_NAV = [
+  ["store", "Beranda"],
   ["katalog", "Katalog"],
   ["custom-email", "Custom Email"],
   ["help", "Bantuan"],
@@ -2759,6 +2760,7 @@ function StoreFooter({ navigate, guest }) {
             <p>Stok dan katalog terhubung ke Neon Database.</p>
           </div>
           <div className="cx-footer-links">
+            <button onClick={() => navigate("store")}>Beranda</button>
             <button onClick={() => navigate("help")}>Bantuan</button>
             <button onClick={() => navigate("faq")}>FAQ</button>
             <button onClick={() => navigate("cara-beli")}>Cara Beli</button>
