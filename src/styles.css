@@ -3763,3 +3763,14 @@ html { scroll-behavior: smooth; }
   .cx-cev2-hero-copy h1 { font-size: 21px; }
   .cx-cev2-steps { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
+
+/* Custom Email v2 — polish state tombol */
+.cx-cev2 .cx-ce-verify-btn { min-height: 44px; font-size: 12.5px; border-color: var(--b2); color: var(--ink2); background: rgba(168,85,247,.10); }
+.cx-cev2 .cx-ce-verify-btn:not(:disabled):hover { background: rgba(168,85,247,.18); color: var(--ink); }
+.cx-cev2 .cx-btn.cx-btn-primary:disabled,
+.cx-cev2 .cx-btn.cx-btn-secondary:disabled {
+  background: var(--bg); background-image: none; border: 1px solid var(--b1);
+  color: var(--faint); box-shadow: none; opacity: 1; cursor: not-allowed;
+}
+.cx-cev2 .cx-btn.cx-btn-primary:disabled svg { opacity: .6; }
+.cx-cev2 .cx-btn.cx-btn-primary:not(:disabled).cx-cev2-cta { box-shadow: 0 10px 26px -14px rgba(168,85,247,.9); }
