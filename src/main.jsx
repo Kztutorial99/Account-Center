@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import "./styles.css";
 import { applySeo, applyProductSchema } from "./seo.js";
-import { signInWithGoogle, consumeGoogleRedirect, signOutGoogle } from "./firebase.js";
+import { signInWithGoogle, consumeGoogleRedirect, signOutGoogle } from "./google-signin.js";
 
 /* ─── helpers ─── */
 const formatPrice = (v) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(v) || 0);
@@ -4600,10 +4600,10 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome }) {
   const googleSignIn = async () => {
     setError(""); setBusy(true);
     try {
-      const idToken = await signInWithGoogle();
-      if (!idToken) return; // redirect flow: hasil diproses saat halaman kembali
+      const accessToken = await signInWithGoogle();
+      if (!accessToken) return;
       const res = await jsonRequest("/api/auth", {
-        method: "POST", body: JSON.stringify({ action: "google", idToken }),
+        method: "POST", body: JSON.stringify({ action: "google", accessToken }),
       });
       onAuthenticated(res.user);
     } catch (err) {
