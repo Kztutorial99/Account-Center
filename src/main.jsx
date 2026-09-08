@@ -2758,17 +2758,38 @@ function ProductCard({ product, colorIdx, onBuy }) {
    Admin isi/acak nama, sistem otomatis cek ketersediaan
    lewat API check-email yang sama dengan halaman publik.
 ════════════════════════════════════════════════════ */
-const GA_FIRST = ["adit", "bayu", "citra", "dimas", "eka", "farel", "gilang", "hana", "indra", "joko", "kirana", "lutfi", "maya", "nanda", "oscar", "putra", "rani", "sandi", "tari", "vino", "wulan", "yoga", "zaki"];
-const GA_LAST  = ["pratama", "santoso", "wijaya", "saputra", "nugroho", "hidayat", "permana", "kusuma", "maulana", "ramadhan", "anggara", "firmansyah"];
+const GA_FIRST_M = ["aditya", "arif", "bayu", "bima", "danu", "dimas", "fajar", "farel", "galih", "gilang", "hendra", "ilham", "indra", "irfan", "kevin", "lutfi", "nanda", "prasetyo", "rafi", "raihan", "reza", "rizky", "satria", "yoga", "zaki", "agung", "dio", "farhan", "hafiz", "yusuf"];
+const GA_FIRST_F = ["aisyah", "alya", "anisa", "aura", "bella", "citra", "dewi", "dina", "eka", "fitri", "hani", "intan", "kayla", "kirana", "laras", "maya", "nadia", "nabila", "putri", "ratna", "rina", "salsabila", "sari", "tiara", "wulan", "zahra", "amelia", "dinda", "lestari", "nurul"];
+const GA_FIRST = [...GA_FIRST_M, ...GA_FIRST_F];
+const GA_LAST  = ["pratama", "wijaya", "saputra", "nugroho", "hidayat", "permana", "kusuma", "maulana", "ramadhan", "firmansyah", "alfarizi", "prameswari", "anggraini", "salsabila", "prasetyo", "wibowo", "santoso", "laksmana", "maharani", "adiningrum"];
+const GA_FEMALE_HINT = new Set([...GA_FIRST_F, "putri", "ayu", "siti", "fitri", "dewi", "sri", "nur", "nia", "desi", "yuni", "rini", "mega", "tania", "cindy"]);
+const GA_MALE_HINT   = new Set([...GA_FIRST_M, "putra", "agus", "budi", "dedi", "eko", "rudi", "andi", "ahmad", "muhammad", "bagus", "asep"]);
+
+// Tebak gender dari nama depan; tidak dikenal -> null
+function detectGenderFromName(name) {
+  const key = String(name || "").toLowerCase().replace(/[^a-z]/g, "");
+  if (!key) return null;
+  if (GA_FEMALE_HINT.has(key)) return "Wanita";
+  if (GA_MALE_HINT.has(key)) return "Pria";
+  if (/(a|i|ah|ah|tri|tika|sari|wati)$/.test(key) && !GA_MALE_HINT.has(key)) return "Wanita";
+  return null;
+}
+
+function pickFirstByGender(gender) {
+  return gender === "Wanita" ? gaPick(GA_FIRST_F) : gaPick(GA_FIRST_M);
+}
 const gaPick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const gaSlug = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 function makeGoogleUsername(first, last) {
   const f = gaSlug(first) || gaPick(GA_FIRST);
   const l = gaSlug(last) || gaPick(GA_LAST);
-  const n = String(Math.floor(Math.random() * 9000) + 100);
-  const styles = [`${f}${l}${n}`, `${f}.${l}${n}`, `${f}${l.slice(0, 4)}${n}`, `${f}${n}${l.slice(0, 3)}`];
-  let out = styles[Math.floor(Math.random() * styles.length)];
+  const n = String(Math.floor(Math.random() * 90) + 10);
+  // Utamakan bentuk bersih tanpa angka; angka hanya dipakai bila terlalu pendek.
+  const clean = [`${f}${l}`, `${f}.${l}`, `${f}${l.slice(0, 4)}`, `${l}${f.slice(0, 4)}`].filter((s) => s.replace(/\./g, "").length >= 6);
+  const withNum = [`${f}${l}${n}`, `${f}.${l}${n}`, `${f}${l.slice(0, 4)}${n}`];
+  const pool = Math.random() < 0.75 && clean.length ? clean : [...clean, ...withNum];
+  let out = pool[Math.floor(Math.random() * pool.length)] || `${f}${l}${n}`;
   while (out.replace(/\./g, "").length < 6) out += String(Math.floor(Math.random() * 10));
   return out.slice(0, 30);
 }
@@ -2812,13 +2833,16 @@ function GoogleAccountMaker({ onNotice }) {
   };
 
   const regenerate = () => {
-    const f = first || gaPick(GA_FIRST);
+    const typedGender = detectGenderFromName(first);
+    const gender = typedGender || (Math.random() > 0.5 ? "Pria" : "Wanita");
+    const f = first || pickFirstByGender(gender);
     const l = last || gaPick(GA_LAST);
+    const g = typedGender || detectGenderFromName(f) || gender;
     if (!first) setFirst(f);
     if (!last) setLast(l);
     setUsername(makeGoogleUsername(f, l));
     setPassword(makeStrongPassword());
-    setProfile({ birthday: makeBirthday(), gender: Math.random() > 0.5 ? "Pria" : "Wanita" });
+    setProfile({ birthday: makeBirthday(), gender: g });
   };
 
   // Cek ketersediaan otomatis (debounce) memakai API yang sudah ada.
@@ -2866,7 +2890,12 @@ function GoogleAccountMaker({ onNotice }) {
 
         <div className="cx-ga-grid">
           <Field label="Nama depan">
-            <InputWrap icon={User}><input value={first} onChange={(e) => setFirst(e.target.value)} placeholder="Contoh: Bayu" /></InputWrap>
+            <InputWrap icon={User}><input value={first} onChange={(e) => {
+                const v = e.target.value;
+                setFirst(v);
+                const g = detectGenderFromName(v);
+                if (g) setProfile((p) => ({ ...p, gender: g }));
+              }} placeholder="Contoh: Rafi / Putri" /></InputWrap>
           </Field>
           <Field label="Nama belakang">
             <InputWrap icon={User}><input value={last} onChange={(e) => setLast(e.target.value)} placeholder="Contoh: Pratama" /></InputWrap>
@@ -2918,7 +2947,13 @@ function GoogleAccountMaker({ onNotice }) {
           <div className="cx-ga-row"><span>Tanggal lahir</span><strong>{profile.birthday}</strong>
             <button className="cx-row-btn" onClick={() => copy(profile.birthday, "Tanggal lahir")} aria-label="Salin tanggal lahir"><Copy size={11} /></button></div>
           <div className="cx-ga-row"><span>Gender</span><strong>{profile.gender}</strong>
-            <button className="cx-row-btn" onClick={() => setProfile((p) => ({ ...p, gender: p.gender === "Pria" ? "Wanita" : "Pria" }))} aria-label="Ganti gender"><RefreshCw size={11} /></button></div>
+            <button className="cx-row-btn" onClick={() => {
+              const g = profile.gender === "Pria" ? "Wanita" : "Pria";
+              setProfile((p) => ({ ...p, gender: g }));
+              const f = pickFirstByGender(g);
+              setFirst(f);
+              setUsername(makeGoogleUsername(f, last || gaPick(GA_LAST)));
+            }} aria-label="Ganti gender"><RefreshCw size={11} /></button></div>
         </div>
 
         <div className="cx-ga-actions">
