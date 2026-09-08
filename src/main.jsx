@@ -575,18 +575,28 @@ const LANDING_FAQ = [
   ["Bagaimana kalau akun bermasalah?", "Ajukan klaim lewat halaman Bantuan sesuai ketentuan pada Kebijakan Refund."],
 ];
 
-function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }) {
+/* Header publik untuk pengunjung yang belum login — tanpa saldo,
+   pesanan, keranjang, atau elemen internal aplikasi. */
+const PUBLIC_NAV = [
+  ["katalog", "Katalog"],
+  ["custom-email", "Custom Email"],
+  ["help", "Bantuan"],
+  ["faq", "FAQ"],
+  ["cara-beli", "Cara Beli"],
+];
+
+function PublicTopbar({ navigate, onLogin, onRegister, activePage }) {
   return (
-    <div className="cx-app cx-land">
+    <>
       <header className="cx-land-top">
         <div className="cx-container cx-land-top-inner">
-          <img className="cx-brand-wordmark" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+          <button className="cx-brand" onClick={() => navigate("store")} aria-label="Beranda Akun Instan">
+            <img className="cx-brand-wordmark" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+          </button>
           <nav className="cx-land-top-nav" aria-label="Navigasi publik">
-            <button onClick={() => navigate("katalog")}>Katalog</button>
-            <button onClick={() => navigate("custom-email")}>Custom Email</button>
-            <button onClick={() => navigate("help")}>Bantuan</button>
-            <button onClick={() => navigate("faq")}>FAQ</button>
-            <button onClick={() => navigate("cara-beli")}>Cara Beli</button>
+            {PUBLIC_NAV.map(([slug, label]) => (
+              <button key={slug} className={activePage === slug ? "is-active" : ""} onClick={() => navigate(slug)}>{label}</button>
+            ))}
           </nav>
           <div className="cx-land-top-auth">
             <button className="cx-btn cx-btn-ghost" onClick={onLogin}><LogIn size={13} /> Masuk</button>
@@ -594,6 +604,22 @@ function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }
           </div>
         </div>
       </header>
+      {/* Navigasi publik versi mobile: pill yang bisa digeser */}
+      <nav className="cx-pub-subnav" aria-label="Navigasi publik mobile">
+        <div className="cx-pub-subnav-track">
+          {PUBLIC_NAV.map(([slug, label]) => (
+            <button key={slug} className={activePage === slug ? "is-active" : ""} onClick={() => navigate(slug)}>{label}</button>
+          ))}
+        </div>
+      </nav>
+    </>
+  );
+}
+
+function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }) {
+  return (
+    <div className="cx-app cx-land">
+      <PublicTopbar navigate={navigate} onLogin={onLogin} onRegister={onRegister} activePage="store" />
 
       <main>
         <section className="cx-hero cx-hero-modern cx-land-hero">
@@ -1083,7 +1109,19 @@ function App() {
     // Halaman publik SEO (katalog, custom-email, help, legal) tetap dirender apa adanya.
   }
 
-  const topbar = (
+  // Tamu (belum login) memakai kerangka publik: header publik, tanpa bottom
+  // nav / saldo / pesanan. Halaman setelah login hanya untuk user yang masuk.
+  const guest = !auth.user;
+  const shellClass = guest ? "cx-app cx-land" : "cx-app";
+
+  const topbar = guest ? (
+    <PublicTopbar
+      navigate={navigate}
+      activePage={activePage}
+      onLogin={() => goAuthScreen("login")}
+      onRegister={() => goAuthScreen("register")}
+    />
+  ) : (
     <StoreTopbar
       activePage={activePage} navigate={navigate} cart={cart}
       onCartOpen={() => setCartOpen(true)}
@@ -1092,7 +1130,7 @@ function App() {
     />
   );
 
-  const tabbar = (
+  const tabbar = guest ? null : (
     <MobileTabBar activePage={activePage} navigate={navigate} cart={cart} cartOpen={cartOpen} onCartOpen={() => setCartOpen(true)} />
   );
 
@@ -1310,30 +1348,30 @@ function App() {
   );
 
   if (activePage === "terms" || activePage === "privacy" || activePage === "refund" || activePage === "disclaimer") return (
-    <div className="cx-app">
+    <div className={shellClass}>
       {topbar}
       <LegalPage kind={activePage} onBack={() => navigate("store")} navigate={navigate} />
-      <StoreFooter navigate={navigate} />
+      <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
     </div>
   );
 
   if (activePage === "account") return (
-    <div className="cx-app">
+    <div className={shellClass}>
       {topbar}
       <ProfilePage user={auth.user} onBack={() => navigate("store")} onTopup={() => navigate("topup")} onSaved={(u) => setAuth({ user: u, loading: false })} onNotice={showNotice} />
-      <StoreFooter navigate={navigate} />
+      <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
     </div>
   );
 
   if (activePage === "topup") return (
-    <div className="cx-app">
+    <div className={shellClass}>
       {topbar}
       <TopUpPage user={auth.user} onBack={() => navigate("store")} onNotice={showNotice} onRefresh={loadSession} />
-      <StoreFooter navigate={navigate} />
+      <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
     </div>
@@ -1341,17 +1379,17 @@ function App() {
 
   /* ── simple pages ── */
   if (activePage === "orders") return (
-    <div className="cx-app">
+    <div className={shellClass}>
       {topbar}
       <OrdersPage onBack={() => navigate("store")} onNotice={showNotice} navigate={navigate} />
-      <StoreFooter navigate={navigate} />
+      <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
     </div>
   );
 
   if (activePage === "custom-email") return (
-    <div className="cx-app">
+    <div className={shellClass}>
       {topbar}
       <CustomEmailPage
         draft={emailDraft}
@@ -1368,44 +1406,44 @@ function App() {
         onBack={() => navigate("store")}
         onCheckout={() => { navigate("store"); setCartOpen(true); }}
       />
-      <StoreFooter navigate={navigate} />
+      <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
     </div>
   );
 
   if (activePage === "help") return (
-    <div className="cx-app">
+    <div className={shellClass}>
       {topbar}
       <HelpPage navigate={navigate} onAskAssistant={() => setAiOpen(true)} />
-      <StoreFooter navigate={navigate} />
+      <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
     </div>
   );
 
   if (activePage === "faq") return (
-    <div className="cx-app">
+    <div className={shellClass}>
       {topbar}
       <FaqPage navigate={navigate} onAskAssistant={() => setAiOpen(true)} />
-      <StoreFooter navigate={navigate} />
+      <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
     </div>
   );
 
   if (activePage === "cara-beli") return (
-    <div className="cx-app">
+    <div className={shellClass}>
       {topbar}
       <CaraBeliPage navigate={navigate} />
-      <StoreFooter navigate={navigate} />
+      <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
     </div>
   );
 
   if (activePage === "katalog") return (
-    <div className="cx-app cx-catv2">
+    <div className={`${shellClass} cx-catv2`}>
       {topbar}
             <main className="cx-container cx-cat-main" id="catalog" style={{ paddingTop: 20, paddingBottom: 64 }}>
         <div className="cx-section-header cx-section-header-stack cx-cat-header">
@@ -1460,7 +1498,7 @@ function App() {
           </div>
         )}
       </main>
-      <StoreFooter navigate={navigate} />
+      <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
     </div>
@@ -1468,7 +1506,7 @@ function App() {
 
   /* ── store page ── */
   return (
-    <div className="cx-app">
+    <div className={shellClass}>
       {topbar}
 
       {/* Hero */}
@@ -1538,7 +1576,7 @@ function App() {
       </section>
 
 
-      <StoreFooter navigate={navigate} />
+      <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
 
@@ -2709,7 +2747,7 @@ function LegalPage({ kind, onBack, navigate }) {
   );
 }
 
-function StoreFooter({ navigate }) {
+function StoreFooter({ navigate, guest }) {
   return (
     <footer className="cx-footer">
       <div className="cx-container cx-footer-inner">
@@ -2724,7 +2762,7 @@ function StoreFooter({ navigate }) {
             <button onClick={() => navigate("help")}>Bantuan</button>
             <button onClick={() => navigate("faq")}>FAQ</button>
             <button onClick={() => navigate("cara-beli")}>Cara Beli</button>
-            <button onClick={() => navigate("orders")}>Pesanan</button>
+            {!guest && <button onClick={() => navigate("orders")}>Pesanan</button>}
             <button onClick={() => navigate("terms")}>Syarat &amp; Ketentuan</button>
             <button onClick={() => navigate("privacy")}>Kebijakan Privasi</button>
             <button onClick={() => navigate("refund")}>Kebijakan Refund</button>
