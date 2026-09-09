@@ -2298,7 +2298,7 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
   ];
   return (
     <main className="cx-page cx-custom-page">
-      <div className="cx-container cx-cev2">
+      <div className="cx-container cx-cev2 cx-cev3">
 
         {/* 1 ── HEADER PRODUK */}
         <header className="cx-cev2-hero">
@@ -2357,7 +2357,7 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
         ) : (
           <section className="cx-cev2-card">
             <div className="cx-cev2-card-head">
-              <h2><Plus size={13} /> Tambah Nama Email</h2>
+              <h2><span className="cx-cev3-step">1</span> Tambah Nama Email</h2>
               <span className="cx-cev2-slot">Sisa {quotaLeft} slot</span>
             </div>
             <div className="cx-cev2-card-body">
@@ -2384,7 +2384,7 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
         {!locked && (
           <section className="cx-cev2-card">
             <div className="cx-cev2-card-head">
-              <h2><User size={13} /> Data Pemilik Akun</h2>
+              <h2><span className="cx-cev3-step">2</span> Data Pemilik Akun</h2>
               <span className={`cx-cev2-slot${profileReady ? " is-ok" : ""}`}>{profileReady ? "Lengkap" : "Wajib"}</span>
             </div>
             <div className="cx-cev2-card-body">
@@ -2446,7 +2446,7 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
         {/* 4 ── NAMA YANG DIPILIH */}
         <section className="cx-cev2-card">
           <div className="cx-cev2-card-head">
-            <h2><ShoppingBag size={13} /> Nama yang Dipilih</h2>
+            <h2><span className="cx-cev3-step">3</span> Nama yang Dipilih</h2>
             <span className="cx-cev2-counter">{list.length}/{max}</span>
           </div>
           <div className="cx-cev2-card-body">
@@ -2483,7 +2483,7 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
         {/* 5 ── RINGKASAN PESANAN */}
         <section className="cx-cev2-card cx-cev2-summary">
           <div className="cx-cev2-card-head">
-            <h2><CreditCard size={13} /> Ringkasan Pesanan</h2>
+            <h2><span className="cx-cev3-step">4</span> Ringkasan Pesanan</h2>
           </div>
           <div className="cx-cev2-card-body">
             <div className="cx-cev2-sum-row"><span>Jumlah nama</span><b>{list.length} nama</b></div>

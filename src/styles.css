@@ -3805,3 +3805,39 @@ html { scroll-behavior: smooth; }
 .cx-ce-admin-prof { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 0; font-size: 11px; color: var(--muted); }
 .cx-ce-admin-prof span { display: inline-flex; align-items: center; gap: 4px; }
 @media (max-width: 360px) { .cx-cev2-grid2 { grid-template-columns: 1fr; } }
+
+/* ═══ Custom Email v3 — card-stack polish (UI only) ═══ */
+.cx-cev3 { gap: 14px; padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+.cx-cev3 .cx-cev2-hero { padding: 18px 16px; gap: 14px; border-color: rgba(167,139,250,.26); }
+.cx-cev3 .cx-cev2-hero-copy h1 { font-size: 20px; letter-spacing: -.015em; }
+.cx-cev3 .cx-cev2-hero-copy p { font-size: 12px; }
+.cx-cev3 .cx-cev2-hero-icon { width: 44px; height: 44px; border-radius: 14px; }
+.cx-cev3 .cx-cev2-price-tag b { font-size: 21px; letter-spacing: -.02em; }
+
+.cx-cev3 .cx-cev2-card {
+  border-color: rgba(167,139,250,.18);
+  box-shadow: 0 14px 34px -26px rgba(88,28,135,.9);
+}
+.cx-cev3 .cx-cev2-card-head { padding: 13px 15px; }
+.cx-cev3 .cx-cev2-card-head h2 { font-size: 13.5px; letter-spacing: -.01em; gap: 9px; }
+.cx-cev3 .cx-cev2-card-body { padding: 15px; gap: 13px; }
+.cx-cev3-step {
+  flex: 0 0 auto; width: 22px; height: 22px; display: grid; place-items: center;
+  border-radius: 8px; font: 700 11px/1 inherit; color: #ede9fe;
+  background: linear-gradient(140deg, rgba(139,92,246,.55), rgba(109,40,217,.4));
+  border: 1px solid rgba(167,139,250,.35);
+}
+.cx-cev3 .cx-cev2-field { margin-bottom: 12px; }
+.cx-cev3 .cx-cev2-items { gap: 9px; }
+.cx-cev3 .cx-cev2-item { padding: 11px; border-color: rgba(167,139,250,.16); }
+
+.cx-cev3 .cx-cev2-summary {
+  border-color: rgba(167,139,250,.34);
+  background: linear-gradient(180deg, rgba(46,25,84,.55), rgba(20,14,38,.9));
+}
+.cx-cev3 .cx-cev2-sum-total { padding: 13px 14px; }
+.cx-cev3 .cx-cev2-sum-total strong { font-size: 21px; letter-spacing: -.02em; }
+.cx-cev3 .cx-cev2-cta { min-height: 50px; font-size: 13.5px; border-radius: 14px; }
+.cx-cev3 .cx-cev2-back { min-height: 42px; }
+.cx-cev3 .cx-cev2-steps, .cx-cev3 .cx-cev2-notes { padding: 14px 15px; gap: 9px; }
+@media (min-width: 720px) { .cx-cev3 { padding-bottom: 32px; } }
