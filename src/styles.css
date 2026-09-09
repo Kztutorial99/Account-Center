@@ -3774,3 +3774,34 @@ html { scroll-behavior: smooth; }
 }
 .cx-cev2 .cx-btn.cx-btn-primary:disabled svg { opacity: .6; }
 .cx-cev2 .cx-btn.cx-btn-primary:not(:disabled).cx-cev2-cta { box-shadow: 0 10px 26px -14px rgba(168,85,247,.9); }
+
+/* ── Custom Email: data pemilik akun ── */
+.cx-cev2-hint { margin: 0 0 10px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+.cx-cev2-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cx-cev2-field { display: block; margin-bottom: 10px; }
+.cx-cev2-field > span { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: .01em; }
+.cx-cev2-field input {
+  width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 12px;
+  border-radius: 12px; border: 1px solid rgba(167,139,250,.22);
+  background: rgba(20,14,38,.72); color: #f5f3ff; font-size: 14px; font-family: inherit;
+  outline: none; transition: border-color .18s ease, box-shadow .18s ease;
+}
+.cx-cev2-field input::placeholder { color: rgba(196,181,253,.5); }
+.cx-cev2-field input:focus { border-color: rgba(167,139,250,.55); box-shadow: 0 0 0 3px rgba(139,92,246,.16); }
+.cx-cev2-gender { display: flex; gap: 8px; flex-wrap: wrap; }
+.cx-cev2-chip {
+  flex: 1 1 30%; min-height: 42px; padding: 0 10px; border-radius: 12px; cursor: pointer;
+  border: 1px solid rgba(167,139,250,.22); background: rgba(20,14,38,.72);
+  color: #ddd6fe; font-size: 12.5px; font-weight: 600; font-family: inherit;
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
+}
+.cx-cev2-chip.is-active {
+  border-color: rgba(167,139,250,.6); color: #fff;
+  background: linear-gradient(135deg, rgba(139,92,246,.35), rgba(109,40,217,.28));
+}
+.cx-cev2-warn { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #fcd34d; }
+.cx-cev2-slot.is-ok { color: #86efac; border-color: rgba(134,239,172,.35); }
+.cx-cev2-item-prof { display: block; margin-top: 3px; font-size: 10.5px; color: var(--muted); line-height: 1.45; }
+.cx-ce-admin-prof { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+.cx-ce-admin-prof span { display: inline-flex; align-items: center; gap: 4px; }
+@media (max-width: 360px) { .cx-cev2-grid2 { grid-template-columns: 1fr; } }
