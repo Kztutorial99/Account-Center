@@ -65,6 +65,8 @@ async function ensureCustomEmailTableUncached(sql) {
   // Hasil kerja admin: password akun Google yang dibuat + catatan untuk pembeli.
   await sql`ALTER TABLE codexa_custom_emails ADD COLUMN IF NOT EXISTS result_password TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE codexa_custom_emails ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT ''`;
+  // Data pemilik akun (nama depan/belakang, tanggal lahir, gender) untuk pembuatan Gmail.
+  await sql`ALTER TABLE codexa_custom_emails ADD COLUMN IF NOT EXISTS profile TEXT NOT NULL DEFAULT ''`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS codexa_custom_emails_unique ON codexa_custom_emails (lower(requested))`;
 }
 
@@ -375,6 +377,50 @@ function normalizeCustomEmailList(payload) {
   return { ok: true, error: "", checks };
 }
 
+const CUSTOM_PROFILE_GENDERS = ["male", "female", "other"];
+const NAME_RE = /^[A-Za-z'.\- ]{2,40}$/;
+
+// Validasi data pemilik akun yang dipakai admin saat membuat Gmail baru.
+function normalizeCustomProfileEntry(raw) {
+  const o = raw && typeof raw === "object" ? raw : {};
+  const clean = (v, n) => String(v == null ? "" : v).trim().replace(/\s+/g, " ").slice(0, n);
+  const firstName = clean(o.firstName, 40);
+  const lastName = clean(o.lastName, 40);
+  const gender = clean(o.gender, 12).toLowerCase();
+  const birthDate = clean(o.birthDate, 10);
+  if (!NAME_RE.test(firstName)) return { ok: false, error: "nama depan wajib diisi (2-40 huruf)" };
+  if (!NAME_RE.test(lastName)) return { ok: false, error: "nama belakang wajib diisi (2-40 huruf)" };
+  if (!CUSTOM_PROFILE_GENDERS.includes(gender)) return { ok: false, error: "jenis kelamin wajib dipilih" };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return { ok: false, error: "tanggal lahir wajib diisi" };
+  const stamp = new Date(`${birthDate}T00:00:00Z`);
+  if (Number.isNaN(stamp.getTime())) return { ok: false, error: "tanggal lahir tidak valid" };
+  const year = Number(birthDate.slice(0, 4));
+  const maxYear = new Date().getUTCFullYear() - 10;
+  if (year < 1920 || year > maxYear) return { ok: false, error: "tanggal lahir tidak wajar (usia minimal 10 tahun)" };
+  return { ok: true, profile: { firstName, lastName, birthDate, gender } };
+}
+
+function normalizeCustomProfiles(payload) {
+  const raw = Array.isArray(payload.customProfiles) ? payload.customProfiles : [];
+  const map = new Map();
+  for (const entry of raw.slice(0, MAX_CUSTOM_EMAILS + 2)) {
+    const check = normalizeCustomEmail(entry && (entry.email || entry.requested));
+    if (!check.ok || !check.value) continue;
+    const prof = normalizeCustomProfileEntry(entry);
+    if (!prof.ok) return { ok: false, error: `${check.value}: ${prof.error}`, map: new Map() };
+    map.set(check.value, prof.profile);
+  }
+  return { ok: true, error: "", map };
+}
+
+function parseCustomProfile(value) {
+  if (!value) return null;
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch (_) { return null; }
+}
+
 async function openCustomEmails(sql, userId) {
   await ensureCustomEmailTable(sql);
   return sql`
@@ -444,10 +490,10 @@ async function handleAdmin(sql, request, response) {
     let customByOrder = new Map();
     try {
       await ensureCustomEmailTable(sql);
-      const custom = await sql`SELECT id, order_id AS "orderId", requested, status, result_password AS "password", note, created_at AS "createdAt" FROM codexa_custom_emails WHERE order_id IS NOT NULL ORDER BY created_at ASC`;
+      const custom = await sql`SELECT id, order_id AS "orderId", requested, status, result_password AS "password", note, profile, created_at AS "createdAt" FROM codexa_custom_emails WHERE order_id IS NOT NULL ORDER BY created_at ASC`;
       for (const c of custom) {
         const list = customByOrder.get(c.orderId) || [];
-        list.push({ id: c.id, requested: c.requested, status: c.status || "pending", password: c.password || "", note: c.note || "" });
+        list.push({ id: c.id, requested: c.requested, status: c.status || "pending", password: c.password || "", note: c.note || "", profile: parseCustomProfile(c.profile) });
         customByOrder.set(c.orderId, list);
       }
     } catch (_) { customByOrder = new Map(); }
@@ -592,10 +638,10 @@ module.exports = async function handler(request, response) {
       let mine = new Map();
       try {
         await ensureCustomEmailTable(sql);
-        const custom = await sql`SELECT id, order_id AS "orderId", requested, status, result_password AS "password", note, created_at AS "createdAt" FROM codexa_custom_emails WHERE user_id = ${user.id} AND order_id IS NOT NULL ORDER BY created_at ASC`;
+        const custom = await sql`SELECT id, order_id AS "orderId", requested, status, result_password AS "password", note, profile, created_at AS "createdAt" FROM codexa_custom_emails WHERE user_id = ${user.id} AND order_id IS NOT NULL ORDER BY created_at ASC`;
         for (const c of custom) {
           const list = mine.get(c.orderId) || [];
-          list.push({ id: c.id, requested: c.requested, status: c.status || "pending", password: c.password || "", note: c.note || "" });
+          list.push({ id: c.id, requested: c.requested, status: c.status || "pending", password: c.password || "", note: c.note || "", profile: parseCustomProfile(c.profile) });
           mine.set(c.orderId, list);
         }
       } catch (_) { mine = new Map(); }
@@ -641,6 +687,18 @@ module.exports = async function handler(request, response) {
     const customChecks = customList.checks;
     const customEmails = customChecks.map((c) => c.value);
     const customEmail = customEmails[0] || "";
+
+    // Data pemilik akun (seperti form pendaftaran Gmail) wajib lengkap per nama.
+    const profileList = normalizeCustomProfiles(payload);
+    if (!profileList.ok) return response.status(400).json({ error: profileList.error });
+    const profileMap = profileList.map;
+    for (const value of customEmails) {
+      if (!profileMap.has(value)) {
+        return response.status(400).json({
+          error: `Lengkapi data pemilik akun (nama depan, nama belakang, tanggal lahir, jenis kelamin) untuk ${value}`,
+        });
+      }
+    }
 
     // Custom email boleh dibeli sendiri tanpa akun di keranjang.
     if (!items.length && !customEmails.length) {
@@ -769,9 +827,10 @@ module.exports = async function handler(request, response) {
     };
     for (const requested of customEmails) {
       const reserveId = crypto.randomUUID();
+      const profileJson = JSON.stringify(profileMap.get(requested) || {});
       const [reservedRow] = await sql`
-        INSERT INTO codexa_custom_emails (id, user_id, order_id, requested, status)
-        VALUES (${reserveId}, ${user.id}, NULL, ${requested}, 'pending')
+        INSERT INTO codexa_custom_emails (id, user_id, order_id, requested, status, profile)
+        VALUES (${reserveId}, ${user.id}, NULL, ${requested}, 'pending', ${profileJson})
         ON CONFLICT DO NOTHING
         RETURNING id
       `;
@@ -782,7 +841,7 @@ module.exports = async function handler(request, response) {
           error: `${requested} baru saja dipesan pembeli lain, pilih nama lain`,
         });
       }
-      reserved.push({ id: reserveId, requested });
+      reserved.push({ id: reserveId, requested, profile: profileMap.get(requested) || null });
     }
 
     // Akun & nama sudah dikunci untuk pembeli ini, baru potong saldo.
@@ -822,7 +881,7 @@ module.exports = async function handler(request, response) {
       } catch (error) {
         console.error("Custom email attach failure", error && error.message);
       }
-      customRecords.push({ id: r.id, requested: r.requested, status: "pending" });
+      customRecords.push({ id: r.id, requested: r.requested, status: "pending", profile: r.profile });
     }
 
 
