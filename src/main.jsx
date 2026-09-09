@@ -608,7 +608,7 @@ function PublicTopbar({ navigate, onLogin, onRegister, activePage }) {
       <header className="cx-land-top">
         <div className="cx-container cx-land-top-inner">
           <button className="cx-brand" onClick={() => navigate("store")} aria-label="Beranda Akun Instan">
-            <img className="cx-brand-wordmark" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+            <img className="cx-brand-wordmark" src="/akun-instan-wordmark.webp" alt="Akun Instan" width="158" height="24" decoding="async" />
           </button>
           <nav className="cx-land-top-nav" aria-label="Navigasi publik">
             {PUBLIC_NAV.map(([slug, label]) => (
@@ -720,7 +720,7 @@ function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }
         <div className="cx-container cx-footer-inner">
           <div className="cx-footer-top">
             <div className="cx-footer-brand">
-              <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+              <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.webp" alt="Akun Instan" width="132" height="20" loading="lazy" decoding="async" />
               <p>Akun digital siap pakai, dikirim otomatis.</p>
             </div>
             <div className="cx-footer-links">
@@ -2141,7 +2141,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
           <Menu size={18} />
         </button>
         <button className="cx-brand" onClick={() => navigate("store")}>
-          <img className="cx-brand-wordmark" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+          <img className="cx-brand-wordmark" src="/akun-instan-wordmark.webp" alt="Akun Instan" width="158" height="24" decoding="async" />
         </button>
         <nav className="cx-nav">
           {[["store","Store"],["katalog","Katalog"],["orders","Pesanan"],["help","Bantuan"]].map(([page, label]) => (
@@ -2219,7 +2219,7 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
           <div className="cx-drawer-backdrop" onClick={() => setDrawerOpen(false)} />
           <aside className="cx-drawer" role="dialog" aria-label="Menu layanan">
             <div className="cx-drawer-head">
-              <img className="cx-drawer-wordmark" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+              <img className="cx-drawer-wordmark" src="/akun-instan-wordmark.webp" alt="Akun Instan" width="132" height="20" decoding="async" />
               <button className="cx-icon-btn" onClick={() => setDrawerOpen(false)} aria-label="Tutup menu"><X size={14} /></button>
             </div>
 
@@ -3013,7 +3013,7 @@ function StoreFooter({ navigate, guest }) {
         <div className="cx-footer-top">
           <div className="cx-footer-brand">
             <button className="cx-brand" onClick={() => navigate("store")} style={{ fontSize: 13 }}>
-              <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+              <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.webp" alt="Akun Instan" width="132" height="20" loading="lazy" decoding="async" />
             </button>
             <p>Stok dan katalog terhubung ke Neon Database.</p>
           </div>
@@ -3771,7 +3771,7 @@ function AdminPage({ onBack, onNotice }) {
       {/* ── Sidebar ── */}
       <aside className={`cx-sidebar${navOpen ? " open" : ""}`}>
         <div className="cx-sidebar-brand">
-          <img className="cx-brand-wordmark cx-brand-wordmark-sidebar" src="/akun-instan-wordmark.png" alt="Akun Instan" />
+          <img className="cx-brand-wordmark cx-brand-wordmark-sidebar" src="/akun-instan-wordmark.webp" alt="Akun Instan" width="125" height="19" decoding="async" />
           <ChevronDown size={12} color="var(--faint)" />
           <button className="cx-sidebar-close" onClick={() => setNavOpen(false)} aria-label="Tutup menu"><X size={14} /></button>
         </div>
@@ -4747,7 +4747,7 @@ function WelcomePage({ onLogin, onRegister }) {
       <main className="cx-welcome-content">
         <header className="cx-welcome-brand cx-rise cx-rise-1">
           <img src="/brand-logo.png" alt="Logo Akun Instan" className="cx-welcome-logo" width="56" height="56" decoding="async" />
-          <img src="/akun-instan-wordmark.png" alt="Akun Instan" className="cx-welcome-wordmark" width="150" height="28" decoding="async" />
+          <img src="/akun-instan-wordmark.webp" alt="Akun Instan" className="cx-welcome-wordmark" width="150" height="28" decoding="async" />
         </header>
 
         <section className="cx-welcome-hero cx-rise cx-rise-2">
