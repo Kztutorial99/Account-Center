@@ -2406,48 +2406,11 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
           </div>
         )}
 
-        {/* 2 ── TAMBAH NAMA */}
-        {locked ? (
-          <section className="cx-cev2-card cx-cev2-locked">
-            <span className="cx-cev2-locked-icon"><LockKeyhole size={16} /></span>
-            <div>
-              <strong>{blocked ? "Pesanan baru terkunci" : `Slot penuh (${max}/${max})`}</strong>
-              <p>{blocked
-                ? "Selesaikan dulu permintaan custom email sebelumnya."
-                : `Batas ${max} nama per transaksi sudah tercapai. Lanjut ke pembayaran.`}</p>
-            </div>
-          </section>
-        ) : (
-          <section className="cx-cev2-card">
-            <div className="cx-cev2-card-head">
-              <h2><span className="cx-cev3-step">1</span> Tambah Nama Email</h2>
-              <span className="cx-cev2-slot">Sisa {quotaLeft} slot</span>
-            </div>
-            <div className="cx-cev2-card-body">
-              <CustomEmailChecker
-                draft={draft}
-                setDraft={setDraft}
-                check={check}
-                onVerify={onVerify}
-                onAdd={onAdd}
-                canAdd={canAdd}
-                quotaLeft={quotaLeft}
-                addLabel={`Tambahkan nama · ${formatPrice(CUSTOM_EMAIL_FEE)}`}
-              />
-              <ul className="cx-cev2-rules">
-                <li><Check size={10} /> 3–30 karakter, huruf kecil & angka.</li>
-                <li><Check size={10} /> Boleh titik (.), tanpa spasi & simbol lain.</li>
-                <li><Check size={10} /> Boleh tulis polos atau lengkap @gmail.com.</li>
-              </ul>
-            </div>
-          </section>
-        )}
-
-        {/* 3 ── DATA PEMILIK AKUN (seperti form daftar Gmail) */}
+        {/* 1 ── DATA PEMILIK AKUN (seperti form daftar Gmail) */}
         {!locked && (
           <section className="cx-cev2-card">
             <div className="cx-cev2-card-head">
-              <h2><span className="cx-cev3-step">2</span> Data Pemilik Akun</h2>
+              <h2><span className="cx-cev3-step">1</span> Data Pemilik Akun</h2>
               <span className={`cx-cev2-slot${profileReady ? " is-ok" : ""}`}>{profileReady ? "Lengkap" : "Wajib"}</span>
             </div>
             <div className="cx-cev2-card-body">
@@ -2502,6 +2465,43 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
               {!profileReady && (
                 <small className="cx-cev2-warn"><CircleHelp size={11} /> Isi semua data di atas supaya nama bisa ditambahkan.</small>
               )}
+            </div>
+          </section>
+        )}
+
+        {/* 2 ── TAMBAH NAMA EMAIL */}
+        {locked ? (
+          <section className="cx-cev2-card cx-cev2-locked">
+            <span className="cx-cev2-locked-icon"><LockKeyhole size={16} /></span>
+            <div>
+              <strong>{blocked ? "Pesanan baru terkunci" : `Slot penuh (${max}/${max})`}</strong>
+              <p>{blocked
+                ? "Selesaikan dulu permintaan custom email sebelumnya."
+                : `Batas ${max} nama per transaksi sudah tercapai. Lanjut ke pembayaran.`}</p>
+            </div>
+          </section>
+        ) : (
+          <section className="cx-cev2-card">
+            <div className="cx-cev2-card-head">
+              <h2><span className="cx-cev3-step">2</span> Tambah Nama Email</h2>
+              <span className="cx-cev2-slot">Sisa {quotaLeft} slot</span>
+            </div>
+            <div className="cx-cev2-card-body">
+              <CustomEmailChecker
+                draft={draft}
+                setDraft={setDraft}
+                check={check}
+                onVerify={onVerify}
+                onAdd={onAdd}
+                canAdd={canAdd}
+                quotaLeft={quotaLeft}
+                addLabel={`Tambahkan nama · ${formatPrice(CUSTOM_EMAIL_FEE)}`}
+              />
+              <ul className="cx-cev2-rules">
+                <li><Check size={10} /> 3–30 karakter, huruf kecil & angka.</li>
+                <li><Check size={10} /> Boleh titik (.), tanpa spasi & simbol lain.</li>
+                <li><Check size={10} /> Boleh tulis polos atau lengkap @gmail.com.</li>
+              </ul>
             </div>
           </section>
         )}
