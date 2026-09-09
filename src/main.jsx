@@ -1441,7 +1441,7 @@ function App() {
                 <div><span>Total dibayar</span><strong>{formatPrice(checkout.order.total)}</strong></div>
                 <div><span>Jumlah akun</span><strong>{checkout.order.itemCount} akun</strong></div>
               </div>
-              <OrderItems items={checkout.order.items} onNotice={showNotice} />
+              <OrderItems items={checkout.order.items} orderId={checkout.order.id} onNotice={showNotice} />
             </div>
             <div className="cx-success-foot">
               <button className="cx-btn cx-btn-primary cx-btn-full" onClick={() => { setCheckout({ loading: false, error: "", order: null }); navigate("orders"); }}>
@@ -1702,13 +1702,46 @@ function App() {
 ════════════════════════════════════════════════════ */
 /* Hasil custom email untuk pembeli: nama yang dipesan, status, password akun
    Google yang dibuat admin, dan catatan tambahan. */
+/* Ambil password asli dari server hanya saat pembeli menekan tampilkan/salin. */
+function useSecret(fetcher, initial) {
+  const [value, setValue] = useState(initial || "");
+  const [loading, setLoading] = useState(false);
+  const reveal = async () => {
+    if (value) return value;
+    setLoading(true);
+    try {
+      const data = await fetcher();
+      const password = (data && data.password) || "";
+      setValue(password);
+      return password;
+    } finally {
+      setLoading(false);
+    }
+  };
+  return { value, loading, reveal };
+}
+
 function CustomEmailResult({ req, onNotice }) {
   const [open, setOpen] = useState(false);
   const status = req.status || "pending";
-  const password = req.password || "";
+  const hasPassword = req.hasPassword || !!req.password;
+  const masked = req.maskedPassword || "•".repeat(10);
   const note = req.note || "";
+  const secret = useSecret(
+    () => jsonRequest("/api/orders?resource=secret", { method: "POST", body: JSON.stringify({ customId: req.id }) }),
+    req.password || "",
+  );
   const copy = (value, label) => {
     if (navigator.clipboard) navigator.clipboard.writeText(value).then(() => onNotice(`${label} disalin`)).catch(() => {});
+  };
+  const toggle = async () => {
+    if (open) { setOpen(false); return; }
+    try { await secret.reveal(); setOpen(true); }
+    catch (e) { onNotice(e.message || "Gagal memuat password"); }
+  };
+  const doCopy = async () => {
+    try { const v = await secret.reveal(); if (v) copy(v, "Password"); }
+    catch (e) { onNotice(e.message || "Gagal memuat password"); }
   };
   return (
     <div className="cx-ce-result">
@@ -1716,15 +1749,15 @@ function CustomEmailResult({ req, onNotice }) {
         <Mail size={11} /> <strong>{req.requested}</strong>
         <span className={`cx-status cx-cemail-${status}`}>{CUSTOM_EMAIL_STATUS_LABEL[status]}</span>
       </div>
-      {password && (
+      {hasPassword && (
         <div className="cx-ce-result-row">
           <span className="cx-ce-result-label"><LockKeyhole size={11} /> Password</span>
-          <code className="cx-mono">{open ? password : "•".repeat(Math.min(10, password.length))}</code>
+          <code className="cx-mono">{open && secret.value ? secret.value : masked}</code>
           <div className="cx-ce-result-actions">
-            <button className="cx-row-btn" onClick={() => setOpen((v) => !v)} aria-label="Lihat password">
+            <button className="cx-row-btn" onClick={toggle} disabled={secret.loading} aria-label="Lihat password">
               {open ? <EyeOff size={12} /> : <Eye size={12} />}
             </button>
-            <button className="cx-row-btn" onClick={() => copy(password, "Password")} aria-label="Salin password">
+            <button className="cx-row-btn" onClick={doCopy} disabled={secret.loading} aria-label="Salin password">
               <Copy size={12} />
             </button>
           </div>
@@ -1740,11 +1773,48 @@ function CustomEmailResult({ req, onNotice }) {
   );
 }
 
-function OrderItems({ items, onNotice }) {
-  const [shown, setShown] = useState({});
+function OrderAccountRow({ account, orderId, itemIndex, accountIndex, onNotice }) {
+  const [open, setOpen] = useState(false);
+  const masked = account.maskedPassword || "•".repeat(Math.min(12, String(account.password || "").length) || 8);
+  const secret = useSecret(
+    () => jsonRequest("/api/orders?resource=secret", {
+      method: "POST",
+      body: JSON.stringify({ orderId, itemIndex, accountIndex }),
+    }),
+    account.password || "",
+  );
   const copy = (value, label) => {
     if (navigator.clipboard) navigator.clipboard.writeText(value).then(() => onNotice(`${label} disalin`)).catch(() => {});
   };
+  const toggle = async () => {
+    if (open) { setOpen(false); return; }
+    try { await secret.reveal(); setOpen(true); }
+    catch (e) { onNotice(e.message || "Gagal memuat password"); }
+  };
+  const doCopy = async () => {
+    try { const v = await secret.reveal(); if (v) copy(v, "Password"); }
+    catch (e) { onNotice(e.message || "Gagal memuat password"); }
+  };
+  return (
+    <div className="cx-order-cred">
+      <div className="cx-order-cred-row">
+        <span className="cx-order-cred-label">Email</span>
+        <code>{account.email}</code>
+        <button className="cx-icon-btn" aria-label="Salin email" onClick={() => copy(account.email, "Email")}><Copy size={12} /></button>
+      </div>
+      <div className="cx-order-cred-row">
+        <span className="cx-order-cred-label">Password</span>
+        <code>{open && secret.value ? secret.value : masked}</code>
+        <button className="cx-icon-btn" aria-label="Tampilkan password" onClick={toggle} disabled={secret.loading}>
+          {open ? <EyeOff size={12} /> : <Eye size={12} />}
+        </button>
+        <button className="cx-icon-btn" aria-label="Salin password" onClick={doCopy} disabled={secret.loading}><Copy size={12} /></button>
+      </div>
+    </div>
+  );
+}
+
+function OrderItems({ items, onNotice, orderId }) {
   if (!Array.isArray(items) || !items.length) {
     return <p style={{ color: "var(--muted)", fontSize: 12 }}>Detail akun tidak tersedia.</p>;
   }
@@ -1756,27 +1826,16 @@ function OrderItems({ items, onNotice }) {
             <ProviderIcon type={item.loginType} size={16} />
             <strong>{item.title}</strong>
           </div>
-          {(item.accounts || []).map((account, k) => {
-            const id = `${i}-${k}`;
-            const open = !!shown[id];
-            return (
-              <div key={id} className="cx-order-cred">
-                <div className="cx-order-cred-row">
-                  <span className="cx-order-cred-label">Email</span>
-                  <code>{account.email}</code>
-                  <button className="cx-icon-btn" aria-label="Salin email" onClick={() => copy(account.email, "Email")}><Copy size={12} /></button>
-                </div>
-                <div className="cx-order-cred-row">
-                  <span className="cx-order-cred-label">Password</span>
-                  <code>{open ? account.password : "•".repeat(Math.min(12, String(account.password || "").length) || 8)}</code>
-                  <button className="cx-icon-btn" aria-label="Tampilkan password" onClick={() => setShown((s) => ({ ...s, [id]: !open }))}>
-                    {open ? <EyeOff size={12} /> : <Eye size={12} />}
-                  </button>
-                  <button className="cx-icon-btn" aria-label="Salin password" onClick={() => copy(account.password, "Password")}><Copy size={12} /></button>
-                </div>
-              </div>
-            );
-          })}
+          {(item.accounts || []).map((account, k) => (
+            <OrderAccountRow
+              key={`${i}-${k}`}
+              account={account}
+              orderId={orderId}
+              itemIndex={i}
+              accountIndex={k}
+              onNotice={onNotice}
+            />
+          ))}
           {item.deliveryDetails && <DeliveryNote className="cx-order-note" text={item.deliveryDetails} />}
         </div>
       ))}
@@ -1860,7 +1919,7 @@ function OrdersPage({ onBack, onNotice, navigate }) {
           {customEmailsOf(order).map((req) => (
             <CustomEmailResult key={req.id} req={req} onNotice={onNotice} />
           ))}
-          <OrderItems items={order.items} onNotice={onNotice} />
+          <OrderItems items={order.items} orderId={order.id} onNotice={onNotice} />
 
         </article>
       ))}
