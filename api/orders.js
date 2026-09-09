@@ -72,6 +72,34 @@ async function ensureCustomEmailTableUncached(sql) {
 
 const ensureCustomEmailTable = once(ensureCustomEmailTableUncached);
 
+/* ── catatan kapan pembeli pertama kali membuka password (untuk sengketa) ── */
+async function ensureRevealTableUncached(sql) {
+  await sql`
+    CREATE TABLE IF NOT EXISTS codexa_secret_reveals (
+      user_id TEXT NOT NULL,
+      ref TEXT NOT NULL,
+      first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, ref)
+    )
+  `;
+}
+const ensureRevealTable = once(ensureRevealTableUncached);
+
+async function markRevealed(sql, userId, ref) {
+  try {
+    await ensureRevealTable(sql);
+    await sql`INSERT INTO codexa_secret_reveals (user_id, ref) VALUES (${userId}, ${ref}) ON CONFLICT DO NOTHING`;
+  } catch (_) {}
+}
+
+// Password disamarkan sebelum dikirim ke browser; aslinya hanya keluar lewat
+// endpoint reveal saat pembeli benar-benar menekan tombol tampilkan/salin.
+function maskSecret(value) {
+  const raw = String(value || "");
+  if (!raw) return "";
+  return "•".repeat(Math.min(12, Math.max(6, raw.length)));
+}
+
 const CUSTOM_EMAIL_STATUS = ["pending", "processing", "done", "rejected"];
 // Satu "tugas" custom email = maksimal 3 nama. Pembeli baru boleh beli lagi
 // setelah semua permintaan sebelumnya selesai (done) atau ditolak (rejected).
@@ -614,6 +642,45 @@ module.exports = async function handler(request, response) {
 
     }
 
+    if (resource === "secret") {
+      // Password asli hanya keluar lewat sini, per pesanan, milik user sendiri.
+      if (request.method !== "POST") {
+        response.setHeader("Allow", "POST");
+        return response.status(405).json({ error: "Method not allowed" });
+      }
+      const body = bodyOf(request) || {};
+      const customId = String(body.customId || "").trim().slice(0, 60);
+      if (customId) {
+        await ensureCustomEmailTable(sql);
+        const [row] = await sql`
+          SELECT id, result_password AS "password" FROM codexa_custom_emails
+          WHERE id = ${customId} AND user_id = ${user.id} LIMIT 1
+        `;
+        if (!row) return response.status(404).json({ error: "Permintaan tidak ditemukan" });
+        if (!row.password) return response.status(404).json({ error: "Password belum tersedia" });
+        await markRevealed(sql, user.id, `custom:${row.id}`);
+        return response.status(200).json({ password: row.password });
+      }
+
+      const orderId = String(body.orderId || "").trim().slice(0, 60);
+      const itemIndex = Math.round(Number(body.itemIndex));
+      const accountIndex = Math.round(Number(body.accountIndex));
+      if (!orderId || !Number.isInteger(itemIndex) || !Number.isInteger(accountIndex)) {
+        return response.status(400).json({ error: "Permintaan tidak lengkap" });
+      }
+      const [order] = await sql`
+        SELECT id, payload_blob AS "payloadBlob" FROM codexa_orders
+        WHERE id = ${orderId} AND user_id = ${user.id} LIMIT 1
+      `;
+      if (!order) return response.status(404).json({ error: "Pesanan tidak ditemukan" });
+      let items = [];
+      try { items = decryptCredentials(order.payloadBlob).items || []; } catch (_) { items = []; }
+      const account = ((items[itemIndex] || {}).accounts || [])[accountIndex];
+      if (!account || !account.password) return response.status(404).json({ error: "Detail akun tidak ditemukan" });
+      await markRevealed(sql, user.id, `order:${order.id}:${itemIndex}:${accountIndex}`);
+      return response.status(200).json({ password: account.password });
+    }
+
     if (resource === "custom-status") {
       // Kuota tugas custom email: berapa yang masih jalan & apakah boleh beli lagi.
       if (request.method !== "GET") {
@@ -641,13 +708,25 @@ module.exports = async function handler(request, response) {
         const custom = await sql`SELECT id, order_id AS "orderId", requested, status, result_password AS "password", note, profile, created_at AS "createdAt" FROM codexa_custom_emails WHERE user_id = ${user.id} AND order_id IS NOT NULL ORDER BY created_at ASC`;
         for (const c of custom) {
           const list = mine.get(c.orderId) || [];
-          list.push({ id: c.id, requested: c.requested, status: c.status || "pending", password: c.password || "", note: c.note || "", profile: parseCustomProfile(c.profile) });
+          list.push({
+            id: c.id, requested: c.requested, status: c.status || "pending",
+            hasPassword: !!c.password, maskedPassword: maskSecret(c.password),
+            note: c.note || "", profile: parseCustomProfile(c.profile),
+          });
           mine.set(c.orderId, list);
         }
       } catch (_) { mine = new Map(); }
       const orders = rows.map((row) => {
         let items = [];
         try { items = decryptCredentials(row.payloadBlob).items || []; } catch (_) { items = []; }
+        // Password tidak ikut dikirim di listing; hanya versi tersamar.
+        const safeItems = items.map((item) => ({
+          ...item,
+          accounts: (item.accounts || []).map((a) => ({
+            index: a.index, email: a.email, price: a.price,
+            hasPassword: !!a.password, maskedPassword: maskSecret(a.password),
+          })),
+        }));
         const customList = mine.get(row.id) || [];
         const custom = customList[0];
         return {
@@ -659,7 +738,7 @@ module.exports = async function handler(request, response) {
           customEmails: customList,
           customEmail: (custom && custom.requested) || "",
           customEmailStatus: (custom && custom.status) || "",
-          items,
+          items: safeItems,
         };
       });
       return response.status(200).json({ orders, balance: user.balance });
