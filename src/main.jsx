@@ -19,6 +19,21 @@ const formatDate  = (v) => v ? new Intl.DateTimeFormat("id-ID", { dateStyle: "me
 const CUSTOM_EMAIL_FEE = 5000;
 const CUSTOM_EMAIL_STATUS_LABEL = { pending: "Menunggu", processing: "Diproses", done: "Selesai", rejected: "Ditolak" };
 const CUSTOM_EMAIL_MAX = 3;
+const CUSTOM_GENDER_LABEL = { male: "Laki-laki", female: "Perempuan", other: "Lainnya" };
+// Data pemilik akun wajib lengkap sebelum nama boleh ditambahkan.
+const isCustomProfileComplete = (p) => Boolean(
+  p && /^[A-Za-z'.\- ]{2,40}$/.test(String(p.firstName || "").trim())
+  && /^[A-Za-z'.\- ]{2,40}$/.test(String(p.lastName || "").trim())
+  && /^\d{4}-\d{2}-\d{2}$/.test(String(p.birthDate || ""))
+  && ["male", "female", "other"].includes(String(p.gender || ""))
+);
+const formatBirthDate = (value) => {
+  if (!value) return "-";
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+};
+
 const customEmailsOf = (order) => {
   if (Array.isArray(order && order.customEmails) && order.customEmails.length) return order.customEmails;
   if (order && order.customEmail) return [{ id: order.id, requested: order.customEmail, status: order.customEmailStatus || "pending" }];
@@ -795,6 +810,9 @@ function App() {
   const [customEmails, setCustomEmails] = useState([]);
   const [emailDraft, setEmailDraft] = useState("");
   const [emailCheck, setEmailCheck] = useState({ state: "idle", message: "", signals: [] });
+  const EMPTY_EMAIL_PROFILE = { firstName: "", lastName: "", birthDate: "", gender: "" };
+  const [emailProfile, setEmailProfile] = useState(EMPTY_EMAIL_PROFILE);
+  const [customProfiles, setCustomProfiles] = useState({});
   const [customStatus, setCustomStatus] = useState({ max: CUSTOM_EMAIL_MAX, open: [], canOrder: true, loading: true });
   const noticeTimer = useRef(null);
 
@@ -1030,8 +1048,9 @@ function App() {
   const shortfall = Math.max(0, cartTotal - userBalance);
   const customQuotaLeft = Math.max(0, (customStatus.max || CUSTOM_EMAIL_MAX) - customEmails.length);
   const customBlocked = !customStatus.canOrder;
+  const emailProfileReady = isCustomProfileComplete(emailProfile);
   const canAddCustom = (emailCheck.state === "available" || emailCheck.state === "unknown")
-    && !customBlocked && customQuotaLeft > 0;
+    && emailProfileReady && !customBlocked && customQuotaLeft > 0;
 
   const addCustomEmail = () => {
     if (requireLogin()) return;
@@ -1047,12 +1066,31 @@ function App() {
       return;
     }
     if (customEmails.some((v) => v.toLowerCase() === value)) { showNotice("Nama itu sudah ada di daftar"); return; }
+    if (!isCustomProfileComplete(emailProfile)) {
+      showNotice("Lengkapi nama depan, nama belakang, tanggal lahir & jenis kelamin");
+      return;
+    }
+    const profile = {
+      firstName: emailProfile.firstName.trim(),
+      lastName: emailProfile.lastName.trim(),
+      birthDate: emailProfile.birthDate,
+      gender: emailProfile.gender,
+    };
     setCustomEmails((list) => [...list, value]);
+    setCustomProfiles((map) => ({ ...map, [value]: profile }));
     setEmailDraft("");
+    setEmailProfile(EMPTY_EMAIL_PROFILE);
     setEmailCheck({ state: "idle", message: "", signals: [] });
     showNotice("Custom email masuk keranjang");
   };
-  const removeCustomEmail = (value) => setCustomEmails((list) => list.filter((v) => v !== value));
+  const removeCustomEmail = (value) => {
+    setCustomEmails((list) => list.filter((v) => v !== value));
+    setCustomProfiles((map) => {
+      const next = { ...map };
+      delete next[value];
+      return next;
+    });
+  };
   /* Hapus satu akun tertentu dari keranjang lewat tombol X. */
   const removeCartAccount = (i, accIndex) => {
     setCart((c) => c.map((item, idx) => {
@@ -1090,11 +1128,17 @@ function App() {
     try {
       const result = await jsonRequest("/api/orders", {
         method: "POST",
-        body: JSON.stringify({ items, customEmails }),
+        body: JSON.stringify({
+          items,
+          customEmails,
+          customProfiles: customEmails.map((value) => ({ email: value, ...(customProfiles[value] || {}) })),
+        }),
       });
       setCart([]);
       setCustomEmails([]);
+      setCustomProfiles({});
       setEmailDraft("");
+      setEmailProfile(EMPTY_EMAIL_PROFILE);
       setEmailCheck({ state: "idle", message: "", signals: [] });
       setCartOpen(false);
       setCheckout({ loading: false, error: "", order: result.order });
@@ -1464,6 +1508,9 @@ function App() {
         blocked={customBlocked}
         onAdd={addCustomEmail}
         onRemove={removeCustomEmail}
+        profile={emailProfile}
+        setProfile={setEmailProfile}
+        profiles={customProfiles}
         onBack={() => navigate("store")}
         onCheckout={() => { navigate("store"); setCartOpen(true); }}
       />
@@ -1678,6 +1725,9 @@ function CustomEmailResult({ req, onNotice }) {
             </button>
           </div>
         </div>
+      )}
+      {req.profile && req.profile.firstName && (
+        <p className="cx-ce-result-note"><User size={11} /> {req.profile.firstName} {req.profile.lastName} · {formatBirthDate(req.profile.birthDate)} · {CUSTOM_GENDER_LABEL[req.profile.gender] || "-"}</p>
       )}
       {note && (
         <p className="cx-ce-result-note"><FileText size={11} /> {note}</p>
@@ -2224,14 +2274,17 @@ function StoreTopbar({ activePage, navigate, cart, onCartOpen, user, menuOpen, s
   );
 }
 
-function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quotaLeft, canAdd, blocked, onAdd, onRemove, onBack, onCheckout }) {
+function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quotaLeft, canAdd, blocked, onAdd, onRemove, profile, setProfile, profiles, onBack, onCheckout }) {
   const max = status.max || CUSTOM_EMAIL_MAX;
   // Slot penuh atau tugas lama belum selesai → input & tombol dikunci.
   const locked = blocked || quotaLeft === 0;
   const total = list.length * CUSTOM_EMAIL_FEE;
   const pct = Math.min(100, Math.round((list.length / max) * 100));
+  const profileReady = isCustomProfileComplete(profile);
+  const maxBirth = `${new Date().getFullYear() - 10}-12-31`;
   const steps = [
     { icon: Pencil, label: "Masukkan nama" },
+    { icon: User, label: "Isi data pemilik akun" },
     { icon: ShieldCheck, label: "Cek ketersediaan" },
     { icon: Plus, label: "Tambahkan" },
     { icon: Wallet, label: "Bayar" },
@@ -2327,6 +2380,69 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
           </section>
         )}
 
+        {/* 3 ── DATA PEMILIK AKUN (seperti form daftar Gmail) */}
+        {!locked && (
+          <section className="cx-cev2-card">
+            <div className="cx-cev2-card-head">
+              <h2><User size={13} /> Data Pemilik Akun</h2>
+              <span className={`cx-cev2-slot${profileReady ? " is-ok" : ""}`}>{profileReady ? "Lengkap" : "Wajib"}</span>
+            </div>
+            <div className="cx-cev2-card-body">
+              <p className="cx-cev2-hint">Dipakai persis seperti form pendaftaran Gmail baru.</p>
+              <div className="cx-cev2-grid2">
+                <label className="cx-cev2-field">
+                  <span>Nama depan</span>
+                  <input
+                    value={profile.firstName}
+                    onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))}
+                    placeholder="Contoh: Andi"
+                    maxLength={40}
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="cx-cev2-field">
+                  <span>Nama belakang</span>
+                  <input
+                    value={profile.lastName}
+                    onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))}
+                    placeholder="Contoh: Saputra"
+                    maxLength={40}
+                    autoComplete="off"
+                  />
+                </label>
+              </div>
+              <label className="cx-cev2-field">
+                <span>Tanggal lahir</span>
+                <input
+                  type="date"
+                  value={profile.birthDate}
+                  min="1920-01-01"
+                  max={maxBirth}
+                  onChange={(e) => setProfile((p) => ({ ...p, birthDate: e.target.value }))}
+                />
+              </label>
+              <div className="cx-cev2-field">
+                <span>Jenis kelamin</span>
+                <div className="cx-cev2-gender">
+                  {["male", "female", "other"].map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      className={`cx-cev2-chip${profile.gender === g ? " is-active" : ""}`}
+                      onClick={() => setProfile((p) => ({ ...p, gender: g }))}
+                    >
+                      {CUSTOM_GENDER_LABEL[g]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {!profileReady && (
+                <small className="cx-cev2-warn"><CircleHelp size={11} /> Isi semua data di atas supaya nama bisa ditambahkan.</small>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* 4 ── NAMA YANG DIPILIH */}
         <section className="cx-cev2-card">
           <div className="cx-cev2-card-head">
@@ -2347,9 +2463,14 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
                     <div className="cx-cev2-item-main">
                       <strong>{v}</strong>
                       <em><Check size={9} /> Tersedia</em>
+                      {profiles[v] && (
+                        <span className="cx-cev2-item-prof">
+                          {profiles[v].firstName} {profiles[v].lastName} · {formatBirthDate(profiles[v].birthDate)} · {CUSTOM_GENDER_LABEL[profiles[v].gender] || "-"}
+                        </span>
+                      )}
                     </div>
                     <div className="cx-cev2-item-act">
-                      <button type="button" onClick={() => { onRemove(v); setDraft(v); }} aria-label={`Ubah ${v}`}><Pencil size={12} /></button>
+                      <button type="button" onClick={() => { setProfile(profiles[v] || { firstName: "", lastName: "", birthDate: "", gender: "" }); onRemove(v); setDraft(v); }} aria-label={`Ubah ${v}`}><Pencil size={12} /></button>
                       <button type="button" className="is-del" onClick={() => onRemove(v)} aria-label={`Hapus ${v}`}><Trash2 size={12} /></button>
                     </div>
                   </li>
@@ -4160,6 +4281,13 @@ function AdminPage({ onBack, onNotice }) {
                               <span>{r.order.userName || r.order.buyerName || "Pembeli"}</span>
                               {r.order.userEmail && <span className="cx-ce-admin-email">{r.order.userEmail}</span>}
                             </div>
+                            {r.profile && r.profile.firstName && (
+                              <div className="cx-ce-admin-prof">
+                                <span><User size={11} /> {r.profile.firstName} {r.profile.lastName}</span>
+                                <span>{formatBirthDate(r.profile.birthDate)}</span>
+                                <span>{CUSTOM_GENDER_LABEL[r.profile.gender] || "-"}</span>
+                              </div>
+                            )}
                             <div className="cx-ce-admin-actions">
                               {Object.keys(CUSTOM_EMAIL_STATUS_LABEL).map((st) => (
                                 <button
