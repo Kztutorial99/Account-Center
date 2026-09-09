@@ -561,7 +561,7 @@ function SessionSplash({ title = "Menyiapkan Akun Instan", subtitle = "Memeriksa
           <span className="cx-splash-orbit cx-splash-orbit-b" aria-hidden="true"><i /></span>
           <span className="cx-splash-ring" aria-hidden="true" />
           <span className="cx-splash-pulse" aria-hidden="true" />
-          <span className="cx-splash-core"><img src="/brand-logo.png" alt="Akun Instan" /></span>
+          <span className="cx-splash-core"><img src="/brand-logo.webp" alt="Akun Instan" width="84" height="84" decoding="async" /></span>
         </div>
         <div className="cx-splash-copy">
           <strong>{title}</strong>
@@ -4746,7 +4746,7 @@ function WelcomePage({ onLogin, onRegister }) {
 
       <main className="cx-welcome-content">
         <header className="cx-welcome-brand cx-rise cx-rise-1">
-          <img src="/brand-logo.png" alt="Logo Akun Instan" className="cx-welcome-logo" width="56" height="56" decoding="async" />
+          <img src="/brand-logo.webp" alt="Logo Akun Instan" className="cx-welcome-logo" width="56" height="56" decoding="async" />
           <img src="/akun-instan-wordmark.webp" alt="Akun Instan" className="cx-welcome-wordmark" width="150" height="28" decoding="async" />
         </header>
 
