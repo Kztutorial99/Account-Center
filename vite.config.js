@@ -63,6 +63,18 @@ function apiDevMiddleware() {
 
 module.exports = defineConfig({
   plugins: [react(), apiDevMiddleware()],
+  build: {
+    cssMinify: "lightningcss",
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("lucide-react")) return "icons";
+          if (id.includes("react-dom") || /node_modules\/(react|scheduler)\//.test(id)) return "react";
+        },
+      },
+    },
+  },
   server: {
     host: "0.0.0.0",
     port: 5000,
