@@ -3,7 +3,7 @@ const { db, ensureTables, currentUser, bodyOf } = require("./_users");
 const { createNotification } = require("./_notifications");
 const { isAdmin } = require("./admin/_auth");
 const { once } = require("./_schema");
-const { effectiveAccountPrice, agedInfo } = require("./_aged");
+const { effectiveAccountPrice, agedInfo, readAgedConfig, DEFAULT_AGED_CONFIG } = require("./_aged");
 
 /* ── enkripsi kredensial (format sama dengan api/admin/products.js) ── */
 function key() { return process.env.ACCOUNT_CREDENTIALS_KEY || ""; }
@@ -23,10 +23,11 @@ function decryptCredentials(value) {
   return JSON.parse(Buffer.concat([decipher.update(Buffer.from(encryptedText, "base64url")), decipher.final()]).toString("utf8"));
 }
 
-function accountsOf(credentials, basePrice) {
+function accountsOf(credentials, basePrice, agedCfg) {
+  const cfg = agedCfg || DEFAULT_AGED_CONFIG;
   const c = credentials || {};
   const fallback = Math.max(0, Math.round(Number(basePrice) || 0));
-  const aged = c.agedPricing !== false;
+  const aged = c.agedPricing !== false && cfg.enabled !== false;
   const price = (v) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.round(n) : fallback; };
   if (Array.isArray(c.accounts) && c.accounts.length) {
     return c.accounts.map((a) => ({
@@ -35,8 +36,8 @@ function accountsOf(credentials, basePrice) {
       createdAt: a.createdAt || "",
       basePrice: price(a.price),
       /* harga yang ditagih = harga dasar + bonus umur akun (sistem aged) */
-      price: effectiveAccountPrice(a, fallback, aged),
-      agedLabel: aged ? agedInfo(a.createdAt).label : "",
+      price: effectiveAccountPrice(a, fallback, aged, cfg),
+      agedLabel: aged ? agedInfo(a.createdAt, cfg).label : "",
     }));
   }
   const legacy = { email: c.email || c.username || "", password: c.password || "", price: fallback };
@@ -813,6 +814,7 @@ module.exports = async function handler(request, response) {
 
     // Ambil listing yang dibeli, validasi ketersediaan & hitung total
     const purchases = [];
+    const agedCfg = await readAgedConfig(sql);
     let total = 0;
     for (const item of items) {
       const [row] = await sql`
@@ -826,7 +828,7 @@ module.exports = async function handler(request, response) {
       let credentials;
       try { credentials = decryptCredentials(row.credentialBlob); }
       catch (_) { return response.status(500).json({ error: "Kredensial listing tidak bisa dibaca" }); }
-      const accounts = accountsOf(credentials, row.price);
+      const accounts = accountsOf(credentials, row.price, agedCfg);
       const taken = [];
       for (const index of item.indexes) {
         const account = accounts[index - 1];

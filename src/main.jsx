@@ -39,7 +39,9 @@ export const customEmailsOf = (order) => {
   if (order && order.customEmail) return [{ id: order.id, requested: order.customEmail, status: order.customEmailStatus || "pending" }];
   return [];
 };
-/* Sistem harga aged: bonus otomatis sesuai umur akun (sinkron dgn api/_aged.js) */
+/* Sistem harga aged: bonus otomatis sesuai umur akun (sinkron dgn api/_aged.js).
+   Tingkatan di bawah hanya nilai default; admin bisa mengubahnya dari panel
+   (menu "Harga Aged") dan hasilnya dikirim lewat /api/admin/settings. */
 export const AGED_TIERS = [
   { maxDays: 7, bonus: 0, label: "Fresh (0-7 hari)" },
   { maxDays: 30, bonus: 2000, label: "Aged 8-30 hari" },
@@ -47,14 +49,21 @@ export const AGED_TIERS = [
   { maxDays: 180, bonus: 10000, label: "Aged 3-6 bulan" },
   { maxDays: 365, bonus: 18000, label: "Aged 6-12 bulan" },
 ];
-export const agedInfoOf = (value) => {
+export const AGED_DEFAULTS = { enabled: true, tiers: AGED_TIERS, yearBonus: 30000, extraPerYear: 10000 };
+export const agedInfoOf = (value, config) => {
+  const cfg = config && Array.isArray(config.tiers) && config.tiers.length ? config : AGED_DEFAULTS;
   if (!value) return { days: null, bonus: 0, label: "" };
   const t = new Date(value).getTime();
   if (!Number.isFinite(t)) return { days: null, bonus: 0, label: "" };
   const days = Math.max(0, Math.floor((Date.now() - t) / 86400000));
-  for (const tier of AGED_TIERS) if (days <= tier.maxDays) return { days, bonus: tier.bonus, label: tier.label };
-  const extraYears = Math.floor((days - 365) / 365);
-  return { days, bonus: 30000 + extraYears * 10000, label: `Aged ${1 + extraYears} tahun+` };
+  if (cfg.enabled === false) return { days, bonus: 0, label: "Harga tetap" };
+  const tiers = [...cfg.tiers].sort((a, b) => a.maxDays - b.maxDays);
+  for (const tier of tiers) if (days <= tier.maxDays) return { days, bonus: Number(tier.bonus) || 0, label: tier.label };
+  const last = tiers[tiers.length - 1];
+  const extraYears = Math.max(0, Math.floor((days - last.maxDays) / 365));
+  const yearBonus = Number(cfg.yearBonus) || 0;
+  const extraPerYear = Number(cfg.extraPerYear) || 0;
+  return { days, bonus: yearBonus + extraYears * extraPerYear, label: `Aged ${1 + extraYears} tahun+` };
 };
 export const LOGIN_TYPES = ["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"];
 /* Template produk siap pakai: admin cukup ganti harga, email & password. */

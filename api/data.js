@@ -1,7 +1,7 @@
 const { neon } = require("@neondatabase/serverless");
 const crypto = require("crypto");
 const { once } = require("./_schema");
-const { effectiveAccountPrice, agedInfo } = require("./_aged");
+const { effectiveAccountPrice, agedInfo, readAgedConfig } = require("./_aged");
 
 const ensureTable = once(async function ensureTableUncached(sql) {
   await sql`
@@ -58,6 +58,7 @@ module.exports = async function handler(request, response) {
   try {
     const sql = neon(process.env.DATABASE_URL);
     await ensureTable(sql);
+    const agedCfg = await readAgedConfig(sql);
     const rows = await sql`
       SELECT id, title, description, login_type AS "loginType", price, stock, status, credential_blob AS "credentialBlob"
       FROM codexa_account_listings
@@ -73,13 +74,13 @@ module.exports = async function handler(request, response) {
             ? [{ email: credentials.email || credentials.username || "", password: credentials.password || "", price: row.price }]
             : []);
       const basePrice = Math.max(0, Math.round(Number(row.price) || 0));
-      const agedEnabled = credentials.agedPricing !== false;
+      const agedEnabled = credentials.agedPricing !== false && agedCfg.enabled !== false;
       const maskedAccounts = accounts.map((account, index) => {
-        const info = agedEnabled ? agedInfo(account.createdAt) : { days: null, bonus: 0, label: "" };
+        const info = agedEnabled ? agedInfo(account.createdAt, agedCfg) : { days: null, bonus: 0, label: "" };
         return {
           index: index + 1,
           /* harga tampil = harga dasar + bonus umur akun (otomatis, sistem aged) */
-          price: effectiveAccountPrice(account, basePrice, agedEnabled),
+          price: effectiveAccountPrice(account, basePrice, agedEnabled, agedCfg),
           agedDays: info.days,
           agedLabel: info.label,
           agedBonus: info.bonus,

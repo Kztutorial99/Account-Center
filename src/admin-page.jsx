@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, LayoutDashboard, Wallet, ArrowUpRight, ArrowDownRight, BadgeCheck, Bell, Check, CircleHelp, Command, Eye, EyeOff, ChevronDown, FileText, LockKeyhole, LogIn, LogOut, Menu, MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingBag, Trash2, X, User, Mail, Sparkles,
+  ArrowRight, LayoutDashboard, Wallet, ArrowUpRight, ArrowDownRight, BadgeCheck, Bell, Check, CircleHelp, Command, Eye, EyeOff, ChevronDown, FileText, LockKeyhole, LogIn, LogOut, Menu, MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingBag, Trash2, X, User, Mail, Sparkles, TrendingUp,
 } from "lucide-react";
 import {
-  ACCENT_COLORS, ActionBtn, AssistantWidget, agedInfoOf, jsonRequest, CUSTOM_EMAIL_FEE, CUSTOM_EMAIL_STATUS_LABEL, CUSTOM_GENDER_LABEL, ExpandableText, Field, InputWrap, LOGIN_TYPES, PRODUCT_TEMPLATES, ProductDescription, ProviderIcon, RowSkeleton, SessionSplash, Spinner, customEmailsOf, emptyListing, formatBirthDate, formatDate, formatPrice, useConfirmDialog, usePendingActions,
+  ACCENT_COLORS, ActionBtn, AssistantWidget, agedInfoOf, AGED_DEFAULTS, jsonRequest, CUSTOM_EMAIL_FEE, CUSTOM_EMAIL_STATUS_LABEL, CUSTOM_GENDER_LABEL, ExpandableText, Field, InputWrap, LOGIN_TYPES, PRODUCT_TEMPLATES, ProductDescription, ProviderIcon, RowSkeleton, SessionSplash, Spinner, customEmailsOf, emptyListing, formatBirthDate, formatDate, formatPrice, useConfirmDialog, usePendingActions,
 } from "./main.jsx";
 
 function AdminPage({ onBack, onNotice }) {
@@ -29,6 +29,10 @@ function AdminPage({ onBack, onNotice }) {
   const [aiCfg, setAiCfg]                 = useState(null);
   const [aiForm, setAiForm]               = useState(null);
   const [savingAi, setSavingAi]           = useState(false);
+  const [agedCfg, setAgedCfg]             = useState(AGED_DEFAULTS);
+  const [agedForm, setAgedForm]           = useState(null);
+  const [savingAged, setSavingAged]       = useState(false);
+  const [agedError, setAgedError]         = useState("");
   const [aiNotice, setAiNotice]           = useState("");
   const [aiError, setAiError]             = useState("");
   const [testingAi, setTestingAi]         = useState(false);
@@ -72,6 +76,14 @@ function AdminPage({ onBack, onNotice }) {
           maxSteps: String(p.assistant.maxSteps ?? 6),
           temperature: String(p.assistant.temperature ?? 0.3),
           extraPrompt: p.assistant.extraPrompt || "",
+        });
+        const aged = p.aged && Array.isArray(p.aged.tiers) && p.aged.tiers.length ? p.aged : AGED_DEFAULTS;
+        setAgedCfg(aged);
+        setAgedForm({
+          enabled: aged.enabled !== false,
+          tiers: aged.tiers.map((t) => ({ maxDays: String(t.maxDays), bonus: String(t.bonus), label: t.label || "" })),
+          yearBonus: String(aged.yearBonus ?? 30000),
+          extraPerYear: String(aged.extraPerYear ?? 10000),
         });
       })
       .catch((e) => setAiError(e.message));
@@ -121,6 +133,52 @@ function AdminPage({ onBack, onNotice }) {
       setAiNotice(`${p.message} (model ${p.model})`);
     } catch (e) { setAiError(e.message); }
     finally { setTestingAi(false); }
+  };
+
+  /* ── Pengaturan harga aged (bisa diubah admin, tanpa redeploy) ── */
+  const updateAgedTier = (index, key, value) =>
+    setAgedForm((f) => ({ ...f, tiers: f.tiers.map((t, i) => (i === index ? { ...t, [key]: value } : t)) }));
+  const addAgedTier = () =>
+    setAgedForm((f) => ({ ...f, tiers: [...f.tiers, { maxDays: "", bonus: "", label: "" }] }));
+  const removeAgedTier = (index) =>
+    setAgedForm((f) => ({ ...f, tiers: f.tiers.filter((_, i) => i !== index) }));
+  const resetAgedForm = () =>
+    setAgedForm({
+      enabled: true,
+      tiers: AGED_DEFAULTS.tiers.map((t) => ({ maxDays: String(t.maxDays), bonus: String(t.bonus), label: t.label })),
+      yearBonus: String(AGED_DEFAULTS.yearBonus),
+      extraPerYear: String(AGED_DEFAULTS.extraPerYear),
+    });
+
+  const saveAgedSettings = async () => {
+    if (!agedForm) return;
+    const tiers = agedForm.tiers
+      .map((t) => ({ maxDays: Number(t.maxDays), bonus: Number(t.bonus) || 0, label: (t.label || "").trim() }))
+      .filter((t) => Number.isFinite(t.maxDays) && t.maxDays > 0);
+    if (!tiers.length) { setAgedError("Minimal satu tingkatan umur harus diisi"); return; }
+    setSavingAged(true); setAgedError("");
+    try {
+      const p = await jsonRequest("/api/admin/settings", {
+        method: "PATCH",
+        body: JSON.stringify({ aged: {
+          enabled: agedForm.enabled,
+          tiers,
+          yearBonus: Number(agedForm.yearBonus) || 0,
+          extraPerYear: Number(agedForm.extraPerYear) || 0,
+        } }),
+      });
+      const aged = p.aged || AGED_DEFAULTS;
+      setAgedCfg(aged);
+      setAgedForm({
+        enabled: aged.enabled !== false,
+        tiers: aged.tiers.map((t) => ({ maxDays: String(t.maxDays), bonus: String(t.bonus), label: t.label || "" })),
+        yearBonus: String(aged.yearBonus),
+        extraPerYear: String(aged.extraPerYear),
+      });
+      loadListings();
+      onNotice("Pengaturan harga aged disimpan");
+    } catch (e) { setAgedError(e.message); }
+    finally { setSavingAged(false); }
   };
 
   const setUserRole = async (id, role) => {
@@ -533,6 +591,7 @@ function AdminPage({ onBack, onNotice }) {
     { label: "Pengguna",    shortcut: "⌘U", icon: User,           dot: users.some((u) => u.status !== "active") },
     { label: "Top Up",      shortcut: "⌘T", icon: Wallet,         dot: topups.some((t) => t.status === "pending") },
     { label: "Custom Email",shortcut: "⌘E", icon: Mail,           dot: orders.some((o) => customEmailsOf(o).length) },
+    { label: "Harga Aged",  shortcut: "⌘G", icon: TrendingUp,     dot: agedCfg && agedCfg.enabled === false },
     { label: "Assisten",    shortcut: "⌘I", icon: Sparkles,       dot: !(aiCfg && aiCfg.enabled && aiCfg.hasKey) },
     { label: "Pengaturan",  shortcut: "⌘,", icon: Settings },
   ];
@@ -679,7 +738,117 @@ function AdminPage({ onBack, onNotice }) {
 
         {/* Content */}
         <div className="cx-admin-content" ref={contentRef}>
-          {activeNav === "Assisten" ? (
+          {activeNav === "Harga Aged" ? (
+            <>
+              <div className="cx-admin-top">
+                <div>
+                  <div className="cx-admin-date">Harga otomatis sesuai umur akun</div>
+                  <h1>Harga Aged</h1>
+                </div>
+                <div className="cx-admin-actions">
+                  <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={loadSettings}><RefreshCw size={11} /> Refresh</button>
+                  <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={resetAgedForm} disabled={!agedForm}>Pakai Rekomendasi</button>
+                </div>
+              </div>
+
+              <div className="cx-stat-grid">
+                {[
+                  { label: "Status", value: agedCfg?.enabled === false ? "Nonaktif" : "Aktif", delta: agedCfg?.enabled === false ? "semua akun harga tetap" : "harga naik sesuai umur", up: agedCfg?.enabled !== false },
+                  { label: "Tingkatan", value: `${(agedCfg?.tiers || []).length} tier`, delta: "dari fresh sampai aged", up: true },
+                  { label: "Bonus 1 tahun+", value: formatPrice(agedCfg?.yearBonus || 0), delta: "akun umur 1 tahun ke atas", up: true },
+                  { label: "Tiap tahun ekstra", value: formatPrice(agedCfg?.extraPerYear || 0), delta: "ditambah per tahun berikutnya", up: true },
+                ].map(({ label, value, delta, up }) => (
+                  <div key={label} className="cx-stat-card">
+                    <span className="cx-stat-label">{label}</span>
+                    <strong className="cx-stat-value" style={{ fontSize: 15 }}>{value}</strong>
+                    <span className="cx-stat-delta" style={{ color: up ? "var(--green)" : "var(--amber)" }}>{delta}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="cx-panel">
+                <div className="cx-panel-header">
+                  <h3>Tingkatan Bonus Umur</h3>
+                  <span className="cx-panel-sub">tersimpan di database, langsung dipakai tanpa redeploy</span>
+                </div>
+                <div style={{ padding: 14 }}>
+                  {!agedForm ? (
+                    <p style={{ color: "var(--faint)", fontSize: 11 }}>Memuat pengaturan...</p>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.7, marginTop: 0 }}>
+                        Isi <strong style={{ color: "var(--ink2)" }}>umur maksimal (hari)</strong> dan <strong style={{ color: "var(--ink2)" }}>bonus harga</strong> tiap tingkatan.
+                        Harga jual satu akun = harga dasar akun + bonus tingkatan yang cocok dengan tanggal buat akun.
+                      </p>
+                      <div className="cx-aged-editor">
+                        {agedForm.tiers.map((tier, index) => (
+                          <div className="cx-aged-row" key={index}>
+                            <span className="cx-account-no">#{index + 1}</span>
+                            <InputWrap>
+                              <input type="number" min="1" value={tier.maxDays} onChange={(e) => updateAgedTier(index, "maxDays", e.target.value)} placeholder="hari maks." />
+                            </InputWrap>
+                            <InputWrap>
+                              <input type="number" min="0" value={tier.bonus} onChange={(e) => updateAgedTier(index, "bonus", e.target.value)} placeholder="bonus (Rp)" />
+                            </InputWrap>
+                            <InputWrap>
+                              <input value={tier.label} onChange={(e) => updateAgedTier(index, "label", e.target.value)} placeholder="Nama tingkatan (cth. Aged 1-3 bulan)" />
+                            </InputWrap>
+                            <button type="button" className="cx-icon-btn" onClick={() => removeAgedTier(index)} disabled={agedForm.tiers.length <= 1} aria-label={`Hapus tingkatan #${index + 1}`}>
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                        <button type="button" className="cx-btn cx-btn-ghost cx-btn-sm" onClick={addAgedTier}>
+                          <Plus size={11} /> Tambah tingkatan
+                        </button>
+                      </div>
+
+                      <div className="cx-form-grid" style={{ marginTop: 14 }}>
+                        <Field label="Bonus akun 1 tahun+" hint="Dipakai kalau umur akun melewati tingkatan terakhir">
+                          <InputWrap><input type="number" min="0" value={agedForm.yearBonus} onChange={(e) => setAgedForm((f) => ({ ...f, yearBonus: e.target.value }))} /></InputWrap>
+                        </Field>
+                        <Field label="Tambahan tiap tahun berikutnya" hint="Contoh: umur 2 tahun = bonus 1 tahun + nilai ini">
+                          <InputWrap><input type="number" min="0" value={agedForm.extraPerYear} onChange={(e) => setAgedForm((f) => ({ ...f, extraPerYear: e.target.value }))} /></InputWrap>
+                        </Field>
+                        <div className="cx-full-span">
+                          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 11, color: "var(--ink2)" }}>
+                            <input type="checkbox" checked={agedForm.enabled} onChange={(e) => setAgedForm((f) => ({ ...f, enabled: e.target.checked }))} />
+                            Harga aged aktif untuk semua produk (kalau dimatikan, semua akun pakai harga dasar)
+                          </label>
+                        </div>
+                      </div>
+
+                      {agedError && <p className="cx-form-error">{agedError}</p>}
+                      <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+                        <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={saveAgedSettings} disabled={savingAged}>
+                          {savingAged ? <><RefreshCw size={11} /> Menyimpan...</> : <><Check size={11} /> Simpan Pengaturan Aged</>}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="cx-panel" style={{ marginTop: 18 }}>
+                <div className="cx-panel-header">
+                  <h3>Contoh Hitungan</h3>
+                  <span className="cx-panel-sub">simulasi harga dasar Rp5.000</span>
+                </div>
+                <div style={{ padding: 14, display: "grid", gap: 8 }}>
+                  {[3, 20, 60, 150, 300, 400, 800].map((days) => {
+                    const date = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+                    const info = agedInfoOf(date, agedCfg);
+                    return (
+                      <div key={days} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 11, color: "var(--muted)" }}>
+                        <span>Umur {days} hari · {info.label || "—"}</span>
+                        <strong style={{ color: "var(--ink)" }}>{formatPrice(5000 + info.bonus)}</strong>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : activeNav === "Assisten" ? (
             <>
               <div className="cx-admin-top">
                 <div>
@@ -1487,7 +1656,7 @@ function AdminPage({ onBack, onNotice }) {
                     <div className="cx-admin-aged">
                       {(() => {
                         const base = Number(account.price) > 0 ? Number(account.price) : Number(form.price) || 0;
-                        const info = form.agedPricing === false ? { bonus: 0, label: "Harga tetap", days: null } : agedInfoOf(account.createdAt);
+                        const info = form.agedPricing === false ? { bonus: 0, label: "Harga tetap", days: null } : agedInfoOf(account.createdAt, agedCfg);
                         return (
                           <>
                             <strong>{formatPrice(base + info.bonus)}</strong>

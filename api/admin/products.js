@@ -1,7 +1,7 @@
 const { neon } = require("@neondatabase/serverless");
 const crypto = require("crypto");
 const { isAdmin } = require("./_auth");
-const { effectiveAccountPrice, agedInfo } = require("../_aged");
+const { effectiveAccountPrice, agedInfo, readAgedConfig, DEFAULT_AGED_CONFIG } = require("../_aged");
 
 const LOGIN_TYPES = new Set(["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"]);
 const STATUSES = new Set(["available", "sold"]);
@@ -76,13 +76,14 @@ function validate(body, requireId = false) {
 }
 
 async function ensureTable(sql) { await sql`CREATE TABLE IF NOT EXISTS codexa_account_listings (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', login_type TEXT NOT NULL, price BIGINT NOT NULL DEFAULT 0, stock INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'sold')), credential_blob TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`; }
-function withAccounts(credentials, basePrice) {
+function withAccounts(credentials, basePrice, agedCfg) {
+  const cfg = agedCfg || DEFAULT_AGED_CONFIG;
   const c = credentials || {};
   const fallback = Math.max(0, Math.round(Number(basePrice) || 0));
   if (Array.isArray(c.accounts) && c.accounts.length) {
-    const aged = c.agedPricing !== false;
+    const aged = c.agedPricing !== false && cfg.enabled !== false;
     return { ...c, agedPricing: aged, accounts: c.accounts.map((a) => {
-      const info = aged ? agedInfo(a.createdAt) : { days: null, bonus: 0, label: "" };
+      const info = aged ? agedInfo(a.createdAt, cfg) : { days: null, bonus: 0, label: "" };
       return {
         email: a.email || a.username || "",
         password: a.password || "",
@@ -91,7 +92,7 @@ function withAccounts(credentials, basePrice) {
         agedDays: info.days,
         agedLabel: info.label,
         agedBonus: info.bonus,
-        agedPrice: effectiveAccountPrice(a, fallback, aged),
+        agedPrice: effectiveAccountPrice(a, fallback, aged, cfg),
       };
     }) };
   }
@@ -99,19 +100,20 @@ function withAccounts(credentials, basePrice) {
   return { accounts: legacy.email || legacy.password ? [legacy] : [], deliveryDetails: c.deliveryDetails || "" };
 }
 
-function view(row) {
-  const credentials = withAccounts(row.credentials, row.price);
+function view(row, agedCfg) {
+  const credentials = withAccounts(row.credentials, row.price, agedCfg);
   return { id: row.id, title: row.title, description: row.description, loginType: row.loginType, price: Number(row.price), stock: credentials.accounts.length, status: row.status, agedPricing: credentials.agedPricing !== false, accounts: credentials.accounts, deliveryDetails: credentials.deliveryDetails || "", createdAt: row.createdAt, updatedAt: row.updatedAt };
 }
 module.exports = async function handler(request, response) {
   if (!isAdmin(request)) return response.status(401).json({ error: "Admin login diperlukan" }); if (!process.env.DATABASE_URL) return response.status(500).json({ error: "DATABASE_URL is not configured" });
   try {
     const sql = neon(process.env.DATABASE_URL); await ensureTable(sql);
-    if (request.method === "GET") { const rows = await sql`SELECT id, title, description, login_type AS "loginType", price, stock, status, credential_blob AS "credentialBlob", created_at AS "createdAt", updated_at AS "updatedAt" FROM codexa_account_listings ORDER BY created_at DESC`; return response.status(200).json({ products: rows.map((row) => view({ ...row, credentials: decryptCredentials(row.credentialBlob) })) }); }
+    const agedCfg = await readAgedConfig(sql);
+    if (request.method === "GET") { const rows = await sql`SELECT id, title, description, login_type AS "loginType", price, stock, status, credential_blob AS "credentialBlob", created_at AS "createdAt", updated_at AS "updatedAt" FROM codexa_account_listings ORDER BY created_at DESC`; return response.status(200).json({ products: rows.map((row) => view({ ...row, credentials: decryptCredentials(row.credentialBlob) }, agedCfg)) }); }
     if (request.method === "DELETE") { const id = text(bodyOf(request).id, 160) || text((request.query && request.query.id) || "", 160); if (!id) return response.status(400).json({ error: "id listing wajib diisi" }); const [row] = await sql`DELETE FROM codexa_account_listings WHERE id=${id} RETURNING id`; if (!row) return response.status(404).json({ error: "Listing tidak ditemukan" }); return response.status(200).json({ deleted: row }); }
     const input = validate(bodyOf(request), request.method === "PATCH" || request.method === "PUT"); if (input.error) return response.status(400).json({ error: input.error });
-    if (request.method === "POST") { const id = crypto.randomUUID(); const [row] = await sql`INSERT INTO codexa_account_listings (id,title,description,login_type,price,stock,status,credential_blob) VALUES (${id},${input.title},${input.description},${input.loginType},${input.price},${input.stock},${input.status},${encryptCredentials(input.credentials)}) RETURNING id,title,description,login_type AS "loginType",price,stock,status,credential_blob AS "credentialBlob",created_at AS "createdAt",updated_at AS "updatedAt"`; return response.status(201).json({ product: view({ ...row, credentials: input.credentials }) }); }
-    if (request.method === "PATCH" || request.method === "PUT") { const [existing] = await sql`SELECT credential_blob AS "credentialBlob" FROM codexa_account_listings WHERE id = ${input.id}`; if (!existing) return response.status(404).json({ error: "Listing tidak ditemukan" }); const credentials = input.credentials; const [row] = await sql`UPDATE codexa_account_listings SET title=${input.title},description=${input.description},login_type=${input.loginType},price=${input.price},stock=${input.stock},status=${input.status},credential_blob=${encryptCredentials(credentials)},updated_at=NOW() WHERE id=${input.id} RETURNING id,title,description,login_type AS "loginType",price,stock,status,credential_blob AS "credentialBlob",created_at AS "createdAt",updated_at AS "updatedAt"`; return response.status(200).json({ product: view({ ...row, credentials }) }); }
+    if (request.method === "POST") { const id = crypto.randomUUID(); const [row] = await sql`INSERT INTO codexa_account_listings (id,title,description,login_type,price,stock,status,credential_blob) VALUES (${id},${input.title},${input.description},${input.loginType},${input.price},${input.stock},${input.status},${encryptCredentials(input.credentials)}) RETURNING id,title,description,login_type AS "loginType",price,stock,status,credential_blob AS "credentialBlob",created_at AS "createdAt",updated_at AS "updatedAt"`; return response.status(201).json({ product: view({ ...row, credentials: input.credentials }, agedCfg) }); }
+    if (request.method === "PATCH" || request.method === "PUT") { const [existing] = await sql`SELECT credential_blob AS "credentialBlob" FROM codexa_account_listings WHERE id = ${input.id}`; if (!existing) return response.status(404).json({ error: "Listing tidak ditemukan" }); const credentials = input.credentials; const [row] = await sql`UPDATE codexa_account_listings SET title=${input.title},description=${input.description},login_type=${input.loginType},price=${input.price},stock=${input.stock},status=${input.status},credential_blob=${encryptCredentials(credentials)},updated_at=NOW() WHERE id=${input.id} RETURNING id,title,description,login_type AS "loginType",price,stock,status,credential_blob AS "credentialBlob",created_at AS "createdAt",updated_at AS "updatedAt"`; return response.status(200).json({ product: view({ ...row, credentials }, agedCfg) }); }
     response.setHeader("Allow", "GET, POST, PATCH, PUT, DELETE"); return response.status(405).json({ error: "Method not allowed" });
   } catch (error) { console.error("Admin products API failed", error); return response.status(500).json({ error: error.message === "ACCOUNT_CREDENTIALS_KEY is not configured" ? "Kunci enkripsi kredensial belum dikonfigurasi di Vercel" : "Operasi listing gagal diproses" }); }
 };

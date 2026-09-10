@@ -11,6 +11,7 @@ const { isAdmin } = require("./_auth");
 const {
   assistantConfig, publicAssistantConfig, writeAssistantSettings, clampInt, clampNum,
 } = require("../_settings");
+const { readAgedConfig, writeAgedConfig, DEFAULT_AGED_CONFIG } = require("../_aged");
 
 module.exports = async function handler(request, response) {
   if (!isAdmin(request)) return response.status(401).json({ error: "Sesi admin tidak valid" });
@@ -20,7 +21,8 @@ module.exports = async function handler(request, response) {
 
     if (request.method === "GET") {
       const cfg = await assistantConfig(sql);
-      return response.status(200).json({ assistant: publicAssistantConfig(cfg) });
+      const aged = await readAgedConfig(sql, { fresh: true });
+      return response.status(200).json({ assistant: publicAssistantConfig(cfg), aged, agedDefaults: DEFAULT_AGED_CONFIG });
     }
 
     if (request.method === "POST") {
@@ -49,6 +51,14 @@ module.exports = async function handler(request, response) {
     }
 
     const body = bodyOf(request);
+
+    // Pengaturan harga aged (tingkatan bonus umur akun) disimpan terpisah.
+    if (body.aged && typeof body.aged === "object") {
+      const aged = await writeAgedConfig(sql, body.aged);
+      const cfg = await assistantConfig(sql);
+      return response.status(200).json({ ok: true, aged, agedDefaults: DEFAULT_AGED_CONFIG, assistant: publicAssistantConfig(cfg) });
+    }
+
     const patch = {};
 
     if (typeof body.enabled === "boolean") patch.enabled = body.enabled;
@@ -79,7 +89,8 @@ module.exports = async function handler(request, response) {
 
     await writeAssistantSettings(sql, patch);
     const cfg = await assistantConfig(sql);
-    return response.status(200).json({ ok: true, assistant: publicAssistantConfig(cfg) });
+    const aged = await readAgedConfig(sql);
+    return response.status(200).json({ ok: true, assistant: publicAssistantConfig(cfg), aged, agedDefaults: DEFAULT_AGED_CONFIG });
   } catch (error) {
     console.error("Admin settings failure", (error && error.message) || error);
     return response.status(500).json({ error: "Gagal memproses pengaturan" });
