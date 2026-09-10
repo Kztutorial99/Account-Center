@@ -584,12 +584,12 @@ export function SessionSplash({ title = "Menyiapkan Akun Instan", subtitle = "Me
    atau elemen internal aplikasi.
 ════════════════════════════════════════════════════ */
 const LANDING_FAQ = [
-  ["Apa itu Akun Instan?", "Akun Instan adalah toko digital Indonesia yang menjual akun Google/Gmail siap pakai dan layanan Custom Email (Gmail sesuai nama pilihanmu). Pembelian diproses otomatis \u2014 detail login langsung terbuka di menu Pesanan setelah pembayaran terverifikasi."],
-  ["Bagaimana cara membeli akun?", "Pilih produk di katalog, lakukan checkout, selesaikan pembayaran, lalu detail akun terbuka otomatis di menu Pesanan."],
-  ["Metode pembayaran apa yang tersedia?", "Pembayaran memakai QRIS, e-wallet (DANA, OVO, GoPay, ShopeePay) dan transfer bank melalui saldo Akun Instan."],
-  ["Kapan akun saya dikirim?", "Setelah pembayaran terverifikasi, detail login langsung terbuka di akun kamu tanpa menunggu admin."],
-  ["Bisa pesan Gmail dengan nama sendiri?", "Bisa. Gunakan menu Custom Email untuk memesan nama Gmail/username sesuai keinginan, lalu tim kami yang membuatkan akunnya."],
-  ["Bagaimana kalau akun bermasalah?", "Ajukan klaim lewat halaman Bantuan sesuai ketentuan pada Kebijakan Refund."],
+  ["Apa itu Akun Instan?", "Akun Instan adalah marketplace digital Indonesia yang menyediakan akun siap pakai, termasuk Google/Gmail, akun game, dan akun digital lainnya. Layanan Custom Email juga tersedia untuk membuat akun Gmail sesuai nama yang Anda inginkan. Setelah pembayaran terverifikasi, detail login langsung tersedia di menu Pesanan."],
+  ["Bagaimana cara membeli akun?", "Pilih produk pada katalog, lakukan checkout, selesaikan pembayaran, lalu detail akun akan terbuka otomatis di menu Pesanan."],
+  ["Metode pembayaran apa yang tersedia?", "Pembayaran dapat dilakukan melalui QRIS, e-wallet (DANA, OVO, GoPay, ShopeePay), atau transfer bank melalui saldo Akun Instan."],
+  ["Kapan akun saya dikirim?", "Setelah pembayaran terverifikasi, detail login langsung tersedia di akun Anda tanpa perlu menunggu konfirmasi admin."],
+  ["Bisa pesan Gmail dengan nama sendiri?", "Ya. Gunakan menu Custom Email untuk memesan nama Gmail atau username sesuai keinginan Anda, lalu tim kami akan membuatkan akunnya."],
+  ["Bagaimana kalau akun bermasalah?", "Ajukan klaim melalui halaman Bantuan sesuai dengan ketentuan Kebijakan Refund."],
 ];
 
 /* Header publik untuk pengunjung yang belum login — tanpa saldo,
@@ -2672,11 +2672,11 @@ const HELP_STEPS = [
 ];
 
 const HELP_FAQ = [
-  { q: "Berapa lama top up diproses?", a: "Umumnya di bawah 1x24 jam pada jam kerja. Status top up bisa dipantau di menu Top Up." },
-  { q: "Akun yang saya beli bermasalah, bagaimana?", a: "Buka Assisten Akun Instan dan laporkan kendalanya. Laporan tersimpan dan dibalas admin lewat notifikasi." },
-  { q: "Bisa refund saldo?", a: "Saldo yang sudah masuk dipakai untuk pembelian akun. Untuk kasus akun gagal dipakai, admin akan mengganti akun atau mengembalikan saldo." },
-  { q: "Di mana melihat detail akun saya?", a: "Menu Pesanan menyimpan semua pembelian beserta kredensial akunnya." },
-  { q: "Kenapa notifikasi tidak muncul?", a: "Tarik ulang halaman atau buka lonceng notifikasi di kanan atas. Pesan dari admin masuk ke situ." },
+  { q: "Berapa lama top up diproses?", a: "Umumnya di bawah 1x24 jam pada jam kerja. Status top up dapat dipantau di menu Top Up." },
+  { q: "Akun yang saya beli bermasalah, bagaimana?", a: "Hubungi Assisten Akun Instan untuk melaporkan kendala. Laporan akan tersimpan dan dibalas oleh admin melalui notifikasi." },
+  { q: "Bisa refund saldo?", a: "Saldo yang sudah masuk digunakan untuk pembelian akun. Untuk kasus akun yang gagal dipakai, admin akan mengganti akun atau mengembalikan saldo sesuai ketentuan." },
+  { q: "Di mana melihat detail akun saya?", a: "Menu Pesanan menyimpan semua riwayat pembelian beserta kredensial akunnya." },
+  { q: "Kenapa notifikasi tidak muncul?", a: "Tarik ulang halaman atau buka ikon lonceng notifikasi di kanan atas. Pesan dari admin akan masuk ke sana." },
 ];
 
 function HelpPage({ navigate, onAskAssistant }) {
@@ -2771,19 +2771,19 @@ function HelpPage({ navigate, onAskAssistant }) {
    HALAMAN FAQ (SEO: /faq)
 ════════════════════════════════════════════════════ */
 const FAQ_PAGE_ITEMS = [
-  { q: "Apa itu Akun Instan?", a: "Akun Instan adalah toko online (marketplace digital) asal Indonesia yang menjual akun digital siap pakai — terutama akun Google/Gmail — serta layanan Custom Email, yaitu pembuatan akun Gmail dengan nama pilihan pembeli. Semua pembelian diproses otomatis: setelah pembayaran terverifikasi, detail login (email dan password) langsung terbuka di menu Pesanan tanpa menunggu admin. Nama \u201cAkun Instan\u201d berasal dari cara kerjanya: akun diterima secara instan, bukan lewat chat manual." },
-  { q: "Apa saja yang bisa dibeli di Akun Instan?", a: "Ada tiga jenis layanan: (1) akun Google/Gmail siap pakai dari katalog dengan stok real-time, (2) Custom Email Gmail sesuai nama yang kamu tentukan sendiri, dan (3) akun digital lain seperti akun game dan social media yang katalognya terus ditambah." },
-  { q: "Apakah Akun Instan aman dan terpercaya?", a: "Setiap akun bergaransi login dan detail akun hanya bisa dilihat oleh pemilik pesanan. Password disimpan tersamar di halaman dan baru dibuka saat kamu menekan tombol tampilkan/salin. Jika akun gagal dipakai, admin mengganti akun atau mengembalikan saldo sesuai Kebijakan Refund." },
-  { q: "Bagaimana cara membeli akun di Akun Instan?", a: "Isi saldo lewat menu Top Up, pilih akun di katalog, klik Beli sekarang, lalu detail login langsung terbuka di menu Pesanan. Panduan lengkapnya ada di halaman Cara Beli." },
-  { q: "Metode pembayaran apa yang tersedia?", a: "Pembayaran memakai QRIS, e-wallet (DANA, OVO, GoPay, ShopeePay) dan transfer bank melalui saldo Akun Instan." },
-  { q: "Berapa lama top up diproses?", a: "Umumnya di bawah 1x24 jam pada jam kerja. Status top up bisa dipantau di menu Top Up." },
-  { q: "Kapan akun saya dikirim?", a: "Setelah pembayaran terverifikasi, detail login langsung terbuka di akun kamu tanpa menunggu admin." },
-  { q: "Apakah akun yang dijual bergaransi?", a: "Ya, setiap akun bergaransi login. Segera ganti password setelah menerima detail akun. Jika akun gagal dipakai, admin mengganti akun atau mengembalikan saldo sesuai Kebijakan Refund." },
-  { q: "Bisa pesan Gmail dengan nama sendiri?", a: "Bisa. Gunakan menu Custom Email untuk memesan nama Gmail/username sesuai keinginan, lalu tim kami yang membuatkan akunnya." },
-  { q: "Di mana melihat detail akun saya?", a: "Menu Pesanan menyimpan semua pembelian beserta kredensial akunnya dan bisa disalin kapan saja." },
-  { q: "Bisa refund saldo?", a: "Saldo yang sudah masuk dipakai untuk pembelian akun. Untuk kasus akun gagal dipakai, admin akan mengganti akun atau mengembalikan saldo." },
-  { q: "Kenapa notifikasi tidak muncul?", a: "Tarik ulang halaman atau buka lonceng notifikasi di kanan atas. Pesan dari admin masuk ke situ." },
-  { q: "Akun yang saya beli bermasalah, bagaimana?", a: "Buka Assisten Akun Instan dan laporkan kendalanya. Laporan tersimpan dan dibalas admin lewat notifikasi." },
+  { q: "Apa itu Akun Instan?", a: "Akun Instan adalah marketplace digital Indonesia yang menyediakan akun siap pakai, mulai dari Google/Gmail hingga akun game dan akun digital lainnya. Selain itu, tersedia layanan Custom Email untuk membuat akun Gmail sesuai nama yang Anda inginkan. Setelah pembayaran terverifikasi, detail login langsung tersedia di menu Pesanan tanpa perlu menunggu admin." },
+  { q: "Apa saja yang bisa dibeli di Akun Instan?", a: "Tersedia tiga kategori layanan: (1) akun Google/Gmail siap pakai dari katalog dengan stok real-time, (2) layanan Custom Email Gmail sesuai nama yang Anda tentukan sendiri, serta (3) akun digital lain seperti akun game dan akun social media yang katalognya terus ditambah." },
+  { q: "Apakah Akun Instan aman dan terpercaya?", a: "Setiap akun bergaransi login dan detail akun hanya dapat dilihat oleh pemilik pesanan. Password disimpan dalam bentuk tersamar di halaman dan baru akan ditampilkan saat Anda menekan tombol tampilkan atau salin. Jika akun gagal dipakai, admin akan mengganti akun atau mengembalikan saldo sesuai Kebijakan Refund." },
+  { q: "Bagaimana cara membeli akun di Akun Instan?", a: "Isi saldo melalui menu Top Up, pilih akun di katalog, klik Beli Sekarang, lalu detail login langsung terbuka di menu Pesanan. Panduan lengkap tersedia di halaman Cara Beli." },
+  { q: "Metode pembayaran apa yang tersedia?", a: "Pembayaran dapat dilakukan melalui QRIS, e-wallet (DANA, OVO, GoPay, ShopeePay), atau transfer bank melalui saldo Akun Instan." },
+  { q: "Berapa lama top up diproses?", a: "Umumnya di bawah 1x24 jam pada jam kerja. Status top up dapat dipantau di menu Top Up." },
+  { q: "Kapan akun saya dikirim?", a: "Setelah pembayaran terverifikasi, detail login langsung tersedia di akun Anda tanpa perlu menunggu konfirmasi admin." },
+  { q: "Apakah akun yang dijual bergaransi?", a: "Ya, setiap akun bergaransi login. Sebaiknya segera ganti password setelah menerima detail akun. Jika akun gagal dipakai, admin akan mengganti akun atau mengembalikan saldo sesuai Kebijakan Refund." },
+  { q: "Bisa pesan Gmail dengan nama sendiri?", a: "Ya. Gunakan menu Custom Email untuk memesan nama Gmail atau username sesuai keinginan Anda, lalu tim kami akan membuatkan akunnya." },
+  { q: "Di mana melihat detail akun saya?", a: "Menu Pesanan menyimpan semua riwayat pembelian beserta kredensial akunnya dan dapat disalin kapan saja." },
+  { q: "Bisa refund saldo?", a: "Saldo yang sudah masuk digunakan untuk pembelian akun. Untuk kasus akun yang gagal dipakai, admin akan mengganti akun atau mengembalikan saldo sesuai ketentuan." },
+  { q: "Kenapa notifikasi tidak muncul?", a: "Tarik ulang halaman atau buka ikon lonceng notifikasi di kanan atas. Pesan dari admin akan masuk ke sana." },
+  { q: "Akun yang saya beli bermasalah, bagaimana?", a: "Hubungi Assisten Akun Instan untuk melaporkan kendala. Laporan akan tersimpan dan dibalas oleh admin melalui notifikasi." },
 ];
 
 function FaqPage({ navigate, onAskAssistant }) {
@@ -2808,16 +2808,17 @@ function FaqPage({ navigate, onAskAssistant }) {
         <section className="cx-help-section cx-faq-about">
           <h2>Apa itu Akun Instan?</h2>
           <p>
-            <strong>Akun Instan</strong> adalah toko digital asal Indonesia yang menjual akun
-            Google/Gmail siap pakai dan melayani pembuatan <strong>Custom Email</strong> — akun
-            Gmail dengan nama yang kamu pilih sendiri. Prosesnya otomatis: isi saldo, pilih akun,
-            bayar, lalu detail login langsung terbuka di menu Pesanan tanpa perlu menunggu admin.
+            <strong>Akun Instan</strong> adalah marketplace digital Indonesia yang menyediakan akun
+            siap pakai, mulai dari Google/Gmail hingga akun game dan akun digital lainnya. Kami
+            juga melayani pembuatan <strong>Custom Email</strong>, yaitu akun Gmail dengan nama yang
+            Anda pilih sendiri. Prosesnya otomatis: isi saldo, pilih akun, lakukan pembayaran, lalu
+            detail login langsung tersedia di menu Pesanan tanpa perlu menunggu admin.
           </p>
           <ul className="cx-faq-about-list">
-            <li><strong>Akun siap pakai</strong> — stok Gmail/Google real-time dengan harga transparan.</li>
-            <li><strong>Custom Email</strong> — pesan nama Gmail sendiri, dibuatkan oleh tim kami.</li>
-            <li><strong>Instan &amp; bergaransi</strong> — akun terkirim otomatis dan bergaransi login.</li>
-            <li><strong>Pembayaran lokal</strong> — QRIS, e-wallet, dan transfer bank lewat saldo.</li>
+            <li><strong>Akun siap pakai</strong> — stok Gmail/Google dan akun digital lainnya real-time dengan harga transparan.</li>
+            <li><strong>Custom Email</strong> — pesan nama Gmail atau username sendiri, dibuatkan oleh tim kami.</li>
+            <li><strong>Instan &amp; bergaransi</strong> — akun terkirim otomatis dan dilindungi garansi login.</li>
+            <li><strong>Pembayaran lokal</strong> — QRIS, e-wallet, dan transfer bank melalui saldo Akun Instan.</li>
           </ul>
         </section>
 
