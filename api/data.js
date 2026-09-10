@@ -1,6 +1,7 @@
 const { neon } = require("@neondatabase/serverless");
 const crypto = require("crypto");
 const { once } = require("./_schema");
+const { effectiveAccountPrice, agedInfo } = require("./_aged");
 
 const ensureTable = once(async function ensureTableUncached(sql) {
   await sql`
@@ -72,11 +73,16 @@ module.exports = async function handler(request, response) {
             ? [{ email: credentials.email || credentials.username || "", password: credentials.password || "", price: row.price }]
             : []);
       const basePrice = Math.max(0, Math.round(Number(row.price) || 0));
+      const agedEnabled = credentials.agedPricing !== false;
       const maskedAccounts = accounts.map((account, index) => {
-        const n = Number(account.price);
+        const info = agedEnabled ? agedInfo(account.createdAt) : { days: null, bonus: 0, label: "" };
         return {
           index: index + 1,
-          price: Number.isFinite(n) && n >= 0 ? Math.round(n) : basePrice,
+          /* harga tampil = harga dasar + bonus umur akun (otomatis, sistem aged) */
+          price: effectiveAccountPrice(account, basePrice, agedEnabled),
+          agedDays: info.days,
+          agedLabel: info.label,
+          agedBonus: info.bonus,
           maskedEmail: maskEmail(account.email || account.username || ""),
           maskedPassword: maskPassword(account.password),
         };
