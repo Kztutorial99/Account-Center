@@ -3,6 +3,7 @@ const { db, ensureTables, currentUser, bodyOf } = require("./_users");
 const { createNotification } = require("./_notifications");
 const { isAdmin } = require("./admin/_auth");
 const { once } = require("./_schema");
+const { effectiveAccountPrice, agedInfo } = require("./_aged");
 
 /* ── enkripsi kredensial (format sama dengan api/admin/products.js) ── */
 function key() { return process.env.ACCOUNT_CREDENTIALS_KEY || ""; }
@@ -25,9 +26,18 @@ function decryptCredentials(value) {
 function accountsOf(credentials, basePrice) {
   const c = credentials || {};
   const fallback = Math.max(0, Math.round(Number(basePrice) || 0));
+  const aged = c.agedPricing !== false;
   const price = (v) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.round(n) : fallback; };
   if (Array.isArray(c.accounts) && c.accounts.length) {
-    return c.accounts.map((a) => ({ email: a.email || a.username || "", password: a.password || "", price: price(a.price) }));
+    return c.accounts.map((a) => ({
+      email: a.email || a.username || "",
+      password: a.password || "",
+      createdAt: a.createdAt || "",
+      basePrice: price(a.price),
+      /* harga yang ditagih = harga dasar + bonus umur akun (sistem aged) */
+      price: effectiveAccountPrice(a, fallback, aged),
+      agedLabel: aged ? agedInfo(a.createdAt).label : "",
+    }));
   }
   const legacy = { email: c.email || c.username || "", password: c.password || "", price: fallback };
   return legacy.email || legacy.password ? [legacy] : [];
@@ -459,7 +469,7 @@ async function openCustomEmails(sql, userId) {
   `;
 }
 
-const CUSTOM_EMAIL_FEE = 5000;
+const CUSTOM_EMAIL_FEE = 10000;
 
 const MAX_ITEMS = 50;
 const MAX_PICKS_PER_ITEM = 100;
@@ -859,7 +869,15 @@ module.exports = async function handler(request, response) {
 
     for (const purchase of purchases) {
       const { row, credentials, accounts, taken, remaining } = purchase;
-      const nextCredentials = { ...credentials, accounts: remaining };
+      /* Simpan kembali dalam bentuk asli (harga dasar + tanggal buat akun),
+         supaya bonus umur tidak ikut tersimpan jadi harga dasar. */
+      const remainingRaw = remaining.map((a) => ({
+        email: a.email,
+        password: a.password,
+        price: Number.isFinite(a.basePrice) ? a.basePrice : Number(a.price) || 0,
+        ...(a.createdAt ? { createdAt: a.createdAt } : {}),
+      }));
+      const nextCredentials = { ...credentials, accounts: remainingRaw };
       const nextStock = remaining.length;
       const nextPrice = remaining.length ? Math.min(...remaining.map((a) => a.price)) : Number(row.price) || 0;
       const nextStatus = remaining.length ? "available" : "sold";
