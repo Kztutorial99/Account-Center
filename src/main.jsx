@@ -16,7 +16,7 @@ import { signInWithGoogle, consumeGoogleRedirect, signOutGoogle } from "./google
 /* ─── helpers ─── */
 export const formatPrice = (v) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(v) || 0);
 export const formatDate = (v) => v ? new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(v)) : "-";
-export const CUSTOM_EMAIL_FEE = 5000;
+export const CUSTOM_EMAIL_FEE = 10000;
 export const CUSTOM_EMAIL_STATUS_LABEL = { pending: "Menunggu", processing: "Diproses", done: "Selesai", rejected: "Ditolak" };
 const CUSTOM_EMAIL_MAX = 3;
 export const CUSTOM_GENDER_LABEL = { male: "Laki-laki", female: "Perempuan", other: "Lainnya" };
@@ -39,6 +39,23 @@ export const customEmailsOf = (order) => {
   if (order && order.customEmail) return [{ id: order.id, requested: order.customEmail, status: order.customEmailStatus || "pending" }];
   return [];
 };
+/* Sistem harga aged: bonus otomatis sesuai umur akun (sinkron dgn api/_aged.js) */
+export const AGED_TIERS = [
+  { maxDays: 7, bonus: 0, label: "Fresh (0-7 hari)" },
+  { maxDays: 30, bonus: 2000, label: "Aged 8-30 hari" },
+  { maxDays: 90, bonus: 5000, label: "Aged 1-3 bulan" },
+  { maxDays: 180, bonus: 10000, label: "Aged 3-6 bulan" },
+  { maxDays: 365, bonus: 18000, label: "Aged 6-12 bulan" },
+];
+export const agedInfoOf = (value) => {
+  if (!value) return { days: null, bonus: 0, label: "" };
+  const t = new Date(value).getTime();
+  if (!Number.isFinite(t)) return { days: null, bonus: 0, label: "" };
+  const days = Math.max(0, Math.floor((Date.now() - t) / 86400000));
+  for (const tier of AGED_TIERS) if (days <= tier.maxDays) return { days, bonus: tier.bonus, label: tier.label };
+  const extraYears = Math.floor((days - 365) / 365);
+  return { days, bonus: 30000 + extraYears * 10000, label: `Aged ${1 + extraYears} tahun+` };
+};
 export const LOGIN_TYPES = ["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"];
 /* Template produk siap pakai: admin cukup ganti harga, email & password. */
 export const PRODUCT_TEMPLATES = [
@@ -49,6 +66,7 @@ export const PRODUCT_TEMPLATES = [
     data: {
       title: "Akun Google (Gmail) Fresh — Siap Pakai",
       loginType: "Google",
+      price: "6000",
       description: [
         "Tentang Produk:",
         "Akun Google / Gmail fresh (baru dibuat, belum pernah dipakai) dan siap langsung login. Jumlah akun yang kamu terima sesuai jumlah yang kamu beli.",
@@ -171,7 +189,7 @@ export const PRODUCT_TEMPLATES = [
   },
 ];
 
-export const emptyListing = { title: "", description: "", loginType: "Google", price: "", status: "available", accounts: [{ email: "", password: "", price: "" }], deliveryDetails: "" };
+export const emptyListing = { title: "", description: "", loginType: "Google", price: "", status: "available", agedPricing: true, accounts: [{ email: "", password: "", price: "", createdAt: "" }], deliveryDetails: "" };
 const accountPriceOf = (account, product) => {
   const n = Number(account && account.price);
   if (Number.isFinite(n) && n > 0) return n;
@@ -3172,7 +3190,10 @@ function AccountPicker({ product, accounts, selected, onToggle, pageSize = 3, si
                 <div className="cx-cred-row"><span>Email</span><code>{account.maskedEmail || "\u2014"}</code></div>
                 <div className="cx-cred-row"><span>Password</span><code>{account.maskedPassword || "\u2014"}</code></div>
               </div>
-              <span className="cx-cred-price">{formatPrice(accountPriceOf(account, product))}</span>
+              <span className="cx-cred-price">
+                {account.agedLabel ? <small className="cx-aged-tag">{account.agedLabel}</small> : null}
+                {formatPrice(accountPriceOf(account, product))}
+              </span>
             </label>
           );
         })}
