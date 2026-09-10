@@ -182,7 +182,7 @@ export function ProviderIcon({ type, size = 16, className = "" }) {
   );
 }
 
-async function jsonRequest(url, opts = {}) {
+export async function jsonRequest(url, opts = {}) {
   const r = await fetch(url, { credentials: "same-origin", ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) } });
   const p = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(p.error || "Permintaan gagal diproses");
