@@ -637,3 +637,40 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 .cx-ai-gate-list li svg { flex: 0 0 auto; opacity: .9; }
 .cx-ai-gate-cta { display: grid; gap: 8px; width: 100%; max-width: 320px; margin-top: 4px; }
 .cx-ai-gate-note { font-size: 11px; opacity: .6; }
+
+
+/* ── FAQ: blok penjelasan "Apa itu Akun Instan" ── */
+.cx-faq-about p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--cx-text-muted, rgba(233, 228, 255, .78));
+}
+.cx-faq-about strong { color: var(--cx-text, #f4f1ff); font-weight: 650; }
+.cx-faq-about-list {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.cx-faq-about-list li {
+  position: relative;
+  padding: 10px 12px 10px 30px;
+  border-radius: 12px;
+  font-size: 12.8px;
+  line-height: 1.6;
+  color: var(--cx-text-muted, rgba(233, 228, 255, .78));
+  background: rgba(139, 92, 246, .07);
+  border: 1px solid rgba(139, 92, 246, .16);
+}
+.cx-faq-about-list li::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 17px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a78bfa, #6d28d9);
+}
