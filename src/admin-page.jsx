@@ -3,7 +3,7 @@ import {
   ArrowRight, LayoutDashboard, Wallet, ArrowUpRight, ArrowDownRight, BadgeCheck, Bell, Check, CircleHelp, Command, Eye, EyeOff, ChevronDown, FileText, LockKeyhole, LogIn, LogOut, Menu, MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingBag, Trash2, X, User, Mail, Sparkles,
 } from "lucide-react";
 import {
-  ACCENT_COLORS, ActionBtn, AssistantWidget, jsonRequest, CUSTOM_EMAIL_FEE, CUSTOM_EMAIL_STATUS_LABEL, CUSTOM_GENDER_LABEL, ExpandableText, Field, InputWrap, LOGIN_TYPES, PRODUCT_TEMPLATES, ProductDescription, ProviderIcon, RowSkeleton, SessionSplash, Spinner, customEmailsOf, emptyListing, formatBirthDate, formatDate, formatPrice, useConfirmDialog, usePendingActions,
+  ACCENT_COLORS, ActionBtn, AssistantWidget, agedInfoOf, jsonRequest, CUSTOM_EMAIL_FEE, CUSTOM_EMAIL_STATUS_LABEL, CUSTOM_GENDER_LABEL, ExpandableText, Field, InputWrap, LOGIN_TYPES, PRODUCT_TEMPLATES, ProductDescription, ProviderIcon, RowSkeleton, SessionSplash, Spinner, customEmailsOf, emptyListing, formatBirthDate, formatDate, formatPrice, useConfirmDialog, usePendingActions,
 } from "./main.jsx";
 
 function AdminPage({ onBack, onNotice }) {
@@ -350,10 +350,11 @@ function AdminPage({ onBack, onNotice }) {
           ...listing,
           price: String(listing.price ?? ""),
           accounts: Array.isArray(listing.accounts) && listing.accounts.length
-            ? listing.accounts.map((a) => ({ email: a.email || a.username || "", password: a.password || "", price: String(a.price ?? listing.price ?? "") }))
-            : [{ email: "", password: "", price: String(listing.price ?? "") }],
+            ? listing.accounts.map((a) => ({ email: a.email || a.username || "", password: a.password || "", price: String(a.price ?? listing.price ?? ""), createdAt: (a.createdAt || "").slice(0, 10) }))
+            : [{ email: "", password: "", price: String(listing.price ?? ""), createdAt: "" }],
+          agedPricing: listing.agedPricing !== false,
         }
-      : { ...emptyListing, accounts: [{ email: "", password: "", price: "" }] });
+      : { ...emptyListing, accounts: [{ email: "", password: "", price: "", createdAt: "" }] });
   };
 
   const updateForm = (key, val) => setForm((f) => ({ ...f, [key]: val }));
@@ -365,11 +366,11 @@ function AdminPage({ onBack, onNotice }) {
 
   const updateAccount = (index, key, val) =>
     setForm((f) => ({ ...f, accounts: (f.accounts || []).map((a, i) => (i === index ? { ...a, [key]: val } : a)) }));
-  const addAccount = () => setForm((f) => ({ ...f, accounts: [...(f.accounts || []), { email: "", password: "", price: String(f.price || "") }] }));
+  const addAccount = () => setForm((f) => ({ ...f, accounts: [...(f.accounts || []), { email: "", password: "", price: String(f.price || ""), createdAt: "" }] }));
   const removeAccount = (index) =>
     setForm((f) => {
       const next = (f.accounts || []).filter((_, i) => i !== index);
-      return { ...f, accounts: next.length ? next : [{ email: "", password: "", price: String(f.price || "") }] };
+      return { ...f, accounts: next.length ? next : [{ email: "", password: "", price: String(f.price || ""), createdAt: "" }] };
     });
 
   const save = async () => {
@@ -377,10 +378,10 @@ function AdminPage({ onBack, onNotice }) {
     try {
       const basePrice = Number(form.price) || 0;
       const accounts = (form.accounts || [])
-        .map((a) => ({ email: (a.email || "").trim(), password: (a.password || "").trim(), price: Number(a.price) > 0 ? Number(a.price) : basePrice }))
+        .map((a) => ({ email: (a.email || "").trim(), password: (a.password || "").trim(), price: Number(a.price) > 0 ? Number(a.price) : basePrice, createdAt: (a.createdAt || "").slice(0, 10) }))
         .filter((a) => a.email || a.password);
       const price = accounts.length ? Math.min(...accounts.map((a) => a.price)) : basePrice;
-      const body = { ...form, accounts, price, stock: accounts.length };
+      const body = { ...form, accounts, price, stock: accounts.length, agedPricing: form.agedPricing !== false };
       if (form.id) await jsonRequest("/api/admin/products", { method: "PATCH", body: JSON.stringify(body) });
       else await jsonRequest("/api/admin/products", { method: "POST", body: JSON.stringify(body) });
       setForm(null); loadListings(); onNotice(form.id ? "Produk diperbarui" : "Produk ditambahkan");
@@ -1426,6 +1427,14 @@ function AdminPage({ onBack, onNotice }) {
                 <Field label="Stok (otomatis dari jumlah akun)">
                   <InputWrap><input value={(form.accounts || []).filter((a) => a.email || a.password).length} readOnly /></InputWrap>
                 </Field>
+                <Field label="Harga aged otomatis" hint="Harga naik sendiri sesuai umur akun (tanggal buat akun)">
+                  <InputWrap>
+                    <select value={form.agedPricing === false ? "off" : "on"} onChange={(e) => updateForm("agedPricing", e.target.value === "on")}>
+                      <option value="on">Aktif (harga + bonus umur)</option>
+                      <option value="off">Nonaktif (harga tetap)</option>
+                    </select>
+                  </InputWrap>
+                </Field>
                 <Field label="Status">
                   <InputWrap>
                     <select value={form.status} onChange={(e) => updateForm("status", e.target.value)}>
@@ -1435,7 +1444,7 @@ function AdminPage({ onBack, onNotice }) {
                   </InputWrap>
                 </Field>
               </div>
-              <div className="cx-form-divider">DATA AKUN <small>1 baris = 1 stok · harga bisa diatur per akun</small></div>
+              <div className="cx-form-divider">DATA AKUN <small>1 baris = 1 stok · harga dasar + tanggal buat akun (harga aged otomatis)</small></div>
               <div className="cx-account-editor">
                 {(form.accounts || []).map((account, index) => (
                   <div className="cx-account-row" key={index}>
@@ -1466,6 +1475,27 @@ function AdminPage({ onBack, onNotice }) {
                         placeholder={String(form.price || "Harga")}
                       />
                     </InputWrap>
+                    <InputWrap>
+                      <input
+                        type="date"
+                        value={account.createdAt || ""}
+                        max={new Date().toISOString().slice(0, 10)}
+                        onChange={(e) => updateAccount(index, "createdAt", e.target.value)}
+                        title="Tanggal akun dibuat"
+                      />
+                    </InputWrap>
+                    <div className="cx-admin-aged">
+                      {(() => {
+                        const base = Number(account.price) > 0 ? Number(account.price) : Number(form.price) || 0;
+                        const info = form.agedPricing === false ? { bonus: 0, label: "Harga tetap", days: null } : agedInfoOf(account.createdAt);
+                        return (
+                          <>
+                            <strong>{formatPrice(base + info.bonus)}</strong>
+                            <span>{info.label || "Isi tanggal buat akun"}{info.bonus ? ` · +${formatPrice(info.bonus)}` : ""}</span>
+                          </>
+                        );
+                      })()}
+                    </div>
                     <button
                       type="button"
                       className="cx-icon-btn"
