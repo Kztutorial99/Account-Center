@@ -1,6 +1,7 @@
 const { neon } = require("@neondatabase/serverless");
 const crypto = require("crypto");
 const { isAdmin } = require("./_auth");
+const { effectiveAccountPrice, agedInfo } = require("../_aged");
 
 const LOGIN_TYPES = new Set(["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"]);
 const STATUSES = new Set(["available", "sold"]);
@@ -26,6 +27,14 @@ function accountPrice(value, fallback) {
   if (Number.isFinite(n) && n >= 0) return Math.round(n);
   return Math.max(0, Math.round(Number(fallback) || 0));
 }
+/* Tanggal pembuatan akun (YYYY-MM-DD) untuk sistem harga aged. */
+function agedDate(value) {
+  const raw = text(value, 40);
+  if (!raw) return "";
+  const t = new Date(raw).getTime();
+  if (!Number.isFinite(t) || t > Date.now() + 86400000) return "";
+  return new Date(t).toISOString().slice(0, 10);
+}
 function normalizeAccounts(body, basePrice) {
   const raw = Array.isArray(body.accounts) ? body.accounts : [];
   const list = raw
@@ -33,6 +42,7 @@ function normalizeAccounts(body, basePrice) {
       email: text(item && (item.email || item.username), 320),
       password: text(item && item.password, 500),
       price: accountPrice(item && item.price, basePrice),
+      createdAt: agedDate(item && (item.createdAt || item.accountCreatedAt)),
     }))
     .filter((item) => item.email || item.password);
   if (list.length) return list;
@@ -62,7 +72,7 @@ function validate(body, requireId = false) {
   if (accounts.some((a) => !Number.isInteger(a.price) || a.price < 0)) return { error: "Harga tiap akun harus angka bulat positif" };
   const seen = new Set();
   for (const a of accounts) { const k = a.email.toLowerCase(); if (seen.has(k)) return { error: `Email duplikat: ${a.email}` }; seen.add(k); }
-  return { id, title, description, loginType, price, stock, status, credentials: { accounts, deliveryDetails: text(body.deliveryDetails, 3000) } };
+  return { id, title, description, loginType, price, stock, status, credentials: { accounts, agedPricing: body.agedPricing !== false, deliveryDetails: text(body.deliveryDetails, 3000) } };
 }
 
 async function ensureTable(sql) { await sql`CREATE TABLE IF NOT EXISTS codexa_account_listings (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', login_type TEXT NOT NULL, price BIGINT NOT NULL DEFAULT 0, stock INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'sold')), credential_blob TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`; }
@@ -70,7 +80,20 @@ function withAccounts(credentials, basePrice) {
   const c = credentials || {};
   const fallback = Math.max(0, Math.round(Number(basePrice) || 0));
   if (Array.isArray(c.accounts) && c.accounts.length) {
-    return { ...c, accounts: c.accounts.map((a) => ({ email: a.email || a.username || "", password: a.password || "", price: accountPrice(a.price, fallback) })) };
+    const aged = c.agedPricing !== false;
+    return { ...c, agedPricing: aged, accounts: c.accounts.map((a) => {
+      const info = aged ? agedInfo(a.createdAt) : { days: null, bonus: 0, label: "" };
+      return {
+        email: a.email || a.username || "",
+        password: a.password || "",
+        price: accountPrice(a.price, fallback),
+        createdAt: a.createdAt || "",
+        agedDays: info.days,
+        agedLabel: info.label,
+        agedBonus: info.bonus,
+        agedPrice: effectiveAccountPrice(a, fallback, aged),
+      };
+    }) };
   }
   const legacy = { email: c.email || c.username || "", password: c.password || "", price: fallback };
   return { accounts: legacy.email || legacy.password ? [legacy] : [], deliveryDetails: c.deliveryDetails || "" };
@@ -78,7 +101,7 @@ function withAccounts(credentials, basePrice) {
 
 function view(row) {
   const credentials = withAccounts(row.credentials, row.price);
-  return { id: row.id, title: row.title, description: row.description, loginType: row.loginType, price: Number(row.price), stock: credentials.accounts.length, status: row.status, accounts: credentials.accounts, deliveryDetails: credentials.deliveryDetails || "", createdAt: row.createdAt, updatedAt: row.updatedAt };
+  return { id: row.id, title: row.title, description: row.description, loginType: row.loginType, price: Number(row.price), stock: credentials.accounts.length, status: row.status, agedPricing: credentials.agedPricing !== false, accounts: credentials.accounts, deliveryDetails: credentials.deliveryDetails || "", createdAt: row.createdAt, updatedAt: row.updatedAt };
 }
 module.exports = async function handler(request, response) {
   if (!isAdmin(request)) return response.status(401).json({ error: "Admin login diperlukan" }); if (!process.env.DATABASE_URL) return response.status(500).json({ error: "DATABASE_URL is not configured" });
