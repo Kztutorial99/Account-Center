@@ -584,6 +584,7 @@ export function SessionSplash({ title = "Menyiapkan Akun Instan", subtitle = "Me
    atau elemen internal aplikasi.
 ════════════════════════════════════════════════════ */
 const LANDING_FAQ = [
+  ["Apa itu Akun Instan?", "Akun Instan adalah toko digital Indonesia yang menjual akun Google/Gmail siap pakai dan layanan Custom Email (Gmail sesuai nama pilihanmu). Pembelian diproses otomatis \u2014 detail login langsung terbuka di menu Pesanan setelah pembayaran terverifikasi."],
   ["Bagaimana cara membeli akun?", "Pilih produk di katalog, lakukan checkout, selesaikan pembayaran, lalu detail akun terbuka otomatis di menu Pesanan."],
   ["Metode pembayaran apa yang tersedia?", "Pembayaran memakai QRIS, e-wallet (DANA, OVO, GoPay, ShopeePay) dan transfer bank melalui saldo Akun Instan."],
   ["Kapan akun saya dikirim?", "Setelah pembayaran terverifikasi, detail login langsung terbuka di akun kamu tanpa menunggu admin."],
@@ -2770,6 +2771,9 @@ function HelpPage({ navigate, onAskAssistant }) {
    HALAMAN FAQ (SEO: /faq)
 ════════════════════════════════════════════════════ */
 const FAQ_PAGE_ITEMS = [
+  { q: "Apa itu Akun Instan?", a: "Akun Instan adalah toko online (marketplace digital) asal Indonesia yang menjual akun digital siap pakai — terutama akun Google/Gmail — serta layanan Custom Email, yaitu pembuatan akun Gmail dengan nama pilihan pembeli. Semua pembelian diproses otomatis: setelah pembayaran terverifikasi, detail login (email dan password) langsung terbuka di menu Pesanan tanpa menunggu admin. Nama \u201cAkun Instan\u201d berasal dari cara kerjanya: akun diterima secara instan, bukan lewat chat manual." },
+  { q: "Apa saja yang bisa dibeli di Akun Instan?", a: "Ada tiga jenis layanan: (1) akun Google/Gmail siap pakai dari katalog dengan stok real-time, (2) Custom Email Gmail sesuai nama yang kamu tentukan sendiri, dan (3) akun digital lain seperti akun game dan social media yang katalognya terus ditambah." },
+  { q: "Apakah Akun Instan aman dan terpercaya?", a: "Setiap akun bergaransi login dan detail akun hanya bisa dilihat oleh pemilik pesanan. Password disimpan tersamar di halaman dan baru dibuka saat kamu menekan tombol tampilkan/salin. Jika akun gagal dipakai, admin mengganti akun atau mengembalikan saldo sesuai Kebijakan Refund." },
   { q: "Bagaimana cara membeli akun di Akun Instan?", a: "Isi saldo lewat menu Top Up, pilih akun di katalog, klik Beli sekarang, lalu detail login langsung terbuka di menu Pesanan. Panduan lengkapnya ada di halaman Cara Beli." },
   { q: "Metode pembayaran apa yang tersedia?", a: "Pembayaran memakai QRIS, e-wallet (DANA, OVO, GoPay, ShopeePay) dan transfer bank melalui saldo Akun Instan." },
   { q: "Berapa lama top up diproses?", a: "Umumnya di bawah 1x24 jam pada jam kerja. Status top up bisa dipantau di menu Top Up." },
@@ -2799,6 +2803,22 @@ function FaqPage({ navigate, onAskAssistant }) {
               <CircleHelp size={13} /> Cara beli
             </button>
           </div>
+        </section>
+
+        <section className="cx-help-section cx-faq-about">
+          <h2>Apa itu Akun Instan?</h2>
+          <p>
+            <strong>Akun Instan</strong> adalah toko digital asal Indonesia yang menjual akun
+            Google/Gmail siap pakai dan melayani pembuatan <strong>Custom Email</strong> — akun
+            Gmail dengan nama yang kamu pilih sendiri. Prosesnya otomatis: isi saldo, pilih akun,
+            bayar, lalu detail login langsung terbuka di menu Pesanan tanpa perlu menunggu admin.
+          </p>
+          <ul className="cx-faq-about-list">
+            <li><strong>Akun siap pakai</strong> — stok Gmail/Google real-time dengan harga transparan.</li>
+            <li><strong>Custom Email</strong> — pesan nama Gmail sendiri, dibuatkan oleh tim kami.</li>
+            <li><strong>Instan &amp; bergaransi</strong> — akun terkirim otomatis dan bergaransi login.</li>
+            <li><strong>Pembayaran lokal</strong> — QRIS, e-wallet, dan transfer bank lewat saldo.</li>
+          </ul>
         </section>
 
         <section className="cx-help-section">
