@@ -178,6 +178,51 @@ export function applySeo(page) {
   );
 }
 
+/* Halaman produk (URL sendiri per listing) → meta + Product schema. */
+export function applyProductSeo(product, page) {
+  const url = `${SITE_URL}/${String(page || "").replace(/^\/+/, "")}`;
+  const name = (product && product.title) || "Detail produk akun digital";
+  const stock = product ? Number(product.stock) || (Array.isArray(product.accounts) ? product.accounts.length : 0) : 0;
+  const rawDesc = (product && product.description) || "";
+  const description = (rawDesc.replace(/\s+/g, " ").trim() ||
+    `Beli ${name} di Akun Instan. Jumlah akun sesuai jumlah yang dibeli, detail login dikirim instan setelah pembayaran, garansi login.`).slice(0, 300);
+  const title = `${name} — Jual Akun Digital Murah | ${SITE_NAME}`;
+  const image = `${SITE_URL}/favicon.svg`;
+
+  document.title = title;
+  setMeta("name", "description", description);
+  setMeta("name", "keywords", `${name}, jual ${name}, beli ${name}, akun digital murah, akun instan`);
+  setMeta("name", "robots", product ? "index, follow, max-image-preview:large" : "noindex, follow");
+  setLink("canonical", url);
+  setMeta("property", "og:type", "product");
+  setMeta("property", "og:site_name", SITE_NAME);
+  setMeta("property", "og:title", title);
+  setMeta("property", "og:description", description);
+  setMeta("property", "og:url", url);
+  setMeta("property", "og:image", image);
+  setMeta("property", "og:locale", "id_ID");
+  setMeta("name", "twitter:card", "summary_large_image");
+  setMeta("name", "twitter:title", title);
+  setMeta("name", "twitter:description", description);
+  setMeta("name", "twitter:image", image);
+
+  setJsonLd("ld-page", product ? {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name,
+    description,
+    url,
+    brand: { "@type": "Brand", name: SITE_NAME },
+    offers: {
+      "@type": "Offer",
+      price: Number(product.price) || 0,
+      priceCurrency: "IDR",
+      url,
+      availability: stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+    },
+  } : null);
+}
+
 /* Katalog produk → ItemList schema, dipanggil setelah data produk siap. */
 export function applyProductSchema(products) {
   const list = Array.isArray(products) ? products.filter(Boolean).slice(0, 30) : [];
