@@ -1074,25 +1074,33 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   background: linear-gradient(135deg, rgba(139,92,246,.10), rgba(139,92,246,.03));
   display: flex; flex-direction: column; gap: 9px;
 }
-.cx-profile-security-head { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
+.cx-profile-security-head { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .cx-profile-security-icon {
   flex: none; width: 28px; height: 28px; border-radius: 8px;
   display: grid; place-items: center; color: #c4b5fd;
   background: rgba(139,92,246,.16); border: 1px solid rgba(139,92,246,.28);
 }
-.cx-profile-security-copy { min-width: 0; }
+.cx-profile-security-copy { min-width: 0; flex: 1 1 auto; }
 .cx-profile-security-copy strong { display: block; font-size: 12.5px; line-height: 1.3; }
 .cx-profile-security-copy small {
   display: block; margin-top: 2px; font-size: 10.5px; line-height: 1.45;
   color: var(--muted, #9089b0); word-break: break-word;
 }
+.cx-profile-security-toggle { flex: none; }
+.cx-profile-security-form {
+  display: flex; flex-direction: column; gap: 8px;
+  padding-top: 9px; border-top: 1px solid rgba(139,92,246,.18);
+}
+.cx-profile-security-form .cx-input-wrap input { min-width: 0; }
 .cx-profile-security-msg {
   margin: 0; font-size: 10.5px; line-height: 1.45;
   display: flex; align-items: center; gap: 5px;
 }
 .cx-profile-security-msg.is-ok { color: #6ee7b7; }
 .cx-profile-security-msg.is-err { color: #fca5a5; }
-.cx-profile-security-btn { align-self: flex-start; }
-@media (max-width: 480px) {
-  .cx-profile-security-btn { align-self: stretch; justify-content: center; width: 100%; }
+.cx-profile-security-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.cx-profile-security-actions .cx-btn { flex: 1 1 140px; justify-content: center; }
+.cx-eye-btn {
+  color: var(--muted, #9089b0); background: none; border: 0;
+  cursor: pointer; padding: 0; display: grid; place-items: center;
 }

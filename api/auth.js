@@ -153,6 +153,45 @@ module.exports = async function handler(request, response) {
     const email = text(body.email, 160).toLowerCase();
     const password = typeof body.password === "string" ? body.password : "";
 
+    /* Ganti password langsung dari halaman profil (tanpa link email).
+       Wajib sudah login dan tahu password lama. */
+    if (action === "change-password") {
+      const uid = sessionUserId(request);
+      if (!uid) return response.status(401).json({ error: "Silakan masuk dulu" });
+      const gate = await rateLimit(sql, { key: `auth:change-pass:${uid}`, limit: 10, windowSec: 600 });
+      if (!gate.allowed) {
+        response.setHeader("Retry-After", String(gate.retryAfter));
+        return response.status(429).json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${gate.retryAfter} detik.` });
+      }
+      const currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
+      if (password.length < 6) return response.status(400).json({ error: "Password baru minimal 6 karakter" });
+      const rows = await sql`
+        SELECT id, provider, status, password_hash AS "passwordHash"
+        FROM codexa_users WHERE id = ${uid} LIMIT 1
+      `;
+      const me = rows[0];
+      if (!me) return response.status(404).json({ error: "Akun tidak ditemukan" });
+      if (me.status && me.status !== "active") {
+        return response.status(403).json({ error: "Akun kamu dinonaktifkan. Hubungi admin." });
+      }
+      if (me.provider === "google") {
+        return response.status(400).json({ error: "Akun Google tidak memakai password" });
+      }
+      if (!verifyPassword(currentPassword, me.passwordHash)) {
+        return response.status(400).json({ error: "Password saat ini salah" });
+      }
+      if (verifyPassword(password, me.passwordHash)) {
+        return response.status(400).json({ error: "Password baru harus berbeda dari password lama" });
+      }
+      await sql`
+        UPDATE codexa_users
+        SET password_hash = ${hashPassword(password)}, reset_token_hash = NULL, reset_expires_at = NULL
+        WHERE id = ${uid}
+      `;
+      return response.status(200).json({ message: "Password berhasil diganti" });
+    }
+
+
     /* Lupa password: kirim link reset ke email (jawaban selalu sama supaya
        email yang terdaftar tidak bisa ditebak dari respons). */
     if (action === "forgot-password") {

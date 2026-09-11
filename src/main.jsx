@@ -4587,6 +4587,35 @@ function ProfilePage({ user, onBack, onTopup, onSaved, onNotice }) {
   const [resetMsg, setResetMsg] = useState("");
   const [resetErr, setResetErr] = useState("");
   const [resetCooldown, startResetCooldown] = useSendCooldown("codexa:reset-link-until");
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwShow, setPwShow] = useState(false);
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwMsg, setPwMsg] = useState("");
+  const [pwErr, setPwErr] = useState("");
+  const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
+
+  /* Ganti password langsung dari profil, tanpa perlu link email. */
+  const changePassword = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (pwBusy) return;
+    setPwMsg(""); setPwErr("");
+    if (pwForm.next.length < 6) { setPwErr("Password baru minimal 6 karakter"); return; }
+    if (pwForm.next !== pwForm.confirm) { setPwErr("Ulangi password baru belum sama"); return; }
+    setPwBusy(true);
+    try {
+      const res = await jsonRequest("/api/auth", {
+        method: "POST",
+        body: JSON.stringify({ action: "change-password", currentPassword: pwForm.current, password: pwForm.next }),
+      });
+      setPwForm({ current: "", next: "", confirm: "" });
+      setPwShow(false);
+      setPwOpen(false);
+      if (onNotice) onNotice(res.message || "Password berhasil diganti");
+    } catch (err) {
+      setPwErr(err.message || "Gagal mengganti password");
+    } finally { setPwBusy(false); }
+  };
+
 
   const sendReset = async () => {
     if (resetBusy || resetCooldown > 0) return;
@@ -4730,26 +4759,86 @@ function ProfilePage({ user, onBack, onTopup, onSaved, onNotice }) {
               <div className="cx-profile-security-head">
                 <span className="cx-profile-security-icon" aria-hidden="true"><KeyRound size={14} /></span>
                 <div className="cx-profile-security-copy">
-                  <strong>Reset password</strong>
-                  <small>Kirim link ganti password ke {user.email}</small>
+                  <strong>Ganti password</strong>
+                  <small>Ubah password akun langsung di sini</small>
                 </div>
+                <button
+                  type="button"
+                  className="cx-btn cx-btn-ghost cx-btn-sm cx-profile-security-toggle"
+                  onClick={() => { setPwOpen((v) => !v); setPwErr(""); setPwMsg(""); }}
+                  aria-expanded={pwOpen}
+                >
+                  {pwOpen ? "Tutup" : "Ubah"}
+                </button>
               </div>
-              {resetMsg && <p className="cx-profile-security-msg is-ok"><BadgeCheck size={12} /> {resetMsg}</p>}
-              {resetErr && <p className="cx-profile-security-msg is-err">{resetErr}</p>}
-              <button
-                type="button"
-                className="cx-btn cx-btn-secondary cx-btn-sm cx-profile-security-btn"
-                disabled={resetBusy || resetCooldown > 0}
-                onClick={sendReset}
-              >
-                {resetBusy
-                  ? <><Spinner size={12} /> Mengirim...</>
-                  : resetCooldown > 0
-                    ? <><Clock size={12} /> Kirim ulang {resetCooldown}s</>
-                    : <><Send size={12} /> Kirim link reset</>}
-              </button>
+
+              {pwOpen && (
+                <form className="cx-profile-security-form" onSubmit={changePassword}>
+                  <Field label="Password saat ini">
+                    <InputWrap icon={LockKeyhole}>
+                      <input
+                        type={pwShow ? "text" : "password"}
+                        value={pwForm.current}
+                        onChange={(e) => setPwForm((f) => ({ ...f, current: e.target.value }))}
+                        placeholder="••••••"
+                        autoComplete="current-password"
+                        required
+                      />
+                      <button type="button" className="cx-eye-btn" onClick={() => setPwShow((v) => !v)} aria-label="Tampilkan password">
+                        {pwShow ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                    </InputWrap>
+                  </Field>
+                  <Field label="Password baru" hint="Minimal 6 karakter.">
+                    <InputWrap icon={KeyRound}>
+                      <input
+                        type={pwShow ? "text" : "password"}
+                        value={pwForm.next}
+                        onChange={(e) => setPwForm((f) => ({ ...f, next: e.target.value }))}
+                        placeholder="••••••"
+                        autoComplete="new-password"
+                        required
+                      />
+                    </InputWrap>
+                  </Field>
+                  <Field label="Ulangi password baru">
+                    <InputWrap icon={KeyRound}>
+                      <input
+                        type={pwShow ? "text" : "password"}
+                        value={pwForm.confirm}
+                        onChange={(e) => setPwForm((f) => ({ ...f, confirm: e.target.value }))}
+                        placeholder="••••••"
+                        autoComplete="new-password"
+                        required
+                      />
+                    </InputWrap>
+                  </Field>
+                  {pwMsg && <p className="cx-profile-security-msg is-ok"><BadgeCheck size={12} /> {pwMsg}</p>}
+                  {pwErr && <p className="cx-profile-security-msg is-err">{pwErr}</p>}
+                  <div className="cx-profile-security-actions">
+                    <button type="submit" className="cx-btn cx-btn-primary cx-btn-sm" disabled={pwBusy}>
+                      {pwBusy ? <><Spinner size={12} /> Menyimpan...</> : <><ShieldCheck size={12} /> Simpan password</>}
+                    </button>
+                    <button
+                      type="button"
+                      className="cx-btn cx-btn-ghost cx-btn-sm"
+                      disabled={pwBusy || resetBusy || resetCooldown > 0}
+                      onClick={sendReset}
+                    >
+                      {resetBusy
+                        ? <><Spinner size={12} /> Mengirim...</>
+                        : resetCooldown > 0
+                          ? <><Clock size={12} /> Link {resetCooldown}s</>
+                          : <><Send size={12} /> Lupa password</>}
+                    </button>
+                  </div>
+                  {resetMsg && <p className="cx-profile-security-msg is-ok"><BadgeCheck size={12} /> {resetMsg}</p>}
+                  {resetErr && <p className="cx-profile-security-msg is-err">{resetErr}</p>}
+                </form>
+              )}
             </div>
           )}
+
 
           <div className="cx-balance-card">
             <span><Wallet size={13} /> Saldo tersedia</span>
