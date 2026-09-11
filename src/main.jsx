@@ -4457,7 +4457,7 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
                 <p className="cx-email-check is-ok"><BadgeCheck size={11} /> Email terdaftar, silakan isi password</p>
               )}
             </Field>
-            {(mode !== "login" || emailCheck !== "checking") && (
+            {(mode === "register" || emailCheck === "email") && (
               <Field label="Password" hint={mode === "register" ? "Minimal 6 karakter." : ""}>
                 <InputWrap icon={LockKeyhole}>
                   <input type={showPass ? "text" : "password"} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="••••••" required />
