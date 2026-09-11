@@ -11,11 +11,96 @@ module.exports = async function handler(request, response) {
     const sql = db();
     await ensureTables(sql);
 
+    /* ── DETAIL (satu user + aktivitas nyata) ── */
+    const detailId = request.query && typeof request.query.id === "string" ? request.query.id : "";
+    if (request.method === "GET" && detailId) {
+      const rows = await sql`
+        SELECT u.id, u.name, u.email, u.phone, u.balance, u.status, u.role, u.note,
+               u.provider, u.created_at AS "createdAt"
+        FROM codexa_users u WHERE u.id = ${detailId} LIMIT 1
+      `;
+      if (!rows.length) return response.status(404).json({ error: "User tidak ditemukan" });
+      const user = rows[0];
+
+      const [agg] = await sql`
+        SELECT COALESCE(SUM(CASE WHEN status = 'approved' THEN amount ELSE 0 END), 0) AS "topupTotal",
+               COUNT(*) FILTER (WHERE status = 'approved') AS "topupCount",
+               COUNT(*) FILTER (WHERE status = 'pending') AS "pendingCount",
+               MAX(created_at) AS "lastTopupAt"
+        FROM codexa_topups WHERE user_id = ${detailId}
+      `;
+      const topups = await sql`
+        SELECT id, amount, method, status, created_at AS "createdAt"
+        FROM codexa_topups WHERE user_id = ${detailId} ORDER BY created_at DESC LIMIT 8
+      `;
+
+      // Tabel pesanan dibuat oleh modul lain; jangan gagalkan detail bila belum ada.
+      let orderStat = { orderCount: 0, orderTotal: 0, lastOrderAt: null, available: false };
+      let orders = [];
+      try {
+        const [o] = await sql`
+          SELECT COUNT(*) AS "orderCount", COALESCE(SUM(total), 0) AS "orderTotal",
+                 MAX(created_at) AS "lastOrderAt"
+          FROM codexa_orders WHERE user_id = ${detailId}
+        `;
+        orderStat = {
+          orderCount: Number(o.orderCount) || 0,
+          orderTotal: Number(o.orderTotal) || 0,
+          lastOrderAt: o.lastOrderAt || null,
+          available: true,
+        };
+        orders = await sql`
+          SELECT id, total, item_count AS "itemCount", created_at AS "createdAt"
+          FROM codexa_orders WHERE user_id = ${detailId} ORDER BY created_at DESC LIMIT 8
+        `;
+      } catch (_) { /* tabel pesanan belum tersedia */ }
+
+      const activity = [
+        {
+          kind: "signup",
+          label: `Akun dibuat${user.provider === "google" ? " via Google" : " via Email"}`,
+          status: "Terdaftar",
+          at: user.createdAt,
+        },
+        ...topups.map((t) => ({
+          kind: "topup",
+          label: `Top up ${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(t.amount) || 0)}`,
+          status: t.status === "approved" ? "Berhasil" : t.status === "pending" ? "Menunggu" : "Ditolak",
+          at: t.createdAt,
+        })),
+        ...orders.map((o) => ({
+          kind: "order",
+          label: `Pembelian ${Number(o.itemCount) || 1} item`,
+          status: new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(o.total) || 0),
+          at: o.createdAt,
+        })),
+      ]
+        .filter((a) => a.at)
+        .sort((a, b) => new Date(b.at) - new Date(a.at))
+        .slice(0, 10);
+
+      return response.status(200).json({
+        user: {
+          ...user,
+          balance: Number(user.balance) || 0,
+          status: user.status || "active",
+          role: user.role === "admin" ? "admin" : "user",
+          provider: user.provider || "",
+          topupTotal: Number(agg.topupTotal) || 0,
+          topupCount: Number(agg.topupCount) || 0,
+          pendingCount: Number(agg.pendingCount) || 0,
+          lastTopupAt: agg.lastTopupAt || null,
+          ...orderStat,
+        },
+        activity,
+      });
+    }
+
     /* ── LIST ── */
     if (request.method === "GET") {
       const users = await sql`
         SELECT u.id, u.name, u.email, u.phone, u.balance, u.status, u.role, u.note,
-               u.created_at AS "createdAt",
+               u.provider, u.created_at AS "createdAt",
                COALESCE(SUM(CASE WHEN t.status = 'approved' THEN t.amount ELSE 0 END), 0) AS "topupTotal",
                COUNT(t.id) FILTER (WHERE t.status = 'pending') AS "pendingCount",
                MAX(t.created_at) AS "lastTopupAt"
@@ -33,9 +118,11 @@ module.exports = async function handler(request, response) {
           pendingCount: Number(u.pendingCount) || 0,
           status: u.status || "active",
           role: u.role === "admin" ? "admin" : "user",
+          provider: u.provider || "",
         })),
       });
     }
+
 
     const body = bodyOf(request);
     const id = text(body.id, 60);
