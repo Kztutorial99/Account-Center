@@ -552,11 +552,11 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 .cx-auth-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 .cx-auth-mark {
   width: 42px; height: 42px; flex: none; border-radius: 13px;
-  display: grid; place-items: center;
-  font: 800 16px Outfit, Inter, system-ui, sans-serif; color: #fff;
+  display: grid; place-items: center; overflow: hidden;
   background: linear-gradient(135deg, #a855f7, #6366f1);
   box-shadow: 0 8px 22px rgba(168,85,247,.35);
 }
+.cx-auth-mark img { width: 100%; height: 100%; object-fit: contain; padding: 5px; }
 .cx-auth-card h1 {
   font: 700 clamp(18px, 5vw, 21px)/1.2 Outfit, Inter, system-ui, sans-serif;
   letter-spacing: -.02em; margin: 0 0 3px; color: var(--ink);
@@ -593,11 +593,11 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   }
   .cx-auth-aside { display: block; }
   .cx-auth-aside-mark {
-    width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center;
-    font: 800 18px Outfit, Inter, sans-serif; color: #fff;
+    width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center; overflow: hidden;
     background: linear-gradient(135deg, #a855f7, #6366f1);
     box-shadow: 0 10px 26px rgba(168,85,247,.35); margin-bottom: 20px;
   }
+  .cx-auth-aside-mark img { width: 100%; height: 100%; object-fit: contain; padding: 5px; }
   .cx-auth-aside h2 { font: 700 34px/1.15 Outfit, Inter, sans-serif; letter-spacing: -.03em; margin: 0 0 10px; }
   .cx-auth-aside p { color: var(--muted); font-size: 14px; max-width: 42ch; margin: 0 0 22px; }
   .cx-auth-points { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
@@ -902,14 +902,13 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 .cx-verify-mark {
   display: grid;
   place-items: center;
-  width: 19px;
-  height: 19px;
-  border-radius: 6px;
-  font-size: 9.5px;
-  letter-spacing: 0;
-  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
   background: var(--indigo);
+  overflow: hidden;
 }
+.cx-verify-mark img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
 .cx-verify-card h1 {
   margin: 0 0 6px;
   font-size: 17px;

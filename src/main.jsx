@@ -3883,7 +3883,7 @@ function WelcomePage({ onLogin, onRegister }) {
             <div className="cx-welcome-card-lines">
               <span /><span /><span />
             </div>
-            <div className="cx-welcome-card-brand">AI</div>
+            <div className="cx-welcome-card-brand"><img src="/brand-logo.webp" alt="Akun Instan" loading="eager" decoding="async" /></div>
           </div>
           <div className="cx-welcome-card cx-welcome-card-back" />
           <div className="cx-welcome-orb cx-welcome-orb-a" />
@@ -4015,7 +4015,7 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
       <div className="cx-verify-card">
         <div className="cx-verify-top">
           <div className="cx-verify-icon" aria-hidden="true"><Mail size={20} /></div>
-          <div className="cx-verify-brand"><span className="cx-verify-mark">AI</span> Akun Instan</div>
+          <div className="cx-verify-brand"><span className="cx-verify-mark"><img src="/brand-logo.webp" alt="Akun Instan" loading="eager" decoding="async" /></span> Akun Instan</div>
         </div>
         <h1>Verifikasi email kamu</h1>
         <p className="cx-verify-lead">
@@ -4088,7 +4088,7 @@ function VerifyStatusPage({ onBackToLogin, loggedIn }) {
           <div className={`cx-verify-icon ${ok ? "is-ok" : "is-bad"}`} aria-hidden="true">
             {ok ? <BadgeCheck size={22} /> : <X size={22} />}
           </div>
-          <div className="cx-verify-brand"><span className="cx-verify-mark">AI</span> Akun Instan</div>
+          <div className="cx-verify-brand"><span className="cx-verify-mark"><img src="/brand-logo.webp" alt="Akun Instan" loading="eager" decoding="async" /></span> Akun Instan</div>
         </div>
         <h1>{ok ? "Email berhasil diverifikasi" : "Link verifikasi tidak berlaku"}</h1>
         <p className="cx-verify-lead">
@@ -4144,7 +4144,7 @@ function ForgotPasswordPage({ onBackToLogin, onRegister }) {
       <div className="cx-verify-card">
         <div className="cx-verify-top">
           <div className="cx-verify-icon" aria-hidden="true"><KeyRound size={20} /></div>
-          <div className="cx-verify-brand"><span className="cx-verify-mark">AI</span> Akun Instan</div>
+          <div className="cx-verify-brand"><span className="cx-verify-mark"><img src="/brand-logo.webp" alt="Akun Instan" loading="eager" decoding="async" /></span> Akun Instan</div>
         </div>
         <h1>Lupa password?</h1>
         <p className="cx-verify-lead">
@@ -4216,7 +4216,7 @@ function ResetPasswordPage({ onAuthenticated, onBackToLogin }) {
       <div className="cx-verify-card">
         <div className="cx-verify-top">
           <div className="cx-verify-icon" aria-hidden="true"><LockKeyhole size={20} /></div>
-          <div className="cx-verify-brand"><span className="cx-verify-mark">AI</span> Akun Instan</div>
+          <div className="cx-verify-brand"><span className="cx-verify-mark"><img src="/brand-logo.webp" alt="Akun Instan" loading="eager" decoding="async" /></span> Akun Instan</div>
         </div>
         <h1>Buat password baru</h1>
         <p className="cx-verify-lead">Password baru langsung aktif dan kamu otomatis masuk ke akun.</p>
@@ -4342,7 +4342,7 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome, onV
 
       <div className="cx-auth-layout">
         <aside className="cx-auth-aside" aria-hidden="true">
-          <div className="cx-auth-aside-mark">AI</div>
+          <div className="cx-auth-aside-mark"><img src="/brand-logo.webp" alt="Akun Instan" loading="eager" decoding="async" /></div>
           <h2>Akun Instan</h2>
           <p>Akun Google, Gmail &amp; akun digital siap pakai. Proses cepat, saldo aman, dibantu admin.</p>
           <ul className="cx-auth-points">
@@ -4359,7 +4359,7 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome, onV
             </button>
           )}
           <div className="cx-auth-head">
-            <div className="cx-auth-mark">AI</div>
+            <div className="cx-auth-mark"><img src="/brand-logo.webp" alt="Akun Instan" loading="eager" decoding="async" /></div>
             <div>
               <h1>{mode === "register" ? "Daftar Akun Instan" : "Masuk ke Akun Instan"}</h1>
               <p>{mode === "register" ? "Buat akun untuk mulai belanja dan isi saldo." : "Masuk dulu untuk mengakses katalog dan saldo kamu."}</p>

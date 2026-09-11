@@ -596,7 +596,7 @@ function AdminPage({ onBack, onNotice }) {
   if (!authenticated) return (
     <div className="cx-login-wrap">
       <div className="cx-login-box">
-        <div className="cx-login-mark">AI</div>
+        <div className="cx-login-mark"><img src="/brand-logo.webp" alt="Akun Instan" loading="eager" decoding="async" /></div>
         <h1>Akun Instan Admin</h1>
         <p>Masuk untuk mengelola produk dan pesanan.</p>
         <form onSubmit={login}>

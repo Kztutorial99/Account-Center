@@ -278,7 +278,8 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 /* ── ADMIN LOGIN ────────────────────────────── */
 .cx-login-wrap { min-height: 100vh; display: grid; place-items: center; background: var(--bg); }
 .cx-login-box { width: min(400px, calc(100% - 32px)); }
-.cx-login-mark { width: 36px; height: 36px; background: var(--indigo); border-radius: 4px; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 16px; margin-bottom: 18px; }
+.cx-login-mark { width: 36px; height: 36px; background: var(--indigo); border-radius: 4px; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 16px; margin-bottom: 18px; overflow: hidden; }
+.cx-login-mark img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
 .cx-login-box h1 { font: 700 22px Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: -.04em; margin: 0 0 4px; }
 .cx-login-box p { color: var(--muted); font-size: 12px; margin: 0 0 24px; }
 .cx-form-error { color: var(--red); font-size: 11px; margin-top: 8px; }
@@ -3069,10 +3070,13 @@ html { scroll-behavior: smooth; }
 .cx-welcome-card-lines span:nth-child(2) { width: 60px; }
 .cx-welcome-card-lines span:nth-child(3) { width: 40px; }
 .cx-welcome-card-brand {
-  position: absolute; right: 16px; bottom: 16px;
-  font: 700 14px Inter, system-ui, sans-serif; color: rgba(255,255,255,.85);
-  letter-spacing: -.03em;
+  position: absolute; right: 14px; bottom: 14px;
+  width: 40px; height: 40px; border-radius: 10px; overflow: hidden;
+  background: rgba(255,255,255,.10);
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  display: grid; place-items: center;
 }
+.cx-welcome-card-brand img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
 .cx-welcome-orb {
   position: absolute; border-radius: 50%; filter: blur(18px); pointer-events: none;
 }
