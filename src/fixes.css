@@ -730,3 +730,8 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   .cx-filter-chip{height:36px;display:inline-flex;align-items:center;justify-content:center}
   .cx-filter-selects{gap:10px}
 }
+.cx-filter-label{display:block;line-height:1.4}
+@media (max-width:520px){
+  .cx-filter-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .cx-filter-select{position:relative}
+}

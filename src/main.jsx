@@ -1820,14 +1820,14 @@ function App() {
           </div>
           <div className="cx-filter-selects">
             <label className="cx-filter-select">
-              <span>Urutkan</span>
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <span className="cx-filter-label">Urutkan</span>
+              <select aria-label="Urutkan produk" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                 {CATALOG_SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
               </select>
             </label>
             <label className="cx-filter-select">
-              <span>Platform</span>
-              <select value={platFilter} onChange={(e) => setPlatFilter(e.target.value)}>
+              <span className="cx-filter-label">Platform</span>
+              <select aria-label="Filter platform" value={platFilter} onChange={(e) => setPlatFilter(e.target.value)}>
                 <option value="all">Semua platform</option>
                 {platformOptions.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
