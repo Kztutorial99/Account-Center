@@ -3966,7 +3966,6 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
   const [cooldown, startCooldown] = useSendCooldown("codexa:resend-verify-until");
   const [error, setError] = useState(linkState === "invalid" ? "Link verifikasi tidak valid atau sudah kedaluwarsa. Kirim ulang link baru." : "");
   const [message, setMessage] = useState(pending && pending.message ? pending.message : "");
-  const captcha = useTurnstile();
 
   const check = async ({ silent } = {}) => {
     if (!email || !password) {
@@ -3996,18 +3995,15 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
   const resend = async () => {
     if (!email || !password) { setError("Sesi pendaftaran sudah berakhir. Silakan masuk untuk mengirim link baru."); return; }
     if (cooldown > 0) return;
-    if (!captcha.token) { setError("Selesaikan verifikasi keamanan dulu."); return; }
     setResending(true); setError(""); setMessage("");
     try {
       const res = await jsonRequest("/api/auth", {
         method: "POST",
-        body: JSON.stringify({ action: "resend-verification", email, password, captchaToken: captcha.token }),
+        body: JSON.stringify({ action: "resend-verification", email, password }),
       });
       setMessage(res.message || "Link verifikasi baru sudah dikirim.");
       startCooldown(res.retryAfter);
-      captcha.reset();
     } catch (err) {
-      captcha.reset();
       setError(err.message || "Gagal mengirim ulang link");
       if (err.retryAfter) startCooldown(err.retryAfter);
     }
@@ -4053,8 +4049,6 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
         {message && <p className="cx-form-success"><BadgeCheck size={13} /> {message}</p>}
         {error && <p className="cx-form-error">{error}</p>}
 
-        <Captcha state={captcha} />
-
         <div className="cx-verify-actions">
           <button type="button" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy} onClick={() => check()}>
             {busy ? <><RefreshCw size={13} /> Memeriksa...</> : <><ShieldCheck size={13} /> Saya sudah verifikasi email</>}
@@ -4062,7 +4056,7 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
           <button
             type="button"
             className="cx-btn cx-btn-secondary cx-btn-full"
-            disabled={resending || cooldown > 0 || !captcha.token}
+            disabled={resending || cooldown > 0}
             onClick={resend}
           >
             {resending
@@ -4373,17 +4367,15 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
   };
 
   const resendVerification = async () => {
-    if (!captcha.token) { setError("Selesaikan verifikasi keamanan dulu."); return; }
     setError(""); setMessage(""); setBusy(true);
     try {
       const res = await jsonRequest("/api/auth", {
         method: "POST",
-        body: JSON.stringify({ action: "resend-verification", email: form.email, password: form.password, captchaToken: captcha.token }),
+        body: JSON.stringify({ action: "resend-verification", email: form.email, password: form.password }),
       });
       setMessage(res.message);
       setCanResend(false);
-      captcha.reset();
-    } catch (err) { captcha.reset(); setError(err.message); }
+    } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
 
@@ -4473,9 +4465,9 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
             )}
             {message && <p className="cx-form-success"><BadgeCheck size={14} /> {message}</p>}
             {error && <p className="cx-form-error">{error}</p>}
-            {(mode === "register" || canResend) && <Captcha state={captcha} />}
+            {mode === "register" && <Captcha state={captcha} />}
             {canResend && (
-              <button type="button" className="cx-btn cx-btn-secondary cx-btn-full" disabled={busy || !captcha.token} onClick={resendVerification}>
+              <button type="button" className="cx-btn cx-btn-secondary cx-btn-full" disabled={busy} onClick={resendVerification}>
                 <Mail size={13} /> Kirim ulang link verifikasi
               </button>
             )}
