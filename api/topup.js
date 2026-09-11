@@ -10,13 +10,12 @@ const { once } = require("./_schema");
 const MIN_TOPUP = 10000;
 /* Bonus saldo per nominal top up (mengikuti tampilan halaman Top Up). */
 const TOPUP_BONUS_TIERS = [
-  { amount: 10000, bonus: 500 },
-  { amount: 25000, bonus: 1000 },
-  { amount: 50000, bonus: 2500 },
-  { amount: 100000, bonus: 5000 },
-  { amount: 250000, bonus: 15000 },
-  { amount: 500000, bonus: 35000 },
-  { amount: 1000000, bonus: 75000 },
+  { amount: 10000, bonus: 0 },
+  { amount: 25000, bonus: 2000 },
+  { amount: 50000, bonus: 4000 },
+  { amount: 100000, bonus: 8000 },
+  { amount: 250000, bonus: 20000 },
+  { amount: 500000, bonus: 45000 },
 ];
 const topupBonus = (value) => {
   const v = Math.round(Number(value) || 0);
@@ -220,6 +219,8 @@ module.exports = async function handler(request, response) {
         balance: user.balance,
         pendingTotal: Number(agg && agg.pendingTotal) || 0,
         pendingCount: Number(agg && agg.pendingCount) || 0,
+        bonusTiers: TOPUP_BONUS_TIERS,
+        minTopup: MIN_TOPUP,
         topups: rows.map((r) => ({ ...r, amount: Number(r.amount) || 0 })),
       });
     }
