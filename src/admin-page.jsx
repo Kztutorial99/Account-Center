@@ -26,6 +26,9 @@ function AdminPage({ onBack, onNotice }) {
   const [userQuery, setUserQuery]         = useState("");
   const [userPage, setUserPage]           = useState(1);
   const [userForm, setUserForm]           = useState(null);
+  const [userDetail, setUserDetail]       = useState(null);
+  const [userActivity, setUserActivity]   = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const [savingUser, setSavingUser]       = useState(false);
   const [aiCfg, setAiCfg]                 = useState(null);
   const [aiForm, setAiForm]               = useState(null);
@@ -213,14 +216,24 @@ function AdminPage({ onBack, onNotice }) {
       note: u.note || "", password: "",
       createdAt: u.createdAt, topupTotal: u.topupTotal || 0,
     });
+    // Detail memakai data asli dari database; tidak ada nilai karangan di UI.
+    setUserDetail({ ...u });
+    setUserActivity(null);
+    setLoadingDetail(true);
+    jsonRequest(`/api/admin/users?id=${encodeURIComponent(u.id)}`, { method: "GET" })
+      .then((p) => { setUserDetail(p.user || u); setUserActivity(p.activity || []); })
+      .catch(() => { setUserActivity([]); })
+      .finally(() => setLoadingDetail(false));
   };
+  const closeUserForm = () => { setUserForm(null); setUserDetail(null); setUserActivity(null); };
+
   const updateUserForm = (key, val) => setUserForm((f) => ({ ...f, [key]: val }));
 
   const saveUser = async () => {
     setSavingUser(true); setApiError("");
     try {
       await jsonRequest("/api/admin/users", { method: "PATCH", body: JSON.stringify(userForm) });
-      setUserForm(null); loadUsersData(); onNotice("Data user diperbarui");
+      closeUserForm(); loadUsersData(); onNotice("Data user diperbarui");
     } catch (e) { setApiError(e.message); }
     finally { setSavingUser(false); }
   };
@@ -1557,13 +1570,108 @@ function AdminPage({ onBack, onNotice }) {
 
       {/* User modal */}
       {userForm && (
-        <div className="cx-modal-backdrop" onClick={() => setUserForm(null)}>
-          <div className="cx-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="cx-modal-backdrop" onClick={closeUserForm}>
+          <div className="cx-modal cx-user-modal" onClick={(e) => e.stopPropagation()}>
             <div className="cx-modal-header">
-              <h2>Edit Akun User</h2>
-              <button className="cx-icon-btn" onClick={() => setUserForm(null)}><X size={14} /></button>
+              <h2>Detail User</h2>
+              <button className="cx-icon-btn" onClick={closeUserForm}><X size={14} /></button>
             </div>
             <div className="cx-modal-body">
+              {(() => {
+                const d = userDetail || {};
+                const nd = <em className="cx-nd">Belum tersedia</em>;
+                const provider = d.provider === "google" ? "Google" : d.provider === "email" ? "Email & password" : "";
+                const statusLabel = (s) => (s === "active" ? "Aktif" : s === "suspended" ? "Ditangguhkan" : s === "banned" ? "Diblokir" : "—");
+                const statusClass = (s) => (s === "active" ? "cx-status-ok" : s === "suspended" ? "cx-status-low" : "cx-status-out");
+                const initials = String(d.name || userForm.name || "U").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+                return (
+                  <>
+                    <div className="cx-ud-head">
+                      <div className="cx-avatar cx-ud-avatar">{initials}</div>
+                      <div className="cx-ud-head-main">
+                        <strong>{d.name || userForm.name || "Tanpa nama"}</strong>
+                        <div className="cx-ud-badges">
+                          <span className={`cx-status ${d.role === "admin" ? "cx-status-ok" : ""}`}>
+                            <ShieldCheck size={9} /> {d.role === "admin" ? "Admin" : "User"}
+                          </span>
+                          <span className={`cx-status ${statusClass(d.status)}`}>{statusLabel(d.status)}</span>
+                        </div>
+                        <small><Mail size={9} /> {d.email || userForm.email}</small>
+                        <small className="cx-mono">ID · {d.id}</small>
+                      </div>
+                      <div className="cx-ud-head-actions">
+                        {d.status === "active"
+                          ? <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => { setUserStatus(d.id, "suspend"); setUserDetail({ ...d, status: "suspended" }); updateUserForm("status", "suspended"); }}><LockKeyhole size={11} /> Nonaktifkan</button>
+                          : <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => { setUserStatus(d.id, "activate"); setUserDetail({ ...d, status: "active" }); updateUserForm("status", "active"); }}><BadgeCheck size={11} /> Aktifkan</button>}
+                      </div>
+                    </div>
+
+                    <div className="cx-ud-section">
+                      <div className="cx-form-divider">IDENTITAS &amp; AKUN</div>
+                      <div className="cx-ud-list">
+                        <div><User size={11} /><span>Nama</span><strong>{d.name || nd}</strong></div>
+                        <div><Mail size={11} /><span>Email</span><strong>{d.email || nd}</strong></div>
+                        <div><Bell size={11} /><span>WhatsApp</span><strong>{d.phone || nd}</strong></div>
+                        <div><FileText size={11} /><span>User ID</span><strong className="cx-mono">{d.id}</strong></div>
+                        <div><LogIn size={11} /><span>Login via</span><strong>{provider || nd}</strong></div>
+                        <div><Command size={11} /><span>Tanggal daftar</span><strong>{d.createdAt ? formatDate(d.createdAt) : nd}</strong></div>
+                        <div><TrendingUp size={11} /><span>Login terakhir</span><strong>{nd}</strong></div>
+                      </div>
+                    </div>
+
+                    <div className="cx-ud-section">
+                      <div className="cx-form-divider">SALDO &amp; TRANSAKSI</div>
+                      <div className="cx-form-balance">
+                        <div>
+                          <small>Saldo saat ini</small>
+                          <strong>{formatPrice(Number(userForm.balance) || 0)}</strong>
+                        </div>
+                        <span>total top up<br />{formatPrice(d.topupTotal || 0)}</span>
+                      </div>
+                      <div className="cx-ud-stats">
+                        <div><small>Jumlah top up</small><strong>{loadingDetail ? "…" : `${d.topupCount ?? 0}×`}</strong></div>
+                        <div><small>Top up pending</small><strong>{d.pendingCount ?? 0}</strong></div>
+                        <div><small>Total pembelian</small><strong>{d.available ? formatPrice(d.orderTotal || 0) : nd}</strong></div>
+                        <div><small>Top up terakhir</small><strong>{d.lastTopupAt ? formatDate(d.lastTopupAt) : nd}</strong></div>
+                      </div>
+                    </div>
+
+                    <div className="cx-ud-section">
+                      <div className="cx-form-divider">STATUS &amp; AKSES</div>
+                      <div className="cx-ud-list">
+                        <div><BadgeCheck size={11} /><span>Status akun</span><strong><span className={`cx-status ${statusClass(d.status)}`}>{statusLabel(d.status)}</span></strong></div>
+                        <div><ShieldCheck size={11} /><span>Role</span><strong>{d.role === "admin" ? "Admin" : "User"}</strong></div>
+                        <div><Mail size={11} /><span>Status email</span><strong>{d.provider === "google" ? <span className="cx-status cx-status-ok">Terverifikasi (Google)</span> : nd}</strong></div>
+                        <div><CircleHelp size={11} /><span>Verifikasi akun</span><strong>{nd}</strong></div>
+                      </div>
+                    </div>
+
+                    <div className="cx-ud-section">
+                      <div className="cx-form-divider">AKTIVITAS TERBARU</div>
+                      {loadingDetail && !userActivity
+                        ? <div className="cx-ud-empty"><Spinner /> Memuat aktivitas…</div>
+                        : (userActivity && userActivity.length
+                          ? (
+                            <div className="cx-ud-activity">
+                              {userActivity.map((a, i) => (
+                                <div key={i}>
+                                  {a.kind === "topup" ? <Wallet size={12} /> : a.kind === "order" ? <ShoppingBag size={12} /> : <LogIn size={12} />}
+                                  <div>
+                                    <strong>{a.label}</strong>
+                                    <small>{a.status} · {formatDate(a.at)}</small>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )
+                          : <div className="cx-ud-empty"><FileText size={14} /> Belum ada aktivitas tercatat.</div>)}
+                    </div>
+                  </>
+                );
+              })()}
+
+              <div className="cx-form-divider">UBAH DATA <small>hanya untuk koreksi</small></div>
+
               <div className="cx-form-section">
                 <div className="cx-form-divider">DATA AKUN <small>identitas & kontak</small></div>
                 <div className="cx-form-grid">
@@ -1641,7 +1749,7 @@ function AdminPage({ onBack, onNotice }) {
               {apiError && <p className="cx-form-error">{apiError}</p>}
             </div>
             <div className="cx-modal-footer">
-              <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => setUserForm(null)}>Batal</button>
+              <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={closeUserForm}>Batal</button>
               <button className="cx-btn cx-btn-primary cx-btn-sm" onClick={saveUser} disabled={savingUser}>
                 {savingUser ? "Menyimpan..." : "Simpan Perubahan"}
               </button>
