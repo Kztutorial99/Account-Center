@@ -14,7 +14,7 @@ const {
 const { verifyCaptcha } = require("./_turnstile");
 
 /* Form publik yang wajib lewat captcha Cloudflare Turnstile. */
-const CAPTCHA_ACTIONS = new Set(["login", "register", "resend-verification", "forgot-password"]);
+const CAPTCHA_ACTIONS = new Set(["register", "resend-verification", "forgot-password"]);
 
 const RESEND_COOLDOWN_SEC = 60;
 const RESEND_HOURLY_CAP = 5;

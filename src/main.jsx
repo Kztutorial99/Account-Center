@@ -4315,12 +4315,12 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!captcha.token) { setError("Selesaikan verifikasi keamanan dulu."); return; }
+    if (mode === "register" && !captcha.token) { setError("Selesaikan verifikasi keamanan dulu."); return; }
     setError(""); setMessage(""); setCanResend(false); setBusy(true);
     try {
       const payload = mode === "register"
         ? { action: "register", name: form.name, email: form.email, phone: form.phone, password: form.password, captchaToken: captcha.token }
-        : { action: "login", email: form.email, password: form.password, captchaToken: captcha.token };
+        : { action: "login", email: form.email, password: form.password };
       const res = await jsonRequest("/api/auth", { method: "POST", body: JSON.stringify(payload) });
       if (res.verificationRequired) {
         if (onVerificationSent) {
@@ -4341,7 +4341,7 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
     } catch (err) {
       /* Untuk keamanan, kegagalan kredensial saat masuk selalu memakai pesan
          netral: email belum terdaftar tidak dibocorkan ke penyerang. */
-      captcha.reset();
+      if (mode === "register") captcha.reset();
       const invalidLogin = mode === "login" && err.status === 401 && !err.code;
       setError(invalidLogin ? "Email atau password salah" : err.message);
       setCanResend(err.code === "EMAIL_NOT_VERIFIED");
@@ -4441,13 +4441,13 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
             )}
             {message && <p className="cx-form-success"><BadgeCheck size={14} /> {message}</p>}
             {error && <p className="cx-form-error">{error}</p>}
-            <Captcha state={captcha} />
+            {(mode === "register" || canResend) && <Captcha state={captcha} />}
             {canResend && (
-              <button type="button" className="cx-btn cx-btn-secondary cx-btn-full" disabled={busy} onClick={resendVerification}>
+              <button type="button" className="cx-btn cx-btn-secondary cx-btn-full" disabled={busy || !captcha.token} onClick={resendVerification}>
                 <Mail size={13} /> Kirim ulang link verifikasi
               </button>
             )}
-            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full cx-auth-submit" disabled={busy || !captcha.token}>
+            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full cx-auth-submit" disabled={busy || (mode === "register" && !captcha.token)}>
               {busy ? <><RefreshCw size={13} /> Memproses...</> : <><LogIn size={13} /> {mode === "register" ? "Daftar sekarang" : "Masuk"}</>}
             </button>
           </form>
