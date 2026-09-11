@@ -1159,4 +1159,13 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 }
 .cx-google-hint p svg{ flex:none; margin-top:2px; color:#c084fc; }
 .cx-google-hint p strong{ color:#e9ddff; font-weight:600; }
+.cx-email-check{
+  margin:6px 2px 0; display:flex; align-items:center; gap:5px;
+  font-size:11px; line-height:1.4; color:var(--muted,#b9a8d8);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.cx-email-check svg{ flex:none; }
+.cx-email-check.is-checking svg{ color:#c084fc; }
+.cx-email-check.is-google{ color:#c084fc; }
+.cx-email-check.is-ok{ color:#4ade80; }
 .cx-captcha-loading{ color:var(--muted,#9d8fbb); text-align:center; }

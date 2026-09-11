@@ -4286,22 +4286,29 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
   const [canResend, setCanResend] = useState(false);
   const [busy, setBusy]         = useState(false);
   const [googleAccount, setGoogleAccount] = useState("");
+  const [emailCheck, setEmailCheck] = useState("idle"); /* idle | checking | google | email */
   const captcha = useTurnstile();
   useEffect(() => { setMode(initialMode); }, [initialMode]);
 
-  /* Cek otomatis: kalau email yang diketik terdaftar lewat Google, tampilkan
-     tombol "Lanjutkan dengan Google" supaya user tak perlu password. */
+  /* Cek otomatis: begitu email valid diketik, sistem memeriksa dulu apakah
+     akun terdaftar dan lewat provider apa, sebelum user mengisi password. */
   useEffect(() => {
     const value = (form.email || "").trim().toLowerCase();
-    if (mode !== "login" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { setGoogleAccount(""); return undefined; }
+    if (mode !== "login" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      setGoogleAccount(""); setEmailCheck("idle"); return undefined;
+    }
     let alive = true;
+    setEmailCheck("checking");
     const timer = setTimeout(async () => {
       try {
         const res = await jsonRequest("/api/auth", {
           method: "POST", body: JSON.stringify({ action: "check-email", email: value }),
         });
-        if (alive) setGoogleAccount(res && res.provider === "google" ? value : "");
-      } catch (_) { if (alive) setGoogleAccount(""); }
+        if (!alive) return;
+        if (res && res.provider === "google") { setGoogleAccount(value); setEmailCheck("google"); }
+        else if (res && res.exists) { setGoogleAccount(""); setEmailCheck("email"); }
+        else { setGoogleAccount(""); setEmailCheck("idle"); }
+      } catch (_) { if (alive) { setGoogleAccount(""); setEmailCheck("idle"); } }
     }, 500);
     return () => { alive = false; clearTimeout(timer); };
   }, [form.email, mode]);
@@ -4443,6 +4450,15 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
               <InputWrap icon={Mail}>
                 <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="nama@email.com" required />
               </InputWrap>
+              {mode === "login" && emailCheck === "checking" && (
+                <p className="cx-email-check is-checking"><RefreshCw size={11} className="cx-spin" /> Memeriksa email...</p>
+              )}
+              {mode === "login" && emailCheck === "google" && (
+                <p className="cx-email-check is-google"><BadgeCheck size={11} /> Terdaftar lewat Google — pakai tombol Google di atas</p>
+              )}
+              {mode === "login" && emailCheck === "email" && (
+                <p className="cx-email-check is-ok"><BadgeCheck size={11} /> Email terdaftar, silakan isi password</p>
+              )}
             </Field>
             <Field label="Password" hint={mode === "register" ? "Minimal 6 karakter." : ""}>
               <InputWrap icon={LockKeyhole}>
@@ -4459,7 +4475,7 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
             )}
             {mode === "login" && googleAccount && (
               <div className="cx-google-hint">
-                <p><BadgeCheck size={13} /> Email ini terdaftar lewat Google. Gunakan tombol <strong>Lanjut dengan Google</strong> di atas, akun ini tidak punya password.</p>
+                <p><BadgeCheck size={13} /> Akun ini login lewat Google, tidak punya password.</p>
               </div>
             )}
             {message && <p className="cx-form-success"><BadgeCheck size={14} /> {message}</p>}
