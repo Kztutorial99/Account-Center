@@ -166,6 +166,22 @@ module.exports = async function handler(request, response) {
     const email = text(body.email, 160).toLowerCase();
     const password = typeof body.password === "string" ? body.password : "";
 
+    /* Cek ringan saat user mengetik email di halaman masuk: dipakai untuk
+       menampilkan tombol "Lanjutkan dengan Google" bila akunnya dibuat
+       lewat Google. Tidak membocorkan data selain metode masuknya. */
+    if (action === "check-email") {
+      if (!EMAIL_RE.test(email)) return response.status(200).json({ exists: false, provider: null });
+      const gate = await rateLimit(sql, { key: `auth:check-email:${clientIp(request)}`, limit: 60, windowSec: 300 });
+      if (!gate.allowed) return response.status(200).json({ exists: false, provider: null });
+      const rows = await sql`SELECT provider FROM codexa_users WHERE email = ${email} LIMIT 1`;
+      if (!rows.length) return response.status(200).json({ exists: false, provider: null });
+      return response.status(200).json({
+        exists: true,
+        provider: rows[0].provider === "google" ? "google" : "email",
+      });
+    }
+
+
     /* Ganti password langsung dari halaman profil (tanpa link email).
        Wajib sudah login dan tahu password lama. */
     if (action === "change-password") {
