@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /* Site key Turnstile bersifat publik (aman ada di bundel frontend). */
 export const TURNSTILE_SITE_KEY = "0x4AAAAAAEwdBVG7PVHDybxk";
@@ -23,20 +23,26 @@ function loadTurnstile() {
 }
 
 /* Hook widget captcha: pasang <Captcha state={captcha} /> lalu kirim
-   captcha.token bersama request, dan captcha.reset() setelah gagal. */
+   captcha.token bersama request, dan captcha.reset() setelah gagal.
+   Widget dipasang lewat callback ref sehingga tetap muncul walau kotak
+   captcha baru dirender belakangan (mis. setelah pindah login -> daftar). */
 export function useTurnstile() {
-  const holder = useRef(null);
   const widgetId = useRef(null);
+  const [node, setNode] = useState(null);
   const [token, setToken] = useState("");
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
 
+  /* Callback ref: dipanggil setiap kotak captcha mount/unmount. */
+  const holder = useCallback((el) => { setNode(el); }, []);
+
   useEffect(() => {
+    if (!node) return undefined;
     let cancelled = false;
     loadTurnstile()
       .then((ts) => {
-        if (cancelled || !holder.current || widgetId.current !== null) return;
-        widgetId.current = ts.render(holder.current, {
+        if (cancelled || widgetId.current !== null) return;
+        widgetId.current = ts.render(node, {
           sitekey: TURNSTILE_SITE_KEY,
           theme: "dark",
           size: "flexible",
@@ -54,15 +60,16 @@ export function useTurnstile() {
         try { window.turnstile.remove(widgetId.current); } catch (_) {}
       }
       widgetId.current = null;
+      setToken("");
     };
-  }, []);
+  }, [node]);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setToken("");
     if (widgetId.current !== null && window.turnstile) {
       try { window.turnstile.reset(widgetId.current); } catch (_) {}
     }
-  };
+  }, []);
 
   return { holder, token, reset, ready, failed };
 }
