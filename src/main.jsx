@@ -4298,6 +4298,7 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
       setGoogleAccount(""); setEmailCheck("idle"); return undefined;
     }
     let alive = true;
+    setError("");
     setEmailCheck("checking");
     const timer = setTimeout(async () => {
       try {
@@ -4307,7 +4308,7 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
         if (!alive) return;
         if (res && res.provider === "google") { setGoogleAccount(value); setEmailCheck("google"); }
         else if (res && res.exists) { setGoogleAccount(""); setEmailCheck("email"); }
-        else { setGoogleAccount(""); setEmailCheck("idle"); }
+        else { setGoogleAccount(""); setEmailCheck("notfound"); }
       } catch (_) { if (alive) { setGoogleAccount(""); setEmailCheck("idle"); } }
     }, 500);
     return () => { alive = false; clearTimeout(timer); };
@@ -4340,6 +4341,10 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
   const submit = async (e) => {
     e.preventDefault();
     if (mode === "register" && !captcha.token) { setError("Selesaikan verifikasi keamanan dulu."); return; }
+    if (mode === "login" && emailCheck === "notfound") {
+      setError("Akun belum terdaftar di sistem kami. Silakan daftar dulu.");
+      return;
+    }
     setError(""); setMessage(""); setCanResend(false); setBusy(true);
     try {
       const payload = mode === "register"
@@ -4366,6 +4371,12 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
       /* Untuk keamanan, kegagalan kredensial saat masuk selalu memakai pesan
          netral: email belum terdaftar tidak dibocorkan ke penyerang. */
       if (mode === "register") captcha.reset();
+      if (err.code === "ACCOUNT_NOT_FOUND") {
+        setEmailCheck("notfound");
+        setError("Akun belum terdaftar di sistem kami. Silakan daftar dulu.");
+        setBusy(false);
+        return;
+      }
       const invalidLogin = mode === "login" && err.status === 401 && !err.code;
       /* Akun Google tidak punya password: jangan tampilkan "Email atau password
          salah", cukup info arahkan ke tombol Google di atas. */
@@ -4456,6 +4467,9 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
               {mode === "login" && emailCheck === "email" && (
                 <p className="cx-email-check is-ok"><BadgeCheck size={11} /> Email terdaftar, silakan isi password</p>
               )}
+              {mode === "login" && emailCheck === "notfound" && (
+                <p className="cx-email-check is-warn"><ShieldCheck size={11} /> Email ini belum terdaftar di sistem kami</p>
+              )}
             </Field>
             {(mode === "register" || emailCheck === "email") && (
               <Field label="Password" hint={mode === "register" ? "Minimal 6 karakter." : ""}>
@@ -4472,6 +4486,21 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
                 Lupa password?
               </button>
             )}
+            {mode === "login" && emailCheck === "notfound" && (
+              <div className="cx-signup-hint">
+                <div className="cx-signup-hint-body">
+                  <strong>Akun belum terdaftar di sistem kami</strong>
+                  <span>Email <b>{(form.email || "").trim().toLowerCase()}</b> belum punya akun Akun Instan. Daftar dulu, gratis dan cuma butuh 1 menit.</span>
+                </div>
+                <button
+                  type="button"
+                  className="cx-btn cx-btn-primary cx-btn-full"
+                  onClick={() => { setError(""); setMessage(""); switchMode("register"); }}
+                >
+                  <ArrowRight size={13} /> Daftar sekarang
+                </button>
+              </div>
+            )}
             {mode === "login" && googleAccount && (
               <div className="cx-google-hint">
                 <p><BadgeCheck size={13} /> Akun ini login lewat Google, tidak punya password.</p>
@@ -4485,9 +4514,11 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
                 <Mail size={13} /> Kirim ulang link verifikasi
               </button>
             )}
+            {!(mode === "login" && (emailCheck === "notfound" || emailCheck === "google")) && (
             <button type="submit" className="cx-btn cx-btn-primary cx-btn-full cx-auth-submit" disabled={busy || (mode === "register" && !captcha.token)}>
               {busy ? <><RefreshCw size={13} /> Memproses...</> : <><LogIn size={13} /> {mode === "register" ? "Daftar sekarang" : "Masuk"}</>}
             </button>
+            )}
           </form>
 
           <p className="cx-auth-switch">

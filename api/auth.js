@@ -434,7 +434,13 @@ module.exports = async function handler(request, response) {
       FROM codexa_users WHERE email = ${email} LIMIT 1
     `;
     const row = rows[0];
-    if (!row || !verifyPassword(password, row.passwordHash)) {
+    if (!row) {
+      return response.status(404).json({
+        error: "Akun belum terdaftar di sistem kami. Silakan daftar dulu.",
+        code: "ACCOUNT_NOT_FOUND",
+      });
+    }
+    if (!verifyPassword(password, row.passwordHash)) {
       return response.status(401).json({ error: "Email atau password salah" });
     }
     if (row.status && row.status !== "active") {
