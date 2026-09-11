@@ -4291,8 +4291,26 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
   });
   const [canResend, setCanResend] = useState(false);
   const [busy, setBusy]         = useState(false);
+  const [googleAccount, setGoogleAccount] = useState("");
   const captcha = useTurnstile();
   useEffect(() => { setMode(initialMode); }, [initialMode]);
+
+  /* Cek otomatis: kalau email yang diketik terdaftar lewat Google, tampilkan
+     tombol "Lanjutkan dengan Google" supaya user tak perlu password. */
+  useEffect(() => {
+    const value = (form.email || "").trim().toLowerCase();
+    if (mode !== "login" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { setGoogleAccount(""); return undefined; }
+    let alive = true;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await jsonRequest("/api/auth", {
+          method: "POST", body: JSON.stringify({ action: "check-email", email: value }),
+        });
+        if (alive) setGoogleAccount(res && res.provider === "google" ? value : "");
+      } catch (_) { if (alive) setGoogleAccount(""); }
+    }, 500);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [form.email, mode]);
   const switchMode = (m) => {
     setMode(m);
     setError("");
@@ -4443,6 +4461,15 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
               <button type="button" className="cx-auth-forgot" onClick={onForgotPassword}>
                 Lupa password?
               </button>
+            )}
+            {mode === "login" && googleAccount && (
+              <div className="cx-google-hint">
+                <p><BadgeCheck size={13} /> Email ini terdaftar lewat Google, jadi tidak punya password.</p>
+                <button type="button" className="cx-google-btn" onClick={googleSignIn} disabled={busy}>
+                  <GoogleGlyph />
+                  <span>Lanjutkan dengan Google</span>
+                </button>
+              </div>
             )}
             {message && <p className="cx-form-success"><BadgeCheck size={14} /> {message}</p>}
             {error && <p className="cx-form-error">{error}</p>}
