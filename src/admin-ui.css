@@ -85,7 +85,17 @@
 .cx-admin-shell .cx-activity-time { font-size: 9.5px; align-self: flex-start; padding-top: 2px; }
 
 /* ── PRODUK ──────────────────────────────────── */
-.cx-admin-shell .cx-product-grid { gap: var(--ad-gap); padding: var(--ad-pad); }
+.cx-admin-shell .cx-product-grid {
+  gap: var(--ad-gap); padding: var(--ad-pad);
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+}
+.cx-admin-shell .cx-admin-product-card,
+.cx-admin-shell .cx-admin-product-card * { box-sizing: border-box; }
+.cx-admin-shell .cx-admin-product-card { width: 100%; max-width: 100%; min-width: 0; overflow: hidden; }
+.cx-admin-shell .cx-admin-product-card header,
+.cx-admin-shell .cx-admin-product-meta,
+.cx-admin-shell .cx-admin-product-card footer { min-width: 0; max-width: 100%; }
+
 .cx-admin-shell .cx-admin-product-card {
   padding: 12px !important; gap: 8px !important;
   border-radius: var(--ad-radius); border-color: var(--ad-border);
@@ -105,7 +115,8 @@
   font-size: 9.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--faint);
 }
 .cx-admin-shell .cx-admin-product-meta {
-  display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto); gap: 8px; align-items: end;
+
   padding: 8px 10px; border-radius: var(--ad-radius-sm);
   background: rgba(255, 255, 255, .025); border: 1px solid var(--ad-border);
 }
@@ -185,23 +196,40 @@
 }
 
 @media (max-width: 640px) {
-  .cx-admin-shell, .cx-admin-shell * { max-width: 100%; }
-  .cx-admin-shell .cx-admin-content { padding: 12px 12px 22px; overflow-x: hidden; }
+  .cx-admin-shell { max-width: 100vw; overflow-x: clip; }
+  .cx-admin-shell .cx-admin-main,
+  .cx-admin-shell .cx-admin-content,
+  .cx-admin-shell .cx-panel,
+  .cx-admin-shell .cx-panel-header { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .cx-admin-shell .cx-admin-content { padding: 12px 12px 22px; }
   .cx-admin-shell .cx-admin-top { margin-bottom: 10px; }
   .cx-admin-shell .cx-admin-top h1 { font-size: 15.5px; }
 
-  .cx-admin-shell .cx-stat-grid { grid-template-columns: 1fr 1fr; }
+  .cx-admin-shell .cx-stat-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .cx-admin-shell .cx-stat-card { padding: 10px 11px; border-bottom: 1px solid var(--ad-border); }
   .cx-admin-shell .cx-stat-card:nth-child(2n) { border-right: 0; }
   .cx-admin-shell .cx-stat-card:nth-last-child(-n+2) { border-bottom: 0; }
   .cx-admin-shell .cx-stat-value { font-size: 17px; }
 
-  .cx-admin-shell .cx-quick-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cx-admin-shell .cx-quick-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
   .cx-admin-shell .cx-quick-card { padding: 10px; min-height: 54px; }
-  .cx-admin-shell .cx-quick-card svg:last-child { display: none; }
+  .cx-admin-shell .cx-quick-card > svg:last-child { display: none; }
 
-  .cx-admin-shell .cx-product-grid { padding: 10px; gap: 10px; }
-  .cx-admin-shell .cx-admin-product-card footer .cx-row-btn { height: 36px !important; min-height: 36px; }
+  .cx-admin-shell .cx-product-grid { padding: 10px; gap: 10px; grid-template-columns: minmax(0, 1fr); }
+  .cx-admin-shell .cx-admin-product-card header {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 9px; align-items: center;
+  }
+  .cx-admin-shell .cx-admin-product-icon { grid-row: span 2; width: 32px; height: 32px; }
+  .cx-admin-shell .cx-admin-product-card header > .cx-status {
+    grid-column: 2; justify-self: start; margin: 0;
+  }
+  .cx-admin-shell .cx-admin-product-title strong { white-space: normal; overflow-wrap: anywhere; }
+  .cx-admin-shell .cx-admin-product-meta { padding: 8px; gap: 6px; }
+  .cx-admin-shell .cx-admin-product-meta strong { overflow-wrap: anywhere; }
+  .cx-admin-shell .cx-admin-product-card footer .cx-row-btn {
+    height: 36px !important; min-height: 36px; flex: 1 1 0; min-width: 0;
+  }
+
 
   .cx-admin-shell .cx-panel-header { padding: 8px 12px; }
   .cx-admin-shell .cx-setting-row { flex-wrap: wrap; padding: 10px 12px; }
