@@ -4219,6 +4219,11 @@ function ProfilePage({ user, onBack, onTopup, onSaved, onNotice }) {
 
           <ul className="cx-profile-list">
             <li><Mail size={13} /><span>Email</span><strong>{user.email}</strong></li>
+            <li>
+              <ProviderIcon type={user.provider === "google" ? "google" : "email/password"} size={13} />
+              <span>Daftar via</span>
+              <strong>{user.provider === "google" ? "Google" : "Email & password"}</strong>
+            </li>
             <li><Phone size={13} /><span>WhatsApp</span><strong>{user.phone || "-"}</strong></li>
             <li><BadgeCheck size={13} /><span>ID Akun</span><strong className="cx-mono">{String(user.id).slice(0, 8)}</strong></li>
             <li><ShieldCheck size={13} /><span>Status</span><strong>Terverifikasi</strong></li>
@@ -5133,3 +5138,4 @@ class RootErrorBoundary extends React.Component {
 }
 
 createRoot(document.getElementById("root")).render(<React.StrictMode><RootErrorBoundary><App /></RootErrorBoundary></React.StrictMode>);
+
