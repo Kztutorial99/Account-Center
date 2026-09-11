@@ -102,7 +102,7 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 /* ── CART BUTTON ────────────────────────────── */
 .cx-cart-btn { display: flex; align-items: center; gap: 7px; color: var(--ink2); font-size: 12px; font-weight: 600; border: 1px solid var(--b2); background: var(--s1); border-radius: 4px; padding: 0 11px; height: 30px; transition: .15s; }
 .cx-cart-btn:hover { border-color: var(--b3); background: var(--s2); }
-.cx-cart-btn b { background: var(--indigo); color: #fff; font-size: 9px; min-width: 16px; height: 16px; border-radius: 3px; display: grid; place-items: center; }
+.cx-cart-btn b { background: var(--indigo); color: #fff; font-size: 9px; width: 18px; height: 18px; min-width: 18px; border-radius: 50%; display: grid; place-items: center; }
 
 /* ── AVATAR ─────────────────────────────────── */
 .cx-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--s3); color: var(--indigo3); display: grid; place-items: center; font-size: 9px; font-weight: 700; border: 1px solid var(--b3); font-family: ui-monospace,monospace; }
