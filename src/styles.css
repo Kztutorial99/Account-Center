@@ -66,6 +66,9 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 
 /* ── LAYOUT HELPERS ─────────────────────────── */
 .cx-app { min-height: 100vh; display: flex; flex-direction: column; }
+/* Footer selalu menempel di bawah supaya tidak ada ruang kosong di halaman pendek. */
+.cx-app > .cx-footer { margin-top: auto; }
+
 .cx-container { width: min(1160px, calc(100% - 32px)); margin: 0 auto; }
 
 /* ── TOPBAR (Store) ─────────────────────────── */
