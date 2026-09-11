@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, LayoutDashboard, Wallet, ArrowUpRight, ArrowDownRight, BadgeCheck, Bell, Check, CircleHelp, Command, Eye, EyeOff, ChevronDown, FileText, LockKeyhole, LogIn, LogOut, Menu, MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingBag, Trash2, X, User, Mail, Sparkles, TrendingUp,
+  ArrowRight, LayoutDashboard, Wallet, ArrowUpRight, ArrowDownRight, BadgeCheck, Bell, Check, CircleHelp, Command, Eye, EyeOff, ChevronDown, FileText, LockKeyhole, LogIn, LogOut, Menu, MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingBag, Trash2, X, User, Mail, Copy, Sparkles, TrendingUp,
 } from "lucide-react";
 import {
   ACCENT_COLORS, ActionBtn, AssistantWidget, agedInfoOf, AGED_DEFAULTS, jsonRequest, CUSTOM_EMAIL_FEE, CUSTOM_EMAIL_STATUS_LABEL, CUSTOM_GENDER_LABEL, ExpandableText, Field, InputWrap, LOGIN_TYPES, PRODUCT_TEMPLATES, ProductDescription, ProviderIcon, RowSkeleton, SessionSplash, Spinner, customEmailsOf, emptyListing, formatBirthDate, formatDate, formatPrice, useConfirmDialog, usePendingActions,
@@ -24,6 +24,8 @@ function AdminPage({ onBack, onNotice }) {
   const [topups, setTopups]               = useState([]);
   const [users, setUsers]                 = useState([]);
   const [userQuery, setUserQuery]         = useState("");
+  const [userFilter, setUserFilter]       = useState("all");
+  const [copiedId, setCopiedId]           = useState("");
   const [userPage, setUserPage]           = useState(1);
   const [userForm, setUserForm]           = useState(null);
   const [userDetail, setUserDetail]       = useState(null);
@@ -483,10 +485,27 @@ function AdminPage({ onBack, onNotice }) {
     return q ? listings.filter((l) => `${l.title} ${l.loginType}`.toLowerCase().includes(q)) : listings;
   }, [listings, search]);
 
+  const copyUserId = (id) => {
+    const value = String(id || "");
+    if (!value) return;
+    const done = () => { setCopiedId(value); setTimeout(() => setCopiedId((c) => (c === value ? "" : c)), 1600); };
+    try {
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(value).then(done).catch(() => {});
+      else done();
+    } catch { /* ignore */ }
+  };
+
   const filteredUsers = useMemo(() => {
     const q = userQuery.trim().toLowerCase();
-    return q ? users.filter((u) => `${u.name} ${u.email} ${u.phone}`.toLowerCase().includes(q)) : users;
-  }, [users, userQuery]);
+    let list = users;
+    if (userFilter === "active") list = list.filter((u) => u.status === "active");
+    else if (userFilter === "inactive") list = list.filter((u) => u.status !== "active");
+    else if (userFilter === "admin") list = list.filter((u) => u.role === "admin");
+    else if (userFilter === "verified") list = list.filter((u) => u.provider === "google" || u.emailVerified);
+    if (!q) return list;
+    return list.filter((u) => `${u.name || ""} ${u.email || ""} ${u.phone || ""} ${u.id || ""}`.toLowerCase().includes(q));
+  }, [users, userQuery, userFilter]);
+
 
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -556,7 +575,7 @@ function AdminPage({ onBack, onNotice }) {
   const pagedUsers = filteredUsers.slice((safeUserPage - 1) * USERS_PER_PAGE, safeUserPage * USERS_PER_PAGE);
   // Reset halaman hanya saat pencarian berubah; refresh data setelah aksi admin
   // tidak boleh menendang admin kembali ke halaman 1.
-  useEffect(() => { setUserPage(1); }, [userQuery]);
+  useEffect(() => { setUserPage(1); }, [userQuery, userFilter]);
 
   useEffect(() => {
     if (contentRef.current) contentRef.current.scrollTo({ top: 0, behavior: "smooth" });
@@ -1422,21 +1441,31 @@ function AdminPage({ onBack, onNotice }) {
                 {userQuery.trim() ? `${filteredUsers.length} hasil dari ${users.length} akun` : `${users.length} akun terdaftar`}
               </span>
               <div className="cx-panel-actions">
-                <div className="cx-search" style={{ maxWidth: 240 }}>
+                <div className="cx-search cx-user-search">
                   <Search size={12} />
-                  <input value={userQuery} onChange={(e) => setUserQuery(e.target.value)} placeholder="Cari nama / email / no. HP" />
+                  <input value={userQuery} onChange={(e) => setUserQuery(e.target.value)} placeholder="Cari nama, email, no. HP, atau ID akun" />
+                  {userQuery.trim() && <button type="button" className="cx-search-clear" onClick={() => setUserQuery("")} aria-label="Hapus pencarian"><X size={11} /></button>}
                 </div>
               </div>
             </div>
-            {userQuery.trim() && (
-              <div className="cx-filter-bar">
-                <span className="cx-filter-chip">
-                  <Search size={10} /> Filter: “{userQuery.trim()}”
-                  <button type="button" onClick={() => setUserQuery("")} aria-label="Hapus filter"><X size={10} /></button>
-                </span>
-                <button type="button" className="cx-filter-reset" onClick={() => setUserQuery("")}>Tampilkan semua {users.length} akun</button>
-              </div>
-            )}
+            <div className="cx-user-filters">
+              {[
+                { key: "all", label: "Semua" },
+                { key: "active", label: "Aktif" },
+                { key: "inactive", label: "Nonaktif" },
+                { key: "admin", label: "Admin" },
+                { key: "verified", label: "Terverifikasi" },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  className={`cx-user-filter${userFilter === f.key ? " is-active" : ""}`}
+                  onClick={() => setUserFilter(f.key)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
             <div className="cx-user-head">
               <span>USER</span><span>SALDO</span><span>TOP UP</span><span>STATUS</span><span>BERGABUNG</span><span />
             </div>
@@ -1444,11 +1473,18 @@ function AdminPage({ onBack, onNotice }) {
               ? (
                 <div className="cx-panel-empty">
                   <User size={20} />
-                  <p>{userQuery.trim() ? `Tidak ada akun cocok dengan “${userQuery.trim()}”.` : "Belum ada user terdaftar."}</p>
-                  {userQuery.trim() && <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => setUserQuery("")}>Tampilkan semua akun</button>}
+                  <p>Pengguna tidak ditemukan</p>
+                  <small>Coba cari menggunakan nama, email, no. HP, atau ID akun.</small>
+                  {(userQuery.trim() || userFilter !== "all") && (
+                    <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => { setUserQuery(""); setUserFilter("all"); }}>Tampilkan semua akun</button>
+                  )}
                 </div>
               )
-              : pagedUsers.map((u) => (
+              : pagedUsers.map((u) => {
+                const shortId = String(u.id || "").slice(0, 8);
+                const statusCls = u.status === "active" ? "cx-status-ok" : u.status === "suspended" ? "cx-status-low" : "cx-status-out";
+                const statusTxt = u.status === "active" ? "Aktif" : u.status === "suspended" ? "Ditangguhkan" : "Diblokir";
+                return (
                 <div key={u.id} className="cx-user-row">
                   <div className="cx-user-ident">
                     <div className="cx-avatar">{String(u.name || "U").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</div>
@@ -1461,15 +1497,20 @@ function AdminPage({ onBack, onNotice }) {
                       </strong>
                       <small>{u.email}{u.phone ? ` · ${u.phone}` : ""}</small>
                     </div>
+                    <button type="button" className="cx-user-id" onClick={() => copyUserId(u.id)} title="Salin ID akun">
+                      <span>ID AKUN</span>
+                      <em className="cx-mono">{copiedId === String(u.id) ? "ID disalin" : shortId}</em>
+                      <Copy size={10} />
+                    </button>
                   </div>
                   <span className="cx-mono cx-user-cell" data-label="Saldo">{formatPrice(u.balance)}</span>
                   <span className="cx-mono cx-user-cell" data-label="Top up" style={{ color: "var(--muted)" }}>
                     {formatPrice(u.topupTotal)}{u.pendingCount ? ` · ${u.pendingCount} pending` : ""}
                   </span>
-                  <span className={`cx-status ${u.status === "active" ? "cx-status-ok" : u.status === "suspended" ? "cx-status-low" : "cx-status-out"}`}>
-                    {u.status === "active" ? "Aktif" : u.status === "suspended" ? "Ditangguhkan" : "Diblokir"}
-                  </span>
-                  <span className="cx-user-date" data-label="Bergabung">{formatDate(u.createdAt)}</span>
+                  <div className="cx-user-meta">
+                    <span className={`cx-status ${statusCls}`}>{statusTxt}</span>
+                    <span className="cx-user-date">Bergabung • {formatDate(u.createdAt)}</span>
+                  </div>
                   <div className="cx-row-actions">
                     {u.status === "active"
                       ? <button className="cx-row-btn" onClick={() => setUserStatus(u.id, "suspend")} aria-label="Tangguhkan"><LockKeyhole size={11} /> <span>Tangguhkan</span></button>
@@ -1489,7 +1530,9 @@ function AdminPage({ onBack, onNotice }) {
                   </div>
 
                 </div>
-              ))}
+                );
+              })}
+
             {filteredUsers.length > USERS_PER_PAGE && (
               <div className="cx-pager">
                 <span>Halaman {safeUserPage} dari {userPageCount} · {filteredUsers.length} akun</span>
@@ -1585,6 +1628,7 @@ function AdminPage({ onBack, onNotice }) {
                 const provider = d.provider === "google" ? "Google" : d.provider === "email" ? "Email & password" : "";
                 const statusLabel = (s) => (s === "active" ? "Aktif" : s === "suspended" ? "Ditangguhkan" : s === "banned" ? "Diblokir" : "—");
                 const statusClass = (s) => (s === "active" ? "cx-status-ok" : s === "suspended" ? "cx-status-low" : "cx-status-out");
+                const chipClass = (s) => (s === "active" ? "cx-chip-ok" : s === "suspended" ? "cx-chip-warn" : "cx-chip-bad");
                 const initials = String(d.name || userForm.name || "U").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
                 return (
                   <>
@@ -1593,13 +1637,17 @@ function AdminPage({ onBack, onNotice }) {
                       <div className="cx-ud-head-main">
                         <strong>{d.name || userForm.name || "Tanpa nama"}</strong>
                         <div className="cx-ud-badges">
-                          <span className={`cx-status ${d.role === "admin" ? "cx-status-ok" : ""}`}>
+                          <span className={`cx-chip ${d.role === "admin" ? "cx-chip-admin" : "cx-chip-user"}`}>
                             <ShieldCheck size={9} /> {d.role === "admin" ? "Admin" : "User"}
                           </span>
-                          <span className={`cx-status ${statusClass(d.status)}`}>{statusLabel(d.status)}</span>
+                          <span className={`cx-chip ${chipClass(d.status)}`}><i /> {statusLabel(d.status)}</span>
                         </div>
                         <small><Mail size={9} /> {d.email || userForm.email}</small>
-                        <small className="cx-mono">ID · {d.id}</small>
+                        <button type="button" className="cx-user-id cx-ud-id" onClick={() => copyUserId(d.id)} title="Salin ID akun">
+                          <span>ID AKUN</span>
+                          <em className="cx-mono">{copiedId === String(d.id) ? "ID disalin" : String(d.id || "").slice(0, 8)}</em>
+                          <Copy size={10} />
+                        </button>
                       </div>
                       <div className="cx-ud-head-actions">
                         {d.status === "active"
@@ -1641,10 +1689,10 @@ function AdminPage({ onBack, onNotice }) {
                     <div className="cx-ud-section">
                       <div className="cx-form-divider">STATUS &amp; AKSES</div>
                       <div className="cx-ud-list">
-                        <div><BadgeCheck size={11} /><span>Status akun</span><strong><span className={`cx-status ${statusClass(d.status)}`}>{statusLabel(d.status)}</span></strong></div>
-                        <div><ShieldCheck size={11} /><span>Role</span><strong>{d.role === "admin" ? "Admin" : "User"}</strong></div>
-                        <div><Mail size={11} /><span>Status email</span><strong>{d.provider === "google" ? <span className="cx-status cx-status-ok">Terverifikasi (Google)</span> : nd}</strong></div>
-                        <div><CircleHelp size={11} /><span>Verifikasi akun</span><strong>{nd}</strong></div>
+                        <div><BadgeCheck size={11} /><span>Status akun</span><strong><span className={`cx-chip ${chipClass(d.status)}`}><i /> {statusLabel(d.status)}</span></strong></div>
+                        <div><ShieldCheck size={11} /><span>Role</span><strong><span className={`cx-chip ${d.role === "admin" ? "cx-chip-admin" : "cx-chip-user"}`}><i /> {d.role === "admin" ? "Admin" : "User"}</span></strong></div>
+                        <div><Mail size={11} /><span>Status email</span><strong>{d.provider === "google" ? <span className="cx-chip cx-chip-ok"><i /> Terverifikasi (Google)</span> : <span className="cx-chip cx-chip-warn"><i /> Belum terverifikasi</span>}</strong></div>
+                        <div><CircleHelp size={11} /><span>Verifikasi akun</span><strong><span className="cx-chip cx-chip-warn"><i /> Belum tersedia</span></strong></div>
                       </div>
                     </div>
 
@@ -1672,9 +1720,7 @@ function AdminPage({ onBack, onNotice }) {
                 );
               })()}
 
-              <div className="cx-form-divider">UBAH DATA <small>hanya untuk koreksi</small></div>
-
-              <div className="cx-form-section">
+                            <div className="cx-form-section">
                 <div className="cx-form-divider">DATA AKUN <small>identitas & kontak</small></div>
                 <div className="cx-form-grid">
                   <Field label="Nama">
