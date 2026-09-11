@@ -453,13 +453,61 @@
 
 @media (max-width: 720px) {
   .cx-admin-shell .cx-user-search { max-width: 100%; }
-  .cx-admin-shell .cx-user-id { max-width: 100%; }
-  .cx-admin-shell .cx-user-row > .cx-user-meta {
-    grid-column: 1 / -1; border-top: 1px solid var(--b1);
-    padding-top: 8px; margin-top: 2px;
-  }
   .cx-admin-modal-backdrop .cx-modal.cx-user-modal {
     margin-top: calc(12px + env(safe-area-inset-top));
     max-height: calc(100dvh - 24px - env(safe-area-inset-top));
   }
+}
+
+/* ── REVISI: ID badge compact, meta di baris bawah, modal sticky ── */
+.cx-admin-shell .cx-user-id {
+  margin-left: auto; align-self: flex-start; flex: 0 0 auto;
+  display: inline-flex; flex-direction: column; align-items: flex-end;
+  gap: 0; padding: 3px 7px; border-radius: 7px; max-width: 96px;
+  background: rgba(139, 92, 246, .07); border: 1px solid var(--b2);
+  line-height: 1.15;
+}
+.cx-admin-shell .cx-user-id > span {
+  font-size: 7.5px; letter-spacing: .1em; font-weight: 700; color: var(--faint);
+}
+.cx-admin-shell .cx-user-id > em {
+  font-size: 9.5px; color: #ddd6fe; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal;
+}
+.cx-admin-shell .cx-ud-id { align-self: flex-start; max-width: 120px; }
+
+.cx-admin-shell .cx-chip-none { color: #9ca3af; }
+.cx-admin-shell .cx-user-modal .cx-ud-list strong .cx-chip { font-size: 10px; }
+
+@media (max-width: 860px) {
+  .cx-admin-shell .cx-user-row > .cx-user-meta {
+    grid-column: 1 / -1; order: 5;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    border-top: 1px solid var(--b1); padding-top: 9px; margin-top: 2px;
+  }
+  .cx-admin-shell .cx-user-meta .cx-user-date {
+    font-size: 10px; color: var(--faint); text-align: right; white-space: nowrap;
+  }
+  .cx-admin-shell .cx-user-row .cx-row-actions { order: 6; }
+  .cx-admin-shell .cx-user-ident { order: 1; gap: 9px; }
+  .cx-admin-shell .cx-user-cell { order: 2; }
+}
+
+/* modal detail user: header & footer sticky, body scroll */
+.cx-admin-modal-backdrop .cx-modal.cx-user-modal .cx-modal-footer {
+  position: sticky; bottom: 0; z-index: 3; flex: 0 0 auto;
+  background: var(--s2, #14101f);
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+.cx-admin-modal-backdrop .cx-modal.cx-user-modal .cx-modal-header {
+  padding: 12px 16px;
+}
+@media (max-width: 720px) {
+  .cx-admin-modal-backdrop { align-items: flex-end; }
+  .cx-admin-modal-backdrop .cx-modal.cx-user-modal {
+    margin-top: calc(14px + env(safe-area-inset-top));
+    max-height: calc(100dvh - 14px - env(safe-area-inset-top));
+    border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+  }
+  .cx-admin-modal-backdrop .cx-modal.cx-user-modal .cx-modal-body { padding: 14px; }
 }
