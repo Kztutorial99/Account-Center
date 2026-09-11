@@ -822,7 +822,8 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 @media (max-width:900px){
   .cx-custom-page,
   .cx-topup-page{ padding-bottom:6px }
-  .cx-footer-inner{ padding-bottom:calc(70px + env(safe-area-inset-bottom, 0px)) }
+  /* Jarak dari tab bar diatur di styles.css (khusus halaman aplikasi, <=720px);
+     landing & lebar >720px tidak punya tab bar jadi tidak perlu jarak ekstra. */
 }
 
 /* — Top Up: kartu nominal dengan bonus — */
