@@ -381,3 +381,85 @@
   }
   .cx-admin-shell .cx-panel-empty { padding: 20px 12px; }
 }
+
+/* ── FINAL POLISH: Pengguna & Detail User ───────────────────── */
+.cx-admin-shell .cx-user-search { max-width: 340px; width: 100%; position: relative; }
+.cx-admin-shell .cx-search-clear {
+  background: none; border: 0; color: var(--faint); cursor: pointer;
+  display: inline-flex; align-items: center; padding: 2px;
+}
+.cx-admin-shell .cx-user-filters {
+  display: flex; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--b1);
+  overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.cx-admin-shell .cx-user-filters::-webkit-scrollbar { display: none; }
+.cx-admin-shell .cx-user-filter {
+  flex: 0 0 auto; padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--b2); background: transparent; color: var(--muted);
+  font-size: 11px; font-weight: 600; transition: .15s;
+}
+.cx-admin-shell .cx-user-filter:hover { color: #fff; border-color: rgba(167,139,250,.4); }
+.cx-admin-shell .cx-user-filter.is-active {
+  color: #ede9fe; border-color: rgba(167,139,250,.55);
+  background: rgba(139,92,246,.18); box-shadow: 0 0 12px rgba(139,92,246,.18);
+}
+
+/* ID akun chip */
+.cx-admin-shell .cx-user-id {
+  margin-left: auto; flex: 0 0 auto; display: inline-flex; flex-direction: column;
+  align-items: flex-end; gap: 1px; cursor: pointer; max-width: 45%;
+  background: rgba(139,92,246,.08); border: 1px solid var(--b2);
+  border-radius: 8px; padding: 4px 7px; color: var(--muted);
+}
+.cx-admin-shell .cx-user-id > span { font-size: 8px; letter-spacing: .09em; color: var(--faint); }
+.cx-admin-shell .cx-user-id > em { font-style: normal; font-size: 10.5px; color: #ddd6fe; overflow-wrap: anywhere; }
+.cx-admin-shell .cx-user-id > svg { display: none; }
+.cx-admin-shell .cx-user-id:hover { border-color: rgba(167,139,250,.45); }
+.cx-admin-shell .cx-ud-id { margin-left: 0; align-items: flex-start; max-width: 100%; }
+
+/* status + tanggal sebagai metadata di baris bawah */
+.cx-admin-shell .cx-user-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; min-width: 0; flex-wrap: wrap;
+}
+.cx-admin-shell .cx-user-meta .cx-user-date { font-size: 10.5px; color: var(--faint); }
+
+/* semantic chips */
+.cx-admin-shell .cx-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 600;
+  border: 1px solid currentColor; background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.cx-admin-shell .cx-chip > i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.cx-admin-shell .cx-chip-ok { color: #4ade80; }
+.cx-admin-shell .cx-chip-warn { color: #fbbf24; }
+.cx-admin-shell .cx-chip-bad { color: #f87171; }
+.cx-admin-shell .cx-chip-admin { color: #c4b5fd; }
+.cx-admin-shell .cx-chip-user { color: #93c5fd; }
+
+/* modal detail user aman di mobile */
+.cx-admin-shell .cx-modal.cx-user-modal,
+.cx-admin-modal-backdrop .cx-modal.cx-user-modal {
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; width: 100%; max-width: min(720px, 100%);
+}
+.cx-admin-modal-backdrop .cx-modal.cx-user-modal .cx-modal-header {
+  position: sticky; top: 0; z-index: 3; flex: 0 0 auto;
+  background: var(--s2, #14101f);
+}
+.cx-admin-modal-backdrop .cx-modal.cx-user-modal .cx-modal-body {
+  flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 720px) {
+  .cx-admin-shell .cx-user-search { max-width: 100%; }
+  .cx-admin-shell .cx-user-id { max-width: 100%; }
+  .cx-admin-shell .cx-user-row > .cx-user-meta {
+    grid-column: 1 / -1; border-top: 1px solid var(--b1);
+    padding-top: 8px; margin-top: 2px;
+  }
+  .cx-admin-modal-backdrop .cx-modal.cx-user-modal {
+    margin-top: calc(12px + env(safe-area-inset-top));
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top));
+  }
+}
