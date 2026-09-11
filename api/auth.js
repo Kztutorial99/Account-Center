@@ -14,6 +14,7 @@ const shapeUser = (row) => ({
   id: row.id, name: row.name, email: row.email, phone: row.phone || "",
   avatar: row.avatar || "", balance: Number(row.balance) || 0,
   createdAt: row.createdAt, role: row.role === "admin" ? "admin" : "user",
+  provider: row.provider === "google" ? "google" : "email",
 });
 
 module.exports = async function handler(request, response) {
@@ -46,14 +47,14 @@ module.exports = async function handler(request, response) {
       const rows = body.avatar === undefined
         ? await sql`
             UPDATE codexa_users SET name = ${name}, phone = ${phone} WHERE id = ${uid}
-            RETURNING id, name, email, phone, balance, role, avatar, created_at AS "createdAt"`
+            RETURNING id, name, email, phone, balance, role, avatar, provider, created_at AS "createdAt"`
         : await sql`
             UPDATE codexa_users SET name = ${name}, phone = ${phone}, avatar = ${avatar} WHERE id = ${uid}
-            RETURNING id, name, email, phone, balance, role, avatar, created_at AS "createdAt"`;
+            RETURNING id, name, email, phone, balance, role, avatar, provider, created_at AS "createdAt"`;
       if (!rows.length) return response.status(404).json({ error: "Akun tidak ditemukan" });
       const row = rows[0];
       return response.status(200).json({
-        user: { ...row, balance: Number(row.balance) || 0, role: row.role === "admin" ? "admin" : "user" },
+        user: { ...row, balance: Number(row.balance) || 0, role: row.role === "admin" ? "admin" : "user", provider: row.provider === "google" ? "google" : "email" },
       });
     }
 
@@ -91,7 +92,7 @@ module.exports = async function handler(request, response) {
       }
 
       const existing = await sql`
-        SELECT id, name, email, phone, balance, status, role, avatar, created_at AS "createdAt"
+        SELECT id, name, email, phone, balance, status, role, avatar, provider, created_at AS "createdAt"
         FROM codexa_users WHERE email = ${profile.email} LIMIT 1
       `;
 
@@ -100,7 +101,11 @@ module.exports = async function handler(request, response) {
         if (row.status && row.status !== "active") {
           return response.status(403).json({ error: "Akun kamu dinonaktifkan. Hubungi admin." });
         }
-        /* Lengkapi foto profil kalau masih kosong. */
+        /* Tandai sebagai akun Google & lengkapi foto profil kalau masih kosong. */
+        if (row.provider !== "google") {
+          await sql`UPDATE codexa_users SET provider = 'google' WHERE id = ${row.id}`;
+          row.provider = "google";
+        }
         if (!row.avatar && profile.picture) {
           await sql`UPDATE codexa_users SET avatar = ${profile.picture} WHERE id = ${row.id}`;
           row.avatar = profile.picture;
@@ -114,9 +119,9 @@ module.exports = async function handler(request, response) {
       /* Akun Google tidak punya password lokal: isi hash acak yang tidak bisa dipakai login. */
       const randomPass = crypto.randomBytes(24).toString("hex");
       const created = await sql`
-        INSERT INTO codexa_users (id, name, email, phone, password_hash, balance, avatar)
-        VALUES (${id}, ${name}, ${profile.email}, '', ${hashPassword(randomPass)}, 0, ${profile.picture || ""})
-        RETURNING id, name, email, phone, balance, role, avatar, created_at AS "createdAt"
+        INSERT INTO codexa_users (id, name, email, phone, password_hash, balance, avatar, provider)
+        VALUES (${id}, ${name}, ${profile.email}, '', ${hashPassword(randomPass)}, 0, ${profile.picture || ""}, 'google')
+        RETURNING id, name, email, phone, balance, role, avatar, provider, created_at AS "createdAt"
       `;
       return setSession(response, id), response.status(201).json({ user: shapeUser(created[0]) });
     }
@@ -146,9 +151,9 @@ module.exports = async function handler(request, response) {
 
       const id = crypto.randomUUID();
       const rows = await sql`
-        INSERT INTO codexa_users (id, name, email, phone, password_hash, balance)
-        VALUES (${id}, ${name}, ${email}, ${phone}, ${hashPassword(password)}, 0)
-        RETURNING id, name, email, phone, balance, role, avatar, created_at AS "createdAt"
+        INSERT INTO codexa_users (id, name, email, phone, password_hash, balance, provider)
+        VALUES (${id}, ${name}, ${email}, ${phone}, ${hashPassword(password)}, 0, 'email')
+        RETURNING id, name, email, phone, balance, role, avatar, provider, created_at AS "createdAt"
       `;
       await resetRateLimit(sql, throttleKey);
       setSession(response, id);
@@ -158,7 +163,7 @@ module.exports = async function handler(request, response) {
     }
 
     const rows = await sql`
-      SELECT id, name, email, phone, balance, status, role, avatar, password_hash AS "passwordHash", created_at AS "createdAt"
+      SELECT id, name, email, phone, balance, status, role, avatar, provider, password_hash AS "passwordHash", created_at AS "createdAt"
       FROM codexa_users WHERE email = ${email} LIMIT 1
     `;
     const row = rows[0];
@@ -175,6 +180,7 @@ module.exports = async function handler(request, response) {
         id: row.id, name: row.name, email: row.email, phone: row.phone, avatar: row.avatar || "",
         balance: Number(row.balance) || 0, createdAt: row.createdAt,
         role: row.role === "admin" ? "admin" : "user",
+        provider: row.provider === "google" ? "google" : "email",
       },
     });
   } catch (error) {
@@ -182,3 +188,4 @@ module.exports = async function handler(request, response) {
     return response.status(500).json({ error: "Layanan akun sedang bermasalah" });
   }
 };
+
