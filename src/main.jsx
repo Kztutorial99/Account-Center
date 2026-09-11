@@ -4061,9 +4061,7 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
                 : <><Send size={13} /> Kirim ulang link</>}
           </button>
           {cooldown > 0 && (
-            <p className="cx-verify-cooldown">
-              Demi keamanan, link baru bisa dikirim setiap 60 detik (maksimal 5 kali per jam).
-            </p>
+            <p className="cx-verify-cooldown">Demi keamanan: kirim ulang tiap 60&nbsp;detik, maks. 5×&nbsp;per jam.</p>
           )}
         </div>
 
@@ -4174,7 +4172,7 @@ function ForgotPasswordPage({ onBackToLogin, onRegister }) {
                 : <><Send size={13} /> Kirim link reset password</>}
           </button>
           {cooldown > 0 && (
-            <p className="cx-verify-cooldown">Link reset baru bisa dikirim setiap 60 detik (maksimal 5 kali per jam).</p>
+            <p className="cx-verify-cooldown">Demi keamanan: kirim ulang tiap 60&nbsp;detik, maks. 5×&nbsp;per jam.</p>
           )}
         </form>
 
