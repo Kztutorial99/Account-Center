@@ -4461,14 +4461,14 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
               <InputWrap icon={Mail}>
                 <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="nama@email.com" required />
               </InputWrap>
-              {mode === "login" && emailCheck === "checking" && (
+            {mode === "login" && emailCheck === "checking" && (
                 <p className="cx-email-check is-checking"><RefreshCw size={11} className="cx-spin" /> Memeriksa email...</p>
               )}
               {mode === "login" && emailCheck === "email" && (
                 <p className="cx-email-check is-ok"><BadgeCheck size={11} /> Email terdaftar, silakan isi password</p>
               )}
               {mode === "login" && emailCheck === "notfound" && (
-                <p className="cx-email-check is-warn"><ShieldCheck size={11} /> Email ini belum terdaftar di sistem kami</p>
+                <p className="cx-email-check is-warn"><ShieldCheck size={11} /> Email belum terdaftar</p>
               )}
             </Field>
             {(mode === "register" || emailCheck === "email") && (
@@ -4481,23 +4481,22 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
                 </InputWrap>
               </Field>
             )}
-            {mode === "login" && onForgotPassword && (
+            {mode === "login" && onForgotPassword && emailCheck !== "notfound" && (
               <button type="button" className="cx-auth-forgot" onClick={onForgotPassword}>
                 Lupa password?
               </button>
             )}
             {mode === "login" && emailCheck === "notfound" && (
               <div className="cx-signup-hint">
-                <div className="cx-signup-hint-body">
-                  <strong>Akun belum terdaftar di sistem kami</strong>
-                  <span>Email <b>{(form.email || "").trim().toLowerCase()}</b> belum punya akun Akun Instan. Daftar dulu, gratis dan cuma butuh 1 menit.</span>
-                </div>
+                <span className="cx-signup-hint-text">
+                  Belum punya akun? <strong>Daftar gratis</strong> untuk melanjutkan.
+                </span>
                 <button
                   type="button"
-                  className="cx-btn cx-btn-primary cx-btn-full"
+                  className="cx-btn cx-btn-primary cx-btn-full cx-signup-hint-btn"
                   onClick={() => { setError(""); setMessage(""); switchMode("register"); }}
                 >
-                  <ArrowRight size={13} /> Daftar sekarang
+                  Daftar sekarang <ArrowRight size={13} />
                 </button>
               </div>
             )}
