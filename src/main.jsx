@@ -813,26 +813,78 @@ const PAGE_LABELS = {
   disclaimer: "Disclaimer", admin: "Admin Panel",
   ...Object.fromEntries(CATEGORY_SLUGS.map((s) => [s, CATEGORY_PAGES[s].label])),
 };
-/* ─── Halaman detail produk: setiap listing punya URL sendiri ───
-   Contoh: /produk/akun/gmail-fresh-no-pva-a1b2c3 */
+/* ─── Halaman detail produk: setiap listing punya URL pendek & rapi ───
+   Contoh: /produk/akun/google, /produk/akun/facebook, /produk/akun/tiktok */
 export const PRODUCT_PATH_PREFIX = "produk/akun";
 export const slugifyText = (value) =>
   String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "akun";
-export const productPagePath = (p) => {
-  const tail = String((p && p.id) || "").replace(/[^a-zA-Z0-9]/g, "").slice(-6).toLowerCase();
-  return `${PRODUCT_PATH_PREFIX}/${slugifyText(p && p.title)}${tail ? `-${tail}` : ""}`;
+
+/* Nama platform utama dikenali dari judul/tipe login agar URL tetap singkat. */
+const BRAND_SLUGS = [
+  [/mobile\s*legend|\bmlbb\b|\bml\b/, "mobile-legends"],
+  [/free\s*fire|\bff\b/, "free-fire"],
+  [/gmail|google/, "google"],
+  [/facebook|\bfb\b/, "facebook"],
+  [/instagram|\big\b/, "instagram"],
+  [/tiktok/, "tiktok"],
+  [/twitter|\bx\b/, "twitter"],
+  [/telegram/, "telegram"],
+  [/whats\s*app|\bwa\b/, "whatsapp"],
+  [/discord/, "discord"],
+  [/netflix/, "netflix"],
+  [/spotify/, "spotify"],
+  [/canva/, "canva"],
+  [/chat\s*gpt|openai/, "chatgpt"],
+  [/steam/, "steam"],
+  [/roblox/, "roblox"],
+  [/pubg/, "pubg"],
+  [/genshin/, "genshin"],
+  [/valorant/, "valorant"],
+  [/youtube/, "youtube"],
+  [/twitch/, "twitch"],
+  [/linkedin/, "linkedin"],
+  [/shopee/, "shopee"],
+  [/yahoo/, "yahoo"],
+  [/outlook|hotmail|microsoft/, "outlook"],
+  [/apple|icloud/, "apple"],
+];
+export const productBaseSlug = (p) => {
+  const hay = `${(p && p.title) || ""} ${(p && p.loginType) || ""}`.toLowerCase();
+  for (const [re, slug] of BRAND_SLUGS) if (re.test(hay)) return slug;
+  const words = slugifyText(p && p.title).split("-").filter(Boolean).slice(0, 2).join("-");
+  return words || "akun";
+};
+/* Kalau ada beberapa listing pada platform yang sama, urutan kedua dst
+   diberi angka: /produk/akun/google, /produk/akun/google-2, dst. */
+const productSlugMap = (list) => {
+  const items = Array.isArray(list) ? list.filter(Boolean) : [];
+  const seen = {};
+  const map = new Map();
+  items.forEach((p) => {
+    const base = productBaseSlug(p);
+    seen[base] = (seen[base] || 0) + 1;
+    map.set(p, seen[base] > 1 ? `${base}-${seen[base]}` : base);
+  });
+  return map;
+};
+export const productPagePath = (p, list) => {
+  const slug = (list && productSlugMap(list).get(p)) || productBaseSlug(p);
+  return `${PRODUCT_PATH_PREFIX}/${slug}`;
 };
 export const isProductPage = (page) => String(page || "").startsWith(`${PRODUCT_PATH_PREFIX}/`);
 export const findProductByPage = (list, page) => {
-  const items = Array.isArray(list) ? list : [];
+  const items = Array.isArray(list) ? list.filter(Boolean) : [];
   const slug = String(page || "").slice(PRODUCT_PATH_PREFIX.length + 1);
+  const map = productSlugMap(items);
   return (
-    items.find((p) => productPagePath(p) === page) ||
+    items.find((p) => map.get(p) === slug) ||
+    // URL lama (judul panjang + kode id) tetap bisa dibuka.
     items.find((p) => {
       const tail = String(p.id || "").replace(/[^a-zA-Z0-9]/g, "").slice(-6).toLowerCase();
       return tail && slug.endsWith(tail);
     }) ||
     items.find((p) => slugifyText(p.title) === slug.replace(/-[a-z0-9]{1,6}$/, "")) ||
+    items.find((p) => productBaseSlug(p) === slug.replace(/-\d+$/, "")) ||
     null
   );
 };
@@ -1639,7 +1691,11 @@ function App() {
   if (CATEGORY_SLUGS.includes(activePage)) return (
     <div className={shellClass}>
       {topbar}
-      <CategoryPage slug={activePage} navigate={navigate} />
+      <CategoryPage
+        slug={activePage}
+        navigate={navigate}
+        onOpenCatalog={(query) => { setSearch(query || ""); navigate("katalog"); }}
+      />
       <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
@@ -1726,7 +1782,7 @@ function App() {
                 key={p.id || i}
                 product={p}
                 colorIdx={i}
-                onOpen={() => navigate(productPagePath(p))}
+                onOpen={() => navigate(productPagePath(p, data.products))}
                 onBuy={(sel) => { setBuyItem(p); setBuySel(Array.isArray(sel) ? sel : []); }}
               />
             ))}
@@ -2894,7 +2950,8 @@ function HelpPage({ navigate, onAskAssistant }) {
    HALAMAN FAQ (SEO: /faq)
 ════════════════════════════════════════════════════ */
 const FAQ_PAGE_ITEMS = [
-  { q: "Apa itu Akun Instan?", a: "Akun Instan adalah marketplace digital Indonesia yang menyediakan akun siap pakai, mulai dari Google/Gmail hingga akun game dan akun digital lainnya. Selain itu, tersedia layanan Custom Email untuk membuat akun Gmail sesuai nama yang Anda inginkan. Setelah pembayaran terverifikasi, detail login langsung tersedia di menu Pesanan tanpa perlu menunggu admin." },
+  /* Penjelasan "Apa itu Akun Instan?" sudah dijelaskan pada blok di atas,
+     jadi tidak diulang lagi di daftar pertanyaan ini. */
   { q: "Apa saja yang bisa dibeli di Akun Instan?", a: "Tersedia tiga kategori layanan: (1) akun Google/Gmail siap pakai dari katalog dengan stok real-time, (2) layanan Custom Email Gmail sesuai nama yang Anda tentukan sendiri, serta (3) akun digital lain seperti akun game dan akun social media yang katalognya terus ditambah." },
   { q: "Apakah Akun Instan aman dan terpercaya?", a: "Setiap akun bergaransi login dan detail akun hanya dapat dilihat oleh pemilik pesanan. Password disimpan dalam bentuk tersamar di halaman dan baru akan ditampilkan saat Anda menekan tombol tampilkan atau salin. Jika akun gagal dipakai, admin akan mengganti akun atau mengembalikan saldo sesuai Kebijakan Refund." },
   { q: "Bagaimana cara membeli akun di Akun Instan?", a: "Isi saldo melalui menu Top Up, pilih akun di katalog, klik Beli Sekarang, lalu detail login langsung terbuka di menu Pesanan. Panduan lengkap tersedia di halaman Cara Beli." },
