@@ -4293,6 +4293,11 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
   const [busy, setBusy]         = useState(false);
   const captcha = useTurnstile();
   useEffect(() => { setMode(initialMode); }, [initialMode]);
+  const switchMode = (m) => {
+    setMode(m);
+    setError("");
+    if (typeof window !== "undefined") window.history.pushState({}, "", `/${m}`);
+  };
   /* Email dari halaman Lupa password langsung terisi di form Daftar. */
   useEffect(() => {
     if (initialEmail) setForm((f) => (f.email ? f : { ...f, email: initialEmail }));
@@ -4396,8 +4401,8 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
           </div>
 
           <div className="cx-auth-tabs">
-            <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); }}>Masuk</button>
-            <button type="button" className={mode === "register" ? "active" : ""} onClick={() => { setMode("register"); setError(""); }}>Daftar</button>
+            <button type="button" className={mode === "login" ? "active" : ""} onClick={() => switchMode("login")}>Masuk</button>
+            <button type="button" className={mode === "register" ? "active" : ""} onClick={() => switchMode("register")}>Daftar</button>
           </div>
 
           <button type="button" className="cx-google-btn" onClick={googleSignIn} disabled={busy}>
@@ -4454,7 +4459,7 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
 
           <p className="cx-auth-switch">
             {mode === "register" ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
-            <button type="button" onClick={() => { setMode(mode === "register" ? "login" : "register"); setError(""); }}>
+            <button type="button" onClick={() => switchMode(mode === "register" ? "login" : "register")}>
               {mode === "register" ? "Masuk di sini" : "Daftar gratis"}
             </button>
           </p>
