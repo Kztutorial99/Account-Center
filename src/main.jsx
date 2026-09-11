@@ -4023,19 +4023,21 @@ const QRIS_NMID    = "ID1026476486182";
 const WA_NUMBER    = "62895325844493";
 const TG_USERNAME  = "Kztutorial";
 const TOPUP_MIN = 10000;
+/* Fallback lokal — sumber kebenaran tetap dari server (GET /api/topup → bonusTiers). */
 const TOPUP_PRESETS = [
-  { amount: 10000, bonus: 500 },
-  { amount: 25000, bonus: 1000 },
-  { amount: 50000, bonus: 2500 },
-  { amount: 100000, bonus: 5000 },
-  { amount: 250000, bonus: 15000 },
-  { amount: 500000, bonus: 35000 },
+  { amount: 10000, bonus: 0 },
+  { amount: 25000, bonus: 2000 },
+  { amount: 50000, bonus: 4000 },
+  { amount: 100000, bonus: 8000 },
+  { amount: 250000, bonus: 20000 },
+  { amount: 500000, bonus: 45000 },
 ];
 /* Bonus saldo mengikuti nominal terbesar yang tercapai (juga untuk nominal custom). */
-const topupBonus = (value) => {
+const topupBonus = (value, tiers) => {
+  const list = Array.isArray(tiers) && tiers.length ? tiers : TOPUP_PRESETS;
   const v = Math.round(Number(value) || 0);
   let bonus = 0;
-  for (const t of TOPUP_PRESETS) if (v >= t.amount) bonus = t.bonus;
+  for (const t of list) if (v >= (Number(t.amount) || 0)) bonus = Number(t.bonus) || 0;
   return bonus;
 };
 
@@ -4046,7 +4048,7 @@ const topupStatusBadge = (status) =>
   : <span className="cx-topup-badge wait"><Clock size={11} /> Menunggu</span>;
 
 function useTopupData(user) {
-  const [state, setState] = useState({ balance: user.balance, topups: [], pendingTotal: 0, loading: true, error: "" });
+  const [state, setState] = useState({ balance: user.balance, topups: [], pendingTotal: 0, bonusTiers: TOPUP_PRESETS, loading: true, error: "" });
   const load = () => {
     setState((x) => ({ ...x, loading: true, error: "" }));
     jsonRequest("/api/topup", { method: "GET" })
@@ -4054,6 +4056,9 @@ function useTopupData(user) {
         balance: Number(p.balance) || 0,
         topups: p.topups || [],
         pendingTotal: Number(p.pendingTotal) || 0,
+        bonusTiers: Array.isArray(p.bonusTiers) && p.bonusTiers.length
+          ? p.bonusTiers.map((t) => ({ amount: Number(t.amount) || 0, bonus: Number(t.bonus) || 0 }))
+          : TOPUP_PRESETS,
         loading: false,
         error: "",
       }))
@@ -4286,6 +4291,9 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
 
   const amountNumber = Math.round(Number(amount) || 0);
   const pendingTotal = Number(state.pendingTotal) || 0;
+  /* Nominal & bonus mengikuti server supaya saldo yang masuk selalu sama dengan tampilan. */
+  const bonusTiers = Array.isArray(state.bonusTiers) && state.bonusTiers.length ? state.bonusTiers : TOPUP_PRESETS;
+  const customBonus = topupBonus(custom, bonusTiers);
   const expiredAt = payment && payment.expired ? new Date(payment.expired).getTime() : 0;
   const remaining = expiredAt ? expiredAt - now : 0;
 
@@ -4496,7 +4504,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
 
           <div className="cx-topup-form">
             <div className="cx-nominal-grid">
-              {TOPUP_PRESETS.map((t) => (
+              {bonusTiers.map((t) => (
                 <button
                   type="button"
                   key={t.amount}
@@ -4505,7 +4513,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                 >
                   <span className="cx-nominal-cap">Top up</span>
                   <strong>{formatPrice(t.amount)}</strong>
-                  <span className="cx-nominal-bonus">BONUS +{formatPrice(t.bonus)}</span>
+                  {t.bonus > 0 && <span className="cx-nominal-bonus">BONUS +{formatPrice(t.bonus)}</span>}
                   <small>Saldo diterima {formatPrice(t.amount + t.bonus)}</small>
                 </button>
               ))}
@@ -4530,7 +4538,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
                 <small className="cx-nominal-invalid">Nominal minimal {formatPrice(TOPUP_MIN)}.</small>
               )}
               {Math.round(Number(custom) || 0) >= TOPUP_MIN && (
-                <small className="cx-nominal-bonus-hint">Bonus +{formatPrice(topupBonus(custom))} · saldo diterima {formatPrice(Math.round(Number(custom) || 0) + topupBonus(custom))}</small>
+                <small className="cx-nominal-bonus-hint">{customBonus > 0 ? `Bonus +${formatPrice(customBonus)} · ` : ""}saldo diterima {formatPrice(Math.round(Number(custom) || 0) + customBonus)}</small>
               )}
             </div>
 
