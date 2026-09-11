@@ -1634,7 +1634,7 @@ function AdminPage({ onBack, onNotice }) {
                 const initials = String(d.name || userForm.name || "U").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
                 return (
                   <>
-                    <div className="cx-ud-head">
+                    <div className={`cx-ud-head is-${d.status || "unknown"}`}>
                       <div className="cx-avatar cx-ud-avatar">{initials}</div>
                       <div className="cx-ud-head-main">
                         <strong>{d.name || userForm.name || "Tanpa nama"}</strong>
@@ -1645,16 +1645,16 @@ function AdminPage({ onBack, onNotice }) {
                           <span className={`cx-chip ${chipClass(d.status)}`}><i /> {statusLabel(d.status)}</span>
                         </div>
                         <small><Mail size={9} /> {d.email || userForm.email}</small>
-                        <button type="button" className="cx-user-id cx-ud-id" onClick={() => copyUserId(d.id)} title="Salin ID akun">
-                          <span>ID AKUN</span>
-                          <em className="cx-mono">{copiedId === String(d.id) ? "ID disalin" : String(d.id || "").slice(0, 8)}</em>
-                          <Copy size={10} />
-                        </button>
                       </div>
+                      <button type="button" className="cx-user-id cx-ud-id" onClick={() => copyUserId(d.id)} title="Salin ID akun">
+                        <span>ID AKUN</span>
+                        <em className="cx-mono">{copiedId === String(d.id) ? "disalin" : String(d.id || "").slice(0, 8)}</em>
+                        <Copy size={10} />
+                      </button>
                       <div className="cx-ud-head-actions">
                         {d.status === "active"
-                          ? <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => { setUserStatus(d.id, "suspend"); setUserDetail({ ...d, status: "suspended" }); updateUserForm("status", "suspended"); }}><LockKeyhole size={11} /> Nonaktifkan</button>
-                          : <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => { setUserStatus(d.id, "activate"); setUserDetail({ ...d, status: "active" }); updateUserForm("status", "active"); }}><BadgeCheck size={11} /> Aktifkan</button>}
+                          ? <button className="cx-btn cx-btn-ghost cx-btn-sm cx-ud-danger-btn" onClick={() => { setUserStatus(d.id, "suspend"); setUserDetail({ ...d, status: "suspended" }); updateUserForm("status", "suspended"); }}><LockKeyhole size={11} /> Nonaktifkan</button>
+                          : <button className="cx-btn cx-btn-secondary cx-btn-sm cx-ud-ok-btn" onClick={() => { setUserStatus(d.id, "activate"); setUserDetail({ ...d, status: "active" }); updateUserForm("status", "active"); }}><BadgeCheck size={11} /> Aktifkan</button>}
                       </div>
                     </div>
 
@@ -1690,7 +1690,7 @@ function AdminPage({ onBack, onNotice }) {
 
                     <div className="cx-ud-section">
                       <div className="cx-form-divider">STATUS &amp; AKSES</div>
-                      <div className="cx-ud-list">
+                      <div className="cx-ud-list cx-ud-status-list">
                         <div><BadgeCheck size={11} /><span>Status akun</span><strong><span className={`cx-chip ${chipClass(d.status)}`}><i /> {statusLabel(d.status)}</span></strong></div>
                         <div><ShieldCheck size={11} /><span>Role</span><strong><span className={`cx-chip ${d.role === "admin" ? "cx-chip-admin" : "cx-chip-user"}`}><i /> {d.role === "admin" ? "Admin" : "User"}</span></strong></div>
                         <div><Mail size={11} /><span>Status email</span><strong>{d.provider === "google" ? <span className="cx-chip cx-chip-ok"><i /> Terverifikasi (Google)</span> : <span className="cx-chip cx-chip-warn"><i /> Belum terverifikasi</span>}</strong></div>
@@ -1723,7 +1723,7 @@ function AdminPage({ onBack, onNotice }) {
               })()}
 
                             <div className="cx-form-section">
-                <div className="cx-form-divider">DATA AKUN <small>identitas & kontak</small></div>
+                <div className="cx-form-divider">DATA AKUN</div>
                 <div className="cx-form-grid">
                   <Field label="Nama">
                     <InputWrap><input value={userForm.name} onChange={(e) => updateUserForm("name", e.target.value)} /></InputWrap>
@@ -1741,13 +1741,6 @@ function AdminPage({ onBack, onNotice }) {
 
               <div className="cx-form-section">
                 <div className="cx-form-divider">SALDO &amp; TOP UP</div>
-                <div className="cx-form-balance">
-                  <div>
-                    <small>Saldo saat ini</small>
-                    <strong>{formatPrice(Number(userForm.balance) || 0)}</strong>
-                  </div>
-                  <span>total top up<br />{formatPrice(userForm.topupTotal)}</span>
-                </div>
                 <div className="cx-form-grid">
                   <div className="cx-full-span">
                     <Field label="Saldo (IDR)" hint="Ubah manual bila perlu koreksi">

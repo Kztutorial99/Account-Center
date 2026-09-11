@@ -531,3 +531,93 @@
   }
   .cx-admin-modal-backdrop .cx-modal.cx-user-modal .cx-modal-body { padding: 14px; }
 }
+
+/* ── DETAIL USER v2: header premium, status berwarna, mobile aman ── */
+.cx-admin-shell .cx-user-modal .cx-ud-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "ava main id" "act act act";
+  gap: 10px; align-items: start; padding: 12px 12px 10px; margin-bottom: 14px;
+  border: 1px solid rgba(167, 139, 250, .22); border-radius: 14px;
+  background:
+    radial-gradient(120% 130% at 0% 0%, rgba(139, 92, 246, .18), transparent 60%),
+    linear-gradient(160deg, rgba(139, 92, 246, .10), rgba(139, 92, 246, .02));
+  box-shadow: 0 8px 24px -18px rgba(139, 92, 246, .8);
+}
+.cx-admin-shell .cx-user-modal .cx-ud-head .cx-ud-avatar {
+  grid-area: ava; width: 44px; height: 44px; font-size: 14px; border-radius: 13px;
+  border: 1px solid rgba(167, 139, 250, .35);
+}
+.cx-admin-shell .cx-user-modal .cx-ud-head-main { grid-area: main; gap: 5px; }
+.cx-admin-shell .cx-user-modal .cx-ud-head-main strong {
+  font-size: 15.5px; font-weight: 700; letter-spacing: -.01em;
+}
+.cx-admin-shell .cx-user-modal .cx-ud-head-main small { font-size: 11px; }
+.cx-admin-shell .cx-user-modal .cx-ud-head-main small svg { flex: none; }
+.cx-admin-shell .cx-user-modal .cx-ud-head .cx-ud-id {
+  grid-area: id; margin: 0; align-self: start; max-width: 92px;
+}
+.cx-admin-shell .cx-user-modal .cx-ud-head-actions {
+  grid-area: act; justify-content: flex-end;
+  border-top: 1px solid rgba(167, 139, 250, .16); padding-top: 9px; margin-top: 2px;
+}
+.cx-admin-shell .cx-user-modal .cx-ud-head-actions .cx-btn {
+  height: 30px; padding: 0 12px; font-size: 11.5px; border-radius: 9px; width: auto;
+}
+.cx-admin-shell .cx-ud-danger-btn {
+  color: #fca5a5; border: 1px solid rgba(248, 113, 113, .35);
+  background: rgba(248, 113, 113, .08);
+}
+.cx-admin-shell .cx-ud-ok-btn {
+  color: #86efac; border: 1px solid rgba(74, 222, 128, .35);
+  background: rgba(74, 222, 128, .08);
+}
+.cx-admin-shell .cx-user-modal .cx-ud-head.is-active { border-color: rgba(74, 222, 128, .26); }
+.cx-admin-shell .cx-user-modal .cx-ud-head.is-suspended { border-color: rgba(251, 191, 36, .28); }
+.cx-admin-shell .cx-user-modal .cx-ud-head.is-banned { border-color: rgba(248, 113, 113, .3); }
+
+/* Status & Akses: compact, badge dekat label */
+.cx-admin-shell .cx-user-modal .cx-ud-status-list > div {
+  grid-template-columns: 14px minmax(0, auto) minmax(0, 1fr);
+  gap: 8px; padding: 7px 10px;
+}
+.cx-admin-shell .cx-user-modal .cx-ud-status-list strong {
+  text-align: left; justify-self: start;
+}
+.cx-admin-shell .cx-user-modal .cx-ud-status-list .cx-chip {
+  font-size: 10px; padding: 3px 9px; white-space: nowrap;
+}
+.cx-admin-shell .cx-chip-ok { color: #4ade80; }
+.cx-admin-shell .cx-chip-warn { color: #fbbf24; }
+.cx-admin-shell .cx-chip-bad { color: #f87171; }
+.cx-admin-shell .cx-chip-admin { color: #c4b5fd; background: rgba(167, 139, 250, .16); }
+.cx-admin-shell .cx-chip-user { color: #a5b4fc; }
+.cx-admin-shell .cx-chip-none { color: #9ca3af; }
+
+/* Aktivitas terbaru */
+.cx-admin-shell .cx-user-modal .cx-ud-activity > div {
+  grid-template-columns: 26px minmax(0, 1fr); gap: 10px; padding: 10px;
+}
+.cx-admin-shell .cx-user-modal .cx-ud-activity > div > svg {
+  width: 26px; height: 26px; padding: 6px; border-radius: 9px;
+  background: rgba(139, 92, 246, .14); border: 1px solid rgba(167, 139, 250, .22);
+  color: #c4b5fd;
+}
+.cx-admin-shell .cx-user-modal .cx-ud-activity strong { font-size: 12px; font-weight: 650; }
+.cx-admin-shell .cx-user-modal .cx-ud-activity small { font-size: 10px; color: var(--faint); margin-top: 1px; }
+
+/* Mobile: tanpa overflow horizontal, header modal selalu terlihat */
+.cx-admin-shell .cx-user-modal .cx-modal-body,
+.cx-admin-shell .cx-user-modal .cx-modal-body * { max-width: 100%; }
+.cx-admin-modal-backdrop .cx-modal.cx-user-modal .cx-modal-body { overflow-x: hidden; }
+@media (max-width: 640px) {
+  .cx-admin-shell .cx-user-modal .cx-ud-head {
+    grid-template-columns: auto minmax(0, 1fr) auto; padding: 11px;
+  }
+  .cx-admin-shell .cx-user-modal .cx-ud-head .cx-ud-id { max-width: 82px; }
+  .cx-admin-shell .cx-user-modal .cx-ud-head-actions .cx-btn { width: auto; }
+  .cx-admin-shell .cx-user-modal .cx-ud-status-list > div {
+    grid-template-columns: 14px minmax(0, 1fr) auto; row-gap: 0;
+  }
+  .cx-admin-shell .cx-user-modal .cx-ud-status-list strong { grid-column: 3; justify-self: end; }
+}
