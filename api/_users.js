@@ -77,6 +77,7 @@ async function ensureTablesUncached(sql) {
     sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT ''`,
     sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'`,
     sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT ''`,
+    sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'email'`,
   ]);
   await sql`UPDATE codexa_users SET role = 'user' WHERE role NOT IN ('user','admin')`;
 }
@@ -133,7 +134,7 @@ async function currentUser(sql, request) {
   const id = sessionUserId(request);
   if (!id) return null;
   const rows = await sql`
-    SELECT id, name, email, phone, balance, status, role, avatar, created_at AS "createdAt"
+    SELECT id, name, email, phone, balance, status, role, avatar, provider, created_at AS "createdAt"
     FROM codexa_users WHERE id = ${id} LIMIT 1
   `;
   if (!rows.length) return null;
@@ -200,3 +201,4 @@ module.exports = {
   setSession, clearSession, sessionUserId, currentUser, bodyOf, text,
   clientIp, rateLimit, resetRateLimit,
 };
+
