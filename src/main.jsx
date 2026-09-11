@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import "./styles.css";
 import { applySeo, applyProductSchema } from "./seo.js";
+import { CategoryPage, CATEGORY_PAGES, CATEGORY_SLUGS } from "./category-pages.jsx";
 import { signInWithGoogle, consumeGoogleRedirect, signOutGoogle } from "./google-signin.js";
 
 /* ─── helpers ─── */
@@ -802,14 +803,15 @@ function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }
 /* ═══════════════════════════════════════════════════
    APP ROOT
 ════════════════════════════════════════════════════ */
-const PAGE_PATHS = ["admin", "katalog", "orders", "help", "faq", "cara-beli", "account", "topup", "custom-email", "terms", "privacy", "refund", "disclaimer"];
+const PAGE_PATHS = ["admin", "katalog", "orders", "help", "faq", "cara-beli", "account", "topup", "custom-email", "terms", "privacy", "refund", "disclaimer", ...CATEGORY_SLUGS];
 // Halaman publik: bisa dibuka tanpa login dan boleh di-crawl Google.
-export const PUBLIC_PAGES = ["store", "katalog", "custom-email", "help", "faq", "cara-beli", "terms", "privacy", "refund", "disclaimer"];
+export const PUBLIC_PAGES = ["store", "katalog", "custom-email", "help", "faq", "cara-beli", "terms", "privacy", "refund", "disclaimer", ...CATEGORY_SLUGS];
 const PAGE_LABELS = {
   store: "Beranda", katalog: "Katalog", "custom-email": "Custom Email", help: "Bantuan",
   faq: "FAQ", "cara-beli": "Cara Beli", orders: "Pesanan", account: "Akun", topup: "Top Up",
   terms: "Syarat & Ketentuan", privacy: "Kebijakan Privasi", refund: "Kebijakan Refund",
   disclaimer: "Disclaimer", admin: "Admin Panel",
+  ...Object.fromEntries(CATEGORY_SLUGS.map((s) => [s, CATEGORY_PAGES[s].label])),
 };
 const pageFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
@@ -1597,6 +1599,16 @@ function App() {
     <div className={shellClass}>
       {topbar}
       <FaqPage navigate={navigate} onAskAssistant={() => setAiOpen(true)} />
+      <StoreFooter navigate={navigate} guest={guest} />
+      {tabbar}
+      {overlays}
+    </div>
+  );
+
+  if (CATEGORY_SLUGS.includes(activePage)) return (
+    <div className={shellClass}>
+      {topbar}
+      <CategoryPage slug={activePage} navigate={navigate} />
       <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
       {overlays}
@@ -3165,6 +3177,9 @@ function StoreFooter({ navigate, guest }) {
             <button onClick={() => navigate("help")}>Bantuan</button>
             <button onClick={() => navigate("faq")}>FAQ</button>
             <button onClick={() => navigate("cara-beli")}>Cara Beli</button>
+            {CATEGORY_SLUGS.map((s) => (
+              <button key={s} onClick={() => navigate(s)}>{CATEGORY_PAGES[s].label}</button>
+            ))}
             {!guest && <button onClick={() => navigate("orders")}>Pesanan</button>}
             <button onClick={() => navigate("terms")}>Syarat &amp; Ketentuan</button>
             <button onClick={() => navigate("privacy")}>Kebijakan Privasi</button>

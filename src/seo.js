@@ -59,6 +59,41 @@ const PAGE_SEO = {
       "Panduan langkah demi langkah membeli akun Google/Gmail di Akun Instan: isi saldo, pilih akun, bayar pakai saldo, dan ambil detail login secara instan.",
     keywords: "cara beli akun google, cara beli akun gmail, tutorial beli akun digital",
   },
+  "produk/gmail-fresh": {
+    path: "/produk/gmail-fresh",
+    title: "Jual Akun Gmail Fresh No-PVA Murah — Harga Mulai Rp5.000 | Akun Instan",
+    description:
+      "Jual akun Gmail fresh (no-PVA) baru, belum terikat nomor, dikirim instan. Jumlah akun sesuai jumlah yang dibeli, harga makin murah untuk pembelian banyak.",
+    keywords: "jual akun gmail fresh, gmail fresh murah, akun gmail no pva, beli gmail baru, jual email gmail",
+  },
+  "produk/custom-gmail": {
+    path: "/produk/custom-gmail",
+    title: "Custom Gmail Sesuai Nama Sendiri — Cek Nama & Pesan | Akun Instan",
+    description:
+      "Pesan akun Gmail custom dengan nama atau username pilihanmu. Cek ketersediaan nama otomatis, akun dibuat manual oleh tim Akun Instan dan siap dipakai.",
+    keywords: "custom gmail, jual custom gmail, buat gmail sesuai nama, jasa buat akun gmail, gmail nama sendiri",
+  },
+  "produk/gmail-aged": {
+    path: "/produk/gmail-aged",
+    title: "Jual Akun Gmail Aged (Akun Lama) — Harga Sesuai Umur Akun | Akun Instan",
+    description:
+      "Jual akun Gmail aged/tua dengan umur transparan dan harga otomatis mengikuti usia akun. Stok real-time, detail login dikirim instan, garansi login.",
+    keywords: "jual gmail aged, akun gmail lama, gmail tua, beli gmail aged, akun gmail berumur",
+  },
+  "produk/akun-game": {
+    path: "/produk/akun-game",
+    title: "Jual Akun Game Murah & Aman — Kirim Instan | Akun Instan",
+    description:
+      "Jual akun game siap pakai dengan stok real-time, harga transparan, dan detail login dikirim instan setelah pembayaran. Garansi login sesuai kebijakan refund.",
+    keywords: "jual akun game, beli akun game murah, akun game siap pakai, jual akun game aman",
+  },
+  "produk/akun-social-media": {
+    path: "/produk/akun-social-media",
+    title: "Jual Akun Social Media Siap Pakai — Harga Murah | Akun Instan",
+    description:
+      "Jual akun social media siap pakai untuk promosi dan pengelolaan konten. Keterangan akun jelas, pengiriman instan, harga transparan, garansi login.",
+    keywords: "jual akun social media, beli akun sosmed, akun instagram tiktok, jual akun sosmed murah",
+  },
   terms: { path: "/terms", title: "Syarat & Ketentuan | Akun Instan", description: "Syarat dan ketentuan penggunaan layanan Akun Instan." },
   privacy: { path: "/privacy", title: "Kebijakan Privasi | Akun Instan", description: "Kebijakan privasi dan perlindungan data pengguna Akun Instan." },
   refund: { path: "/refund", title: "Kebijakan Refund | Akun Instan", description: "Ketentuan pengembalian dana dan garansi produk akun digital Akun Instan." },
