@@ -35,7 +35,7 @@ async function sendVerificationEmail({ request, email, name, token }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("RESEND_API_KEY belum dikonfigurasi");
 
-  const verifyUrl = `${appOrigin(request)}/api/verify-email?token=${encodeURIComponent(token)}`;
+  const verifyUrl = `${appOrigin(request)}/api/auth?verify=${encodeURIComponent(token)}`;
   const safeName = escapeHtml(name || "Pengguna");
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",

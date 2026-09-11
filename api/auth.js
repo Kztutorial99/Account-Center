@@ -7,7 +7,7 @@ const {
 
 const { verifyFirebaseIdToken } = require("./_firebase");
 const { verifyGoogleAccessToken } = require("./_google");
-const { createVerificationToken, sendVerificationEmail } = require("./_email-verification");
+const { createVerificationToken, hashVerificationToken, sendVerificationEmail } = require("./_email-verification");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -24,6 +24,22 @@ module.exports = async function handler(request, response) {
     await ensureTables(sql);
 
     if (request.method === "GET") {
+      const token = request.query && typeof request.query.verify === "string" ? request.query.verify : "";
+      if (token) {
+        if (!/^[A-Za-z0-9_-]{40,100}$/.test(token)) {
+          return response.redirect(302, "/login?verification=invalid");
+        }
+        const tokenHash = hashVerificationToken(token);
+        const verified = await sql`
+          UPDATE codexa_users
+          SET email_verified_at = NOW(), verification_token_hash = NULL, verification_expires_at = NULL
+          WHERE verification_token_hash = ${tokenHash}
+            AND verification_expires_at > NOW()
+            AND email_verified_at IS NULL
+          RETURNING id
+        `;
+        return response.redirect(302, verified.length ? "/login?verification=success" : "/login?verification=invalid");
+      }
       const user = await currentUser(sql, request);
       return response.status(200).json({ user });
     }
