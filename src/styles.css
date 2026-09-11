@@ -3991,3 +3991,74 @@ html { scroll-behavior: smooth; }
 .cx-cat-links { display: flex; flex-wrap: wrap; gap: 8px; }
 .cx-cat-note { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 14px 0 0; font-size: 12px; color: var(--cx-text-2, #64748b); }
 .cx-cat-inline { background: none; border: 0; padding: 0; font: inherit; color: var(--cx-primary, #2563eb); font-weight: 600; cursor: pointer; text-decoration: underline; }
+
+/* ═══ Halaman produk (URL sendiri per listing) ═══ */
+.cx-pc-title-link {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  color: inherit; font: inherit; text-align: left;
+}
+.cx-pc-title-link:hover { text-decoration: underline; }
+.cx-pc-detail-toggle { display: inline-flex; align-items: center; gap: 4px; }
+
+.cx-prodpage { padding: 18px 0 96px; display: flex; flex-direction: column; gap: 14px; }
+.cx-prodpage-crumbs {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font: 500 11px Inter, system-ui, sans-serif; color: var(--faint, #8b8ba7);
+}
+.cx-prodpage-crumbs button {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--indigo2, #a5b4fc); font: inherit;
+}
+.cx-prodpage-crumbs strong { color: var(--ink2, #e6e6f0); font-weight: 600; }
+.cx-prodpage-head { display: flex; flex-direction: column; gap: 10px; }
+.cx-prodpage-plat {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 600 11px ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--indigo2, #a5b4fc);
+}
+.cx-prodpage-head h1 {
+  margin: 0; font: 700 24px/1.25 Inter, system-ui, sans-serif; letter-spacing: -.03em;
+}
+.cx-prodpage-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.cx-prodpage-chip {
+  padding: 6px 10px; border-radius: 999px;
+  border: 1px solid var(--b1, rgba(255,255,255,.1));
+  background: rgba(255, 255, 255, .04);
+  font: 600 11px Inter, system-ui, sans-serif; color: var(--ink2, #e6e6f0);
+}
+.cx-prodpage-chip.is-out { color: #fca5a5; border-color: rgba(248, 113, 113, .35); }
+.cx-prodpage-card {
+  border: 1px solid var(--b1, rgba(255,255,255,.1)); border-radius: 16px;
+  background: rgba(255, 255, 255, .03); padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.cx-prodpage-card h2 {
+  margin: 0; font: 700 13px Inter, system-ui, sans-serif;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--faint, #8b8ba7);
+}
+.cx-prodpage-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cx-prodpage-buy {
+  position: sticky; bottom: 12px; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-radius: 16px;
+  border: 1px solid var(--b1, rgba(255,255,255,.12));
+  background: rgba(20, 18, 38, .92); backdrop-filter: blur(12px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
+}
+.cx-prodpage-total { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cx-prodpage-total small { font: 500 11px Inter, system-ui, sans-serif; color: var(--faint, #8b8ba7); }
+.cx-prodpage-total strong { font: 700 17px Inter, system-ui, sans-serif; letter-spacing: -.02em; }
+.cx-prodpage-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.cx-prodpage-links button {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--b1, rgba(255,255,255,.1));
+  background: rgba(255, 255, 255, .04);
+  color: var(--ink2, #e6e6f0); font: 600 12px Inter, system-ui, sans-serif;
+}
+.cx-prodpage-links button:hover { border-color: var(--indigo2, #a5b4fc); }
+@media (max-width: 480px) {
+  .cx-prodpage-head h1 { font-size: 20px; }
+  .cx-prodpage-buy { flex-direction: column; align-items: stretch; }
+  .cx-prodpage-buy .cx-btn { width: 100%; justify-content: center; }
+}
