@@ -78,6 +78,9 @@ export function Captcha({ state }) {
   return (
     <div className="cx-captcha">
       <div className="cx-captcha-box" ref={state.holder} />
+      {!state.token && !state.failed && (
+        <p className="cx-captcha-note cx-captcha-loading">Memuat verifikasi keamanan...</p>
+      )}
       {state.failed && (
         <p className="cx-captcha-note">Captcha gagal dimuat. Periksa koneksi lalu muat ulang halaman.</p>
       )}
