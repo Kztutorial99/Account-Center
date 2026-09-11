@@ -1511,7 +1511,7 @@ function AdminPage({ onBack, onNotice }) {
                     <span className={`cx-chip ${u.status === "active" ? "cx-chip-ok" : u.status === "suspended" ? "cx-chip-warn" : "cx-chip-bad"}`}>
                       <i /> {statusTxt}
                     </span>
-                    <span className="cx-user-date">Bergabung {u.createdAt ? formatDate(u.createdAt) : "—"}</span>
+                    <span className="cx-user-date" data-label="Bergabung">{u.createdAt ? formatDate(u.createdAt) : "—"}</span>
                   </div>
                   <div className="cx-row-actions">
                     {u.status === "active"

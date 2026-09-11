@@ -423,6 +423,19 @@
   gap: 8px; min-width: 0; flex-wrap: wrap;
 }
 .cx-admin-shell .cx-user-meta .cx-user-date { font-size: 10.5px; color: var(--faint); }
+/* desktop: meta menempati kolom STATUS + BERGABUNG */
+@media (min-width: 861px) {
+  .cx-admin-shell .cx-user-meta { grid-column: 4 / 6; }
+}
+/* mobile: meta jadi baris penuh setelah kartu Saldo & Top Up, sebelum tombol aksi */
+@media (max-width: 860px) {
+  .cx-admin-shell .cx-user-meta {
+    grid-column: 1 / -1;
+    margin-top: 2px; padding-top: 10px;
+    border-top: 1px dashed var(--ad-border);
+  }
+  .cx-admin-shell .cx-user-meta .cx-user-date { justify-self: end; text-align: right; }
+}
 
 /* semantic chips */
 .cx-admin-shell .cx-chip {
@@ -436,19 +449,26 @@
 .cx-admin-shell .cx-chip-bad { color: #f87171; }
 .cx-admin-shell .cx-chip-admin { color: #c4b5fd; }
 .cx-admin-shell .cx-chip-user { color: #93c5fd; }
+.cx-admin-shell .cx-chip-none { color: #9aa3b2; }
 
 /* modal detail user aman di mobile */
 .cx-admin-shell .cx-modal.cx-user-modal,
 .cx-admin-modal-backdrop .cx-modal.cx-user-modal {
   max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   display: flex; flex-direction: column; width: 100%; max-width: min(720px, 100%);
+  overflow: hidden; /* hanya body yang scroll */
 }
 .cx-admin-modal-backdrop .cx-modal.cx-user-modal .cx-modal-header {
   position: sticky; top: 0; z-index: 3; flex: 0 0 auto;
   background: var(--s2, #14101f);
 }
 .cx-admin-modal-backdrop .cx-modal.cx-user-modal .cx-modal-body {
-  flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.cx-admin-modal-backdrop .cx-modal.cx-user-modal .cx-modal-footer {
+  position: sticky; bottom: 0; z-index: 3; flex: 0 0 auto;
+  background: var(--s2, #14101f);
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
 }
 
 @media (max-width: 720px) {
