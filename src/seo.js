@@ -144,7 +144,7 @@ const setJsonLd = (id, data) => {
 export function applySeo(page) {
   const seo = PAGE_SEO[page] || PAGE_SEO.store;
   const url = `${SITE_URL}${seo.path}`;
-  const image = `${SITE_URL}/favicon.svg`;
+  const image = `${SITE_URL}/icon-512.png`;
 
   document.title = seo.title;
   setMeta("name", "description", seo.description);
@@ -188,7 +188,7 @@ export function applyProductSeo(product, page) {
   const description = (rawDesc.replace(/\s+/g, " ").trim() ||
     `Beli ${name} di Akun Instan. Jumlah akun sesuai jumlah yang dibeli, detail login dikirim instan setelah pembayaran, garansi login.`).slice(0, 300);
   const title = `${name} — Jual Akun Digital Murah | ${SITE_NAME}`;
-  const image = `${SITE_URL}/favicon.svg`;
+  const image = `${SITE_URL}/icon-512.png`;
 
   document.title = title;
   setMeta("name", "description", description);
