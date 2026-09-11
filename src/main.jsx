@@ -4583,6 +4583,26 @@ function ProfilePage({ user, onBack, onTopup, onSaved, onNotice }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fileRef = useRef(null);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetMsg, setResetMsg] = useState("");
+  const [resetErr, setResetErr] = useState("");
+  const [resetCooldown, startResetCooldown] = useSendCooldown("codexa:reset-link-until");
+
+  const sendReset = async () => {
+    if (resetBusy || resetCooldown > 0) return;
+    setResetBusy(true); setResetMsg(""); setResetErr("");
+    try {
+      const res = await jsonRequest("/api/auth", {
+        method: "POST",
+        body: JSON.stringify({ action: "forgot-password", email: user.email }),
+      });
+      setResetMsg(res.message || "Link reset password sudah dikirim. Cek inbox atau folder spam.");
+      startResetCooldown(res.retryAfter);
+    } catch (e) {
+      setResetErr(e.message || "Gagal mengirim link reset password");
+      if (e.retryAfter) startResetCooldown(e.retryAfter);
+    } finally { setResetBusy(false); }
+  };
 
   const startEdit = () => {
     setForm({ name: user.name || "", phone: user.phone || "" });
@@ -4704,6 +4724,32 @@ function ProfilePage({ user, onBack, onTopup, onSaved, onNotice }) {
               </strong>
             </li>
           </ul>
+
+          {user.provider !== "google" && (
+            <div className="cx-profile-security">
+              <div className="cx-profile-security-head">
+                <span className="cx-profile-security-icon" aria-hidden="true"><KeyRound size={14} /></span>
+                <div className="cx-profile-security-copy">
+                  <strong>Reset password</strong>
+                  <small>Kirim link ganti password ke {user.email}</small>
+                </div>
+              </div>
+              {resetMsg && <p className="cx-profile-security-msg is-ok"><BadgeCheck size={12} /> {resetMsg}</p>}
+              {resetErr && <p className="cx-profile-security-msg is-err">{resetErr}</p>}
+              <button
+                type="button"
+                className="cx-btn cx-btn-secondary cx-btn-sm cx-profile-security-btn"
+                disabled={resetBusy || resetCooldown > 0}
+                onClick={sendReset}
+              >
+                {resetBusy
+                  ? <><Spinner size={12} /> Mengirim...</>
+                  : resetCooldown > 0
+                    ? <><Clock size={12} /> Kirim ulang {resetCooldown}s</>
+                    : <><Send size={12} /> Kirim link reset</>}
+              </button>
+            </div>
+          )}
 
           <div className="cx-balance-card">
             <span><Wallet size={13} /> Saldo tersedia</span>
