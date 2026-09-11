@@ -13,8 +13,10 @@ const {
 } = require("./_email-verification");
 const { verifyCaptcha } = require("./_turnstile");
 
-/* Form publik yang wajib lewat captcha Cloudflare Turnstile. */
-const CAPTCHA_ACTIONS = new Set(["register", "resend-verification", "forgot-password"]);
+/* Form publik yang wajib lewat captcha Cloudflare Turnstile.
+   resend-verification dilepas karena sudah ada captcha saat daftar +
+   autentikasi email/password + timer 60 detik + batas 5/jam. */
+const CAPTCHA_ACTIONS = new Set(["register", "forgot-password"]);
 
 const RESEND_COOLDOWN_SEC = 60;
 const RESEND_HOURLY_CAP = 5;
