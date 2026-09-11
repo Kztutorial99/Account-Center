@@ -282,6 +282,7 @@ export async function jsonRequest(url, opts = {}) {
   if (!r.ok) {
     const error = new Error(p.error || "Permintaan gagal diproses");
     error.code = p.code || "";
+    error.retryAfter = Number(p.retryAfter) || 0;
     throw error;
   }
   return p;
@@ -942,10 +943,35 @@ const authScreenFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
   if (slug === "login" || slug === "register") return slug;
   if (slug === "email-verifikasi") return "verify";
+  if (slug === "status-verifikasi") return "verifystatus";
   if (slug === "lupa-password") return "forgot";
   if (slug === "reset-password") return "reset";
   return "welcome";
 };
+
+const RESEND_COOLDOWN_SEC = 60;
+/* Timer kirim ulang: deadline disimpan di sessionStorage supaya refresh
+   halaman tidak mereset jeda 60 detik. */
+function useSendCooldown(storageKey) {
+  const readLeft = () => {
+    try {
+      const until = Number(window.sessionStorage.getItem(storageKey)) || 0;
+      return Math.max(0, Math.ceil((until - Date.now()) / 1000));
+    } catch (_) { return 0; }
+  };
+  const [left, setLeft] = useState(readLeft);
+  useEffect(() => {
+    if (left <= 0) return;
+    const id = window.setInterval(() => setLeft(readLeft()), 1000);
+    return () => window.clearInterval(id);
+  }, [left, storageKey]);
+  const start = (seconds = RESEND_COOLDOWN_SEC) => {
+    const secs = Math.max(1, Math.round(Number(seconds) || RESEND_COOLDOWN_SEC));
+    try { window.sessionStorage.setItem(storageKey, String(Date.now() + secs * 1000)); } catch (_) {}
+    setLeft(secs);
+  };
+  return [left, start];
+}
 
 const VERIFY_PENDING_KEY = "codexa:pending-verification";
 const readVerifyPending = () => {
@@ -1022,7 +1048,7 @@ function App() {
     }
     setAuthScreen(screen);
     if (typeof window !== "undefined") {
-      const AUTH_PATHS = { welcome: "/", verify: "/email-verifikasi", forgot: "/lupa-password", reset: "/reset-password" };
+      const AUTH_PATHS = { welcome: "/", verify: "/email-verifikasi", verifystatus: "/status-verifikasi", forgot: "/lupa-password", reset: "/reset-password" };
       const path = AUTH_PATHS[screen] || `/${screen}`;
       window.history.pushState({}, "", path);
     }
@@ -1415,6 +1441,11 @@ function App() {
   /* ── auth gate: tampilkan splash sampai sesi diketahui (cegah kedip
      halaman internal saat refresh, baik tamu maupun user login) ── */
   if (auth.loading) return <SessionSplash />;
+  /* Link dari email hanya menampilkan info status; user melanjutkan di tab
+     sebelumnya lewat tombol "Saya sudah verifikasi". */
+  if (authScreen === "verifystatus") {
+    return <VerifyStatusPage onBackToLogin={() => goAuthScreen(auth.user ? "welcome" : "login")} loggedIn={Boolean(auth.user)} />;
+  }
   if (welcomeSplash) {
     return <SessionSplash title="Berhasil masuk" subtitle="Mengarahkan kamu ke beranda..." />;
   }
@@ -1427,6 +1458,7 @@ function App() {
       return (
         <ForgotPasswordPage
           onBackToLogin={() => goAuthScreen("login")}
+          onRegister={() => goAuthScreen("register")}
         />
       );
     }
@@ -3926,6 +3958,7 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
   const linkState = new URLSearchParams(window.location.search).get("verification");
   const [busy, setBusy] = useState(false);
   const [resending, setResending] = useState(false);
+  const [cooldown, startCooldown] = useSendCooldown("codexa:resend-verify-until");
   const [error, setError] = useState(linkState === "invalid" ? "Link verifikasi tidak valid atau sudah kedaluwarsa. Kirim ulang link baru." : "");
   const [message, setMessage] = useState(pending && pending.message ? pending.message : "");
 
@@ -3963,6 +3996,7 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
 
   const resend = async () => {
     if (!email || !password) { setError("Sesi pendaftaran sudah berakhir. Silakan masuk untuk mengirim link baru."); return; }
+    if (cooldown > 0) return;
     setResending(true); setError(""); setMessage("");
     try {
       const res = await jsonRequest("/api/auth", {
@@ -3970,7 +4004,11 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
         body: JSON.stringify({ action: "resend-verification", email, password }),
       });
       setMessage(res.message || "Link verifikasi baru sudah dikirim.");
-    } catch (err) { setError(err.message || "Gagal mengirim ulang link"); }
+      startCooldown(res.retryAfter);
+    } catch (err) {
+      setError(err.message || "Gagal mengirim ulang link");
+      if (err.retryAfter) startCooldown(err.retryAfter);
+    }
     finally { setResending(false); }
   };
 
@@ -4017,9 +4055,23 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
           <button type="button" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy} onClick={() => check()}>
             {busy ? <><RefreshCw size={13} /> Memeriksa...</> : <><ShieldCheck size={13} /> Saya sudah verifikasi email</>}
           </button>
-          <button type="button" className="cx-btn cx-btn-secondary cx-btn-full" disabled={resending} onClick={resend}>
-            {resending ? <><RefreshCw size={13} /> Mengirim...</> : <><Send size={13} /> Kirim ulang link</>}
+          <button
+            type="button"
+            className="cx-btn cx-btn-secondary cx-btn-full"
+            disabled={resending || cooldown > 0}
+            onClick={resend}
+          >
+            {resending
+              ? <><RefreshCw size={13} /> Mengirim...</>
+              : cooldown > 0
+                ? <><Clock size={13} /> Kirim ulang dalam {cooldown}s</>
+                : <><Send size={13} /> Kirim ulang link</>}
           </button>
+          {cooldown > 0 && (
+            <p className="cx-verify-cooldown">
+              Demi keamanan, link baru bisa dikirim setiap 60 detik (maksimal 5 kali per jam).
+            </p>
+          )}
         </div>
 
         <p className="cx-verify-foot">
@@ -4031,23 +4083,65 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
   );
 }
 
+/* Halaman /status-verifikasi: dibuka dari link di email. Hanya menampilkan
+   status; user melanjutkan di tab tempat dia mendaftar. */
+function VerifyStatusPage({ onBackToLogin, loggedIn }) {
+  const ok = new URLSearchParams(window.location.search).get("verification") === "success";
+  return (
+    <div className="cx-auth-shell cx-verify-shell">
+      <div className="cx-auth-glow cx-auth-glow-a" aria-hidden="true" />
+      <div className="cx-auth-glow cx-auth-glow-b" aria-hidden="true" />
+
+      <div className="cx-verify-card cx-verify-status">
+        <div className="cx-verify-top">
+          <div className={`cx-verify-icon ${ok ? "is-ok" : "is-bad"}`} aria-hidden="true">
+            {ok ? <BadgeCheck size={22} /> : <X size={22} />}
+          </div>
+          <div className="cx-verify-brand"><span className="cx-verify-mark">AI</span> Akun Instan</div>
+        </div>
+        <h1>{ok ? "Email berhasil diverifikasi" : "Link verifikasi tidak berlaku"}</h1>
+        <p className="cx-verify-lead">
+          {ok
+            ? "Akun kamu sudah aktif. Kembali ke halaman tempat kamu mendaftar, lalu tekan tombol Saya sudah verifikasi email untuk lanjut."
+            : "Link ini sudah kedaluwarsa atau pernah dipakai. Kembali ke halaman verifikasi dan kirim ulang link baru."}
+        </p>
+        <div className={`cx-verify-badge ${ok ? "is-ok" : "is-bad"}`}>
+          {ok ? <><ShieldCheck size={13} /> Status: Terverifikasi</> : <><Clock size={13} /> Status: Belum terverifikasi</>}
+        </div>
+        <p className="cx-verify-foot">
+          Halaman ini boleh ditutup.{" "}
+          <button type="button" onClick={onBackToLogin}>{loggedIn ? "Buka beranda" : "Buka halaman masuk"}</button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* Halaman /lupa-password: kirim link reset password ke email user. */
-function ForgotPasswordPage({ onBackToLogin }) {
+function ForgotPasswordPage({ onBackToLogin, onRegister }) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notRegistered, setNotRegistered] = useState(false);
   const [message, setMessage] = useState("");
+  const [cooldown, startCooldown] = useSendCooldown("codexa:reset-link-until");
 
   const submit = async (e) => {
     e.preventDefault();
-    setBusy(true); setError(""); setMessage("");
+    if (cooldown > 0 || busy) return;
+    setBusy(true); setError(""); setMessage(""); setNotRegistered(false);
     try {
       const res = await jsonRequest("/api/auth", {
         method: "POST",
         body: JSON.stringify({ action: "forgot-password", email: email.trim() }),
       });
       setMessage(res.message || "Link reset password sudah dikirim. Cek inbox atau folder spam.");
-    } catch (err) { setError(err.message || "Gagal mengirim link reset password"); }
+      startCooldown(res.retryAfter);
+    } catch (err) {
+      setError(err.message || "Gagal mengirim link reset password");
+      setNotRegistered(err.code === "EMAIL_NOT_REGISTERED");
+      if (err.retryAfter) startCooldown(err.retryAfter);
+    }
     finally { setBusy(false); }
   };
 
@@ -4074,9 +4168,21 @@ function ForgotPasswordPage({ onBackToLogin }) {
           </Field>
           {message && <p className="cx-form-success"><BadgeCheck size={13} /> {message}</p>}
           {error && <p className="cx-form-error">{error}</p>}
-          <button type="submit" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy}>
-            {busy ? <><RefreshCw size={13} /> Mengirim...</> : <><Send size={13} /> Kirim link reset password</>}
+          {notRegistered && onRegister && (
+            <button type="button" className="cx-verify-inline" onClick={onRegister}>
+              <UserPlus size={13} /> Daftar akun baru dengan email ini
+            </button>
+          )}
+          <button type="submit" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy || cooldown > 0}>
+            {busy
+              ? <><RefreshCw size={13} /> Mengirim...</>
+              : cooldown > 0
+                ? <><Clock size={13} /> Kirim ulang dalam {cooldown}s</>
+                : <><Send size={13} /> Kirim link reset password</>}
           </button>
+          {cooldown > 0 && (
+            <p className="cx-verify-cooldown">Link reset baru bisa dikirim setiap 60 detik (maksimal 5 kali per jam).</p>
+          )}
         </form>
 
         <p className="cx-verify-foot">
@@ -4204,6 +4310,12 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome, onV
       const res = await jsonRequest("/api/auth", { method: "POST", body: JSON.stringify(payload) });
       if (res.verificationRequired) {
         if (onVerificationSent) {
+          try {
+            window.sessionStorage.setItem(
+              "codexa:resend-verify-until",
+              String(Date.now() + (Number(res.retryAfter) || 60) * 1000),
+            );
+          } catch (_) {}
           onVerificationSent({ email: form.email, password: form.password, message: res.message });
         } else {
           setMode("login");

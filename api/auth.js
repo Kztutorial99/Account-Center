@@ -12,6 +12,9 @@ const {
   createResetToken, sendPasswordResetEmail,
 } = require("./_email-verification");
 
+const RESEND_COOLDOWN_SEC = 60;
+const RESEND_HOURLY_CAP = 5;
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const shapeUser = (row) => ({
@@ -30,7 +33,7 @@ module.exports = async function handler(request, response) {
       const token = request.query && typeof request.query.verify === "string" ? request.query.verify : "";
       if (token) {
         if (!/^[A-Za-z0-9_-]{40,100}$/.test(token)) {
-          return response.redirect(302, "/email-verifikasi?verification=invalid");
+          return response.redirect(302, "/status-verifikasi?verification=invalid");
         }
         const tokenHash = hashVerificationToken(token);
         const verified = await sql`
@@ -42,8 +45,8 @@ module.exports = async function handler(request, response) {
           RETURNING id
         `;
         return response.redirect(302, verified.length
-          ? "/email-verifikasi?verification=success"
-          : "/email-verifikasi?verification=invalid");
+          ? "/status-verifikasi?verification=success"
+          : "/status-verifikasi?verification=invalid");
       }
       const user = await currentUser(sql, request);
       return response.status(200).json({ user });
@@ -157,13 +160,30 @@ module.exports = async function handler(request, response) {
       const gate = await rateLimit(sql, { key: `auth:forgot:${clientIp(request)}`, limit: 8, windowSec: 600 });
       if (!gate.allowed) {
         response.setHeader("Retry-After", String(gate.retryAfter));
-        return response.status(429).json({ error: `Terlalu banyak permintaan. Coba lagi dalam ${gate.retryAfter} detik.` });
+        return response.status(429).json({ error: `Terlalu banyak permintaan. Coba lagi dalam ${gate.retryAfter} detik.`, retryAfter: gate.retryAfter });
       }
-      const generic = { message: "Kalau email kamu terdaftar, link reset password sudah kami kirim. Cek inbox atau folder spam." };
       const rows = await sql`SELECT id, name, provider, status FROM codexa_users WHERE email = ${email} LIMIT 1`;
       const user = rows[0];
-      if (!user || user.provider === "google" || (user.status && user.status !== "active")) {
-        return response.status(200).json(generic);
+      if (!user) {
+        return response.status(404).json({ error: "Email ini belum terdaftar di sistem kami. Periksa kembali atau daftar akun baru.", code: "EMAIL_NOT_REGISTERED" });
+      }
+      if (user.provider === "google") {
+        return response.status(400).json({ error: "Akun ini memakai Masuk dengan Google, jadi tidak punya password. Silakan masuk lewat Google.", code: "GOOGLE_ACCOUNT" });
+      }
+      if (user.status && user.status !== "active") {
+        return response.status(403).json({ error: "Akun kamu dinonaktifkan. Hubungi admin." });
+      }
+      /* Jeda 60 detik antar kiriman + maksimal 5 link per jam per email. */
+      const coolKey = `auth:forgot-cool:${email}`;
+      const cool = await rateLimit(sql, { key: coolKey, limit: 1, windowSec: RESEND_COOLDOWN_SEC });
+      if (!cool.allowed) {
+        response.setHeader("Retry-After", String(cool.retryAfter));
+        return response.status(429).json({ error: `Link reset baru bisa dikirim lagi dalam ${cool.retryAfter} detik.`, retryAfter: cool.retryAfter });
+      }
+      const cap = await rateLimit(sql, { key: `auth:forgot-cap:${email}`, limit: RESEND_HOURLY_CAP, windowSec: 3600 });
+      if (!cap.allowed) {
+        response.setHeader("Retry-After", String(cap.retryAfter));
+        return response.status(429).json({ error: `Batas ${RESEND_HOURLY_CAP} permintaan per jam tercapai. Coba lagi dalam ${Math.ceil(cap.retryAfter / 60)} menit.`, retryAfter: cap.retryAfter });
       }
       const reset = createResetToken();
       await sql`
@@ -175,9 +195,13 @@ module.exports = async function handler(request, response) {
         await sendPasswordResetEmail({ request, email, name: user.name, token: reset.token });
       } catch (error) {
         console.error("Reset email failure", error && error.message);
+        await resetRateLimit(sql, coolKey);
         return response.status(502).json({ error: "Email reset password gagal dikirim. Coba lagi sebentar." });
       }
-      return response.status(200).json(generic);
+      return response.status(200).json({
+        message: "Link reset password sudah dikirim ke email kamu. Cek inbox atau folder spam.",
+        retryAfter: RESEND_COOLDOWN_SEC,
+      });
     }
 
     /* Simpan password baru memakai token dari link email. */
@@ -267,15 +291,35 @@ module.exports = async function handler(request, response) {
       if (user.provider === "google" || user.emailVerifiedAt) {
         return response.status(200).json({ message: "Email akun ini sudah terverifikasi." });
       }
+      /* Jeda 60 detik antar kiriman + maksimal 5 link per jam per email. */
+      const coolKey = `auth:resend-cool:${email}`;
+      const cool = await rateLimit(sql, { key: coolKey, limit: 1, windowSec: RESEND_COOLDOWN_SEC });
+      if (!cool.allowed) {
+        response.setHeader("Retry-After", String(cool.retryAfter));
+        return response.status(429).json({ error: `Tunggu ${cool.retryAfter} detik sebelum mengirim link verifikasi lagi.`, retryAfter: cool.retryAfter });
+      }
+      const cap = await rateLimit(sql, { key: `auth:resend-cap:${email}`, limit: RESEND_HOURLY_CAP, windowSec: 3600 });
+      if (!cap.allowed) {
+        response.setHeader("Retry-After", String(cap.retryAfter));
+        return response.status(429).json({ error: `Batas ${RESEND_HOURLY_CAP} pengiriman per jam tercapai. Coba lagi dalam ${Math.ceil(cap.retryAfter / 60)} menit.`, retryAfter: cap.retryAfter });
+      }
       const verification = createVerificationToken();
       await sql`
         UPDATE codexa_users
         SET verification_token_hash = ${verification.hash}, verification_expires_at = ${verification.expiresAt}
         WHERE id = ${user.id}
       `;
-      await sendVerificationEmail({ request, email, name: user.name, token: verification.token });
+      try {
+        await sendVerificationEmail({ request, email, name: user.name, token: verification.token });
+      } catch (error) {
+        await resetRateLimit(sql, coolKey);
+        throw error;
+      }
       await resetRateLimit(sql, throttleKey);
-      return response.status(200).json({ message: "Link verifikasi baru sudah dikirim. Cek inbox atau folder spam." });
+      return response.status(200).json({
+        message: "Link verifikasi baru sudah dikirim. Cek inbox atau folder spam.",
+        retryAfter: RESEND_COOLDOWN_SEC,
+      });
     }
 
     if (action === "register") {
@@ -306,8 +350,10 @@ module.exports = async function handler(request, response) {
         throw error;
       }
       await resetRateLimit(sql, throttleKey);
+      await rateLimit(sql, { key: `auth:resend-cool:${email}`, limit: 1, windowSec: RESEND_COOLDOWN_SEC });
       return response.status(201).json({
         verificationRequired: true,
+        retryAfter: RESEND_COOLDOWN_SEC,
         message: "Link verifikasi sudah dikirim. Cek inbox atau folder spam sebelum masuk.",
       });
     }

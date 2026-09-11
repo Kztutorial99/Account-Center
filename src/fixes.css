@@ -1029,3 +1029,39 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   .cx-verify-card { padding: 16px 14px 14px; border-radius: 15px; }
   .cx-verify-card h1 { font-size: 16px; }
 }
+
+/* ── Halaman status verifikasi (dibuka dari link email) & timer kirim ulang ── */
+.cx-verify-status { text-align: center; }
+.cx-verify-status .cx-verify-top { justify-content: center; }
+.cx-verify-icon.is-ok {
+  background: rgba(34, 197, 94, .14);
+  border-color: rgba(34, 197, 94, .38);
+  color: #4ade80;
+}
+.cx-verify-icon.is-bad {
+  background: rgba(239, 68, 68, .14);
+  border-color: rgba(239, 68, 68, .38);
+  color: #fca5a5;
+}
+.cx-verify-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: 4px auto 2px; padding: 6px 12px;
+  border-radius: 999px; font-size: 12px; font-weight: 600;
+  border: 1px solid transparent;
+}
+.cx-verify-badge.is-ok {
+  background: rgba(34, 197, 94, .12); border-color: rgba(34, 197, 94, .35); color: #6ee7a8;
+}
+.cx-verify-badge.is-bad {
+  background: rgba(250, 204, 21, .1); border-color: rgba(250, 204, 21, .32); color: #fcd34d;
+}
+.cx-verify-cooldown {
+  margin: 2px 0 0; font-size: 11.5px; line-height: 1.5;
+  color: var(--muted, #9089b0); text-align: center;
+}
+.cx-verify-inline {
+  display: inline-flex; align-items: center; gap: 6px;
+  align-self: flex-start; padding: 0; background: none; border: 0;
+  color: var(--indigo2, #c084fc); font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.cx-verify-inline:hover { text-decoration: underline; }
