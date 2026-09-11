@@ -4360,7 +4360,10 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
          netral: email belum terdaftar tidak dibocorkan ke penyerang. */
       if (mode === "register") captcha.reset();
       const invalidLogin = mode === "login" && err.status === 401 && !err.code;
-      setError(invalidLogin ? "Email atau password salah" : err.message);
+      /* Akun Google tidak punya password: jangan tampilkan "Email atau password
+         salah", cukup info arahkan ke tombol Google di atas. */
+      if (invalidLogin && googleAccount) setError("");
+      else setError(invalidLogin ? "Email atau password salah" : err.message);
       setCanResend(err.code === "EMAIL_NOT_VERIFIED");
     }
     finally { setBusy(false); }
@@ -4456,11 +4459,7 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
             )}
             {mode === "login" && googleAccount && (
               <div className="cx-google-hint">
-                <p><BadgeCheck size={13} /> Email ini terdaftar lewat Google, jadi tidak punya password.</p>
-                <button type="button" className="cx-google-btn" onClick={googleSignIn} disabled={busy}>
-                  <GoogleGlyph />
-                  <span>Lanjutkan dengan Google</span>
-                </button>
+                <p><BadgeCheck size={13} /> Email ini terdaftar lewat Google. Gunakan tombol <strong>Lanjut dengan Google</strong> di atas, akun ini tidak punya password.</p>
               </div>
             )}
             {message && <p className="cx-form-success"><BadgeCheck size={14} /> {message}</p>}
