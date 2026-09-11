@@ -8,6 +8,8 @@ import { ShoppingBag, ArrowRight, CircleHelp, ShieldCheck } from "lucide-react";
 
 export const CATEGORY_PAGES = {
   "produk/gmail-fresh": {
+    cta: { label: "Lihat Gmail Fresh", query: "fresh" },
+
     label: "Gmail Fresh",
     badge: "Gmail Fresh",
     h1: "Jual Akun Gmail Fresh (No-PVA) Murah",
@@ -31,6 +33,8 @@ export const CATEGORY_PAGES = {
     ],
   },
   "produk/custom-gmail": {
+    cta: { label: "Pesan Custom Gmail", page: "custom-email" },
+
     label: "Custom Gmail",
     badge: "Custom Gmail",
     h1: "Custom Gmail Sesuai Nama Sendiri",
@@ -54,6 +58,8 @@ export const CATEGORY_PAGES = {
     ],
   },
   "produk/gmail-aged": {
+    cta: { label: "Lihat Gmail Aged", query: "aged" },
+
     label: "Gmail Aged",
     badge: "Gmail Aged",
     h1: "Jual Akun Gmail Aged (Akun Lama / Tua)",
@@ -77,6 +83,8 @@ export const CATEGORY_PAGES = {
     ],
   },
   "produk/akun-game": {
+    cta: { label: "Lihat Akun Game", query: "game" },
+
     label: "Akun Game",
     badge: "Akun Game",
     h1: "Jual Akun Game Murah & Aman",
@@ -100,6 +108,8 @@ export const CATEGORY_PAGES = {
     ],
   },
   "produk/akun-social-media": {
+    cta: { label: "Lihat Akun Social Media", query: "social" },
+
     label: "Akun Social Media",
     badge: "Social Media",
     h1: "Jual Akun Social Media Siap Pakai",
@@ -126,9 +136,20 @@ export const CATEGORY_PAGES = {
 
 export const CATEGORY_SLUGS = Object.keys(CATEGORY_PAGES);
 
-export function CategoryPage({ slug, navigate }) {
+export function CategoryPage({ slug, navigate, onOpenCatalog }) {
   const data = CATEGORY_PAGES[slug];
   if (!data) return null;
+  const cta = data.cta || { label: "Lihat katalog" };
+  // Tombol utama mengarah ke produk kategori ini (bukan katalog umum).
+  const openCategory = () => {
+    if (cta.page) { navigate(cta.page); return; }
+    if (typeof onOpenCatalog === "function") { onOpenCatalog(cta.query || ""); return; }
+    navigate("katalog");
+  };
+  const openAll = () => {
+    if (typeof onOpenCatalog === "function") { onOpenCatalog(""); return; }
+    navigate("katalog");
+  };
   return (
     <main className="cx-help">
       <div className="cx-container">
@@ -137,11 +158,11 @@ export function CategoryPage({ slug, navigate }) {
           <h1>{data.h1}</h1>
           <p>{data.lead}</p>
           <div className="cx-help-cta">
-            <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
-              <ShoppingBag size={13} /> Lihat katalog
+            <button className="cx-btn cx-btn-primary" onClick={openCategory}>
+              <ShoppingBag size={13} /> {cta.label}
             </button>
-            <button className="cx-btn cx-btn-ghost" onClick={() => navigate("cara-beli")}>
-              <ArrowRight size={13} /> Cara beli
+            <button className="cx-btn cx-btn-ghost" onClick={openAll}>
+              <ArrowRight size={13} /> Semua katalog
             </button>
           </div>
         </section>
@@ -195,10 +216,10 @@ export function CategoryPage({ slug, navigate }) {
         <section className="cx-help-contact">
           <div>
             <strong>Siap beli {data.label}?</strong>
-            <p>Stok diperbarui real-time. Pilih akun di katalog, bayar, dan detail login langsung tersedia.</p>
+            <p>Stok diperbarui real-time. Pilih akun {data.label.toLowerCase()}, bayar, dan detail login langsung tersedia.</p>
           </div>
-          <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
-            <ShieldCheck size={13} /> Buka katalog
+          <button className="cx-btn cx-btn-primary" onClick={openCategory}>
+            <ShieldCheck size={13} /> {cta.label}
           </button>
         </section>
 
