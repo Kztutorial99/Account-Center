@@ -1145,3 +1145,16 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 .cx-captcha-note{
   margin:0; font-size:11px; line-height:1.5; color:#fbbf24;
 }
+
+/* Deteksi akun Google di halaman masuk */
+.cx-google-hint{
+  display:flex; flex-direction:column; gap:8px;
+  padding:10px; border-radius:12px;
+  border:1px solid rgba(168,85,247,.28);
+  background:rgba(168,85,247,.08);
+}
+.cx-google-hint p{
+  margin:0; display:flex; align-items:center; gap:6px;
+  font-size:11.5px; line-height:1.5; color:var(--muted,#b9a8d8);
+}
+.cx-captcha-loading{ color:var(--muted,#9d8fbb); text-align:center; }
