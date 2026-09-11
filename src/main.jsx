@@ -4030,7 +4030,6 @@ const TOPUP_PRESETS = [
   { amount: 100000, bonus: 5000 },
   { amount: 250000, bonus: 15000 },
   { amount: 500000, bonus: 35000 },
-  { amount: 1000000, bonus: 75000 },
 ];
 /* Bonus saldo mengikuti nominal terbesar yang tercapai (juga untuk nominal custom). */
 const topupBonus = (value) => {
