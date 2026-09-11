@@ -1469,24 +1469,25 @@ function AdminPage({ onBack, onNotice }) {
                   <span className={`cx-status ${u.status === "active" ? "cx-status-ok" : u.status === "suspended" ? "cx-status-low" : "cx-status-out"}`}>
                     {u.status === "active" ? "Aktif" : u.status === "suspended" ? "Ditangguhkan" : "Diblokir"}
                   </span>
-                  <span className="cx-user-date">{formatDate(u.createdAt)}</span>
+                  <span className="cx-user-date" data-label="Bergabung">{formatDate(u.createdAt)}</span>
                   <div className="cx-row-actions">
                     {u.status === "active"
-                      ? <button className="cx-row-btn" onClick={() => setUserStatus(u.id, "suspend")} aria-label="Tangguhkan"><LockKeyhole size={11} /></button>
-                      : <button className="cx-row-btn" onClick={() => setUserStatus(u.id, "activate")} aria-label="Aktifkan"><BadgeCheck size={11} /></button>}
+                      ? <button className="cx-row-btn" onClick={() => setUserStatus(u.id, "suspend")} aria-label="Tangguhkan"><LockKeyhole size={11} /> <span>Tangguhkan</span></button>
+                      : <button className="cx-row-btn" onClick={() => setUserStatus(u.id, "activate")} aria-label="Aktifkan"><BadgeCheck size={11} /> <span>Aktifkan</span></button>}
                     <button
                       className="cx-row-btn"
                       onClick={() => setUserRole(u.id, u.role === "admin" ? "user" : "admin")}
                       aria-label={u.role === "admin" ? "Cabut admin" : "Jadikan admin"}
                       title={u.role === "admin" ? "Cabut akses admin" : "Jadikan admin"}
                     >
-                      <ShieldCheck size={11} />
+                      <ShieldCheck size={11} /> <span>{u.role === "admin" ? "Cabut admin" : "Jadikan admin"}</span>
                     </button>
-                    <button className="cx-row-btn" onClick={() => openUserForm(u)} aria-label="Edit user"><Pencil size={11} /></button>
+                    <button className="cx-row-btn" onClick={() => openUserForm(u)} aria-label="Edit user"><Pencil size={11} /> <span>Detail</span></button>
                     <button className="cx-row-btn danger" onClick={() => deleteUser(u)} aria-label="Hapus user" disabled={isPending(`user-del-${u.id}`)}>
-                      {isPending(`user-del-${u.id}`) ? <Spinner /> : <Trash2 size={11} />}
+                      {isPending(`user-del-${u.id}`) ? <Spinner /> : <Trash2 size={11} />} <span>Hapus</span>
                     </button>
                   </div>
+
                 </div>
               ))}
             {filteredUsers.length > USERS_PER_PAGE && (
@@ -1570,8 +1571,9 @@ function AdminPage({ onBack, onNotice }) {
 
       {/* User modal */}
       {userForm && (
-        <div className="cx-modal-backdrop" onClick={closeUserForm}>
+        <div className="cx-modal-backdrop cx-admin-modal-backdrop" onClick={closeUserForm}>
           <div className="cx-modal cx-user-modal" onClick={(e) => e.stopPropagation()}>
+
             <div className="cx-modal-header">
               <h2>Detail User</h2>
               <button className="cx-icon-btn" onClick={closeUserForm}><X size={14} /></button>
@@ -1760,7 +1762,8 @@ function AdminPage({ onBack, onNotice }) {
 
       {/* Form modal */}
       {form && (
-        <div className="cx-modal-backdrop" onClick={() => setForm(null)}>
+        <div className="cx-modal-backdrop cx-admin-modal-backdrop" onClick={() => setForm(null)}>
+
           <div className="cx-modal" onClick={(e) => e.stopPropagation()}>
             <div className="cx-modal-header">
               <h2>{form.id ? "Edit Produk" : "Tambah Produk Baru"}</h2>
