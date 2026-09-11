@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { ShieldCheck } from "lucide-react";
 
 /* Site key Turnstile bersifat publik (aman ada di bundel frontend). */
 export const TURNSTILE_SITE_KEY = "0x4AAAAAAEwdBVG7PVHDybxk";
@@ -68,10 +67,9 @@ export function useTurnstile() {
   return { holder, token, reset, ready, failed };
 }
 
-export function Captcha({ state, label = "Verifikasi keamanan" }) {
+export function Captcha({ state }) {
   return (
     <div className="cx-captcha">
-      <span className="cx-captcha-label"><ShieldCheck size={12} /> {label}</span>
       <div className="cx-captcha-box" ref={state.holder} />
       {state.failed && (
         <p className="cx-captcha-note">Captcha gagal dimuat. Periksa koneksi lalu muat ulang halaman.</p>
