@@ -4453,21 +4453,20 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
               {mode === "login" && emailCheck === "checking" && (
                 <p className="cx-email-check is-checking"><RefreshCw size={11} className="cx-spin" /> Memeriksa email...</p>
               )}
-              {mode === "login" && emailCheck === "google" && (
-                <p className="cx-email-check is-google"><BadgeCheck size={11} /> Terdaftar lewat Google — pakai tombol Google di atas</p>
-              )}
               {mode === "login" && emailCheck === "email" && (
                 <p className="cx-email-check is-ok"><BadgeCheck size={11} /> Email terdaftar, silakan isi password</p>
               )}
             </Field>
-            <Field label="Password" hint={mode === "register" ? "Minimal 6 karakter." : ""}>
-              <InputWrap icon={LockKeyhole}>
-                <input type={showPass ? "text" : "password"} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="••••••" required />
-                <button type="button" onClick={() => setShowPass((v) => !v)} style={{ color: "var(--muted)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
-                  {showPass ? <EyeOff size={13} /> : <Eye size={13} />}
-                </button>
-              </InputWrap>
-            </Field>
+            {(mode !== "login" || emailCheck !== "checking") && (
+              <Field label="Password" hint={mode === "register" ? "Minimal 6 karakter." : ""}>
+                <InputWrap icon={LockKeyhole}>
+                  <input type={showPass ? "text" : "password"} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="••••••" required />
+                  <button type="button" onClick={() => setShowPass((v) => !v)} style={{ color: "var(--muted)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
+                    {showPass ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
+                </InputWrap>
+              </Field>
+            )}
             {mode === "login" && onForgotPassword && (
               <button type="button" className="cx-auth-forgot" onClick={onForgotPassword}>
                 Lupa password?
