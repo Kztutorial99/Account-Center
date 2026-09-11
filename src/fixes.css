@@ -1126,3 +1126,24 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   -webkit-text-fill-color: var(--ink) !important;
   box-shadow: 0 0 0 1000px var(--s2) inset !important;
 }
+
+/* ─── Captcha Cloudflare Turnstile (tema dark purple AkunInstan) ─── */
+.cx-captcha{
+  display:flex; flex-direction:column; gap:6px;
+  width:100%; max-width:100%; min-width:0;
+}
+.cx-captcha-label{
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--muted);
+}
+.cx-captcha-box{
+  display:flex; justify-content:center;
+  width:100%; max-width:100%; min-width:0; overflow:hidden;
+  padding:8px; border-radius:12px;
+  border:1px solid var(--line); background:var(--s2);
+}
+.cx-captcha-box iframe{ max-width:100% !important; border-radius:8px; }
+.cx-captcha-note{
+  margin:0; font-size:11px; line-height:1.5; color:#fbbf24;
+}

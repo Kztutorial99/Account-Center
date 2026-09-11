@@ -11,6 +11,10 @@ const {
   createVerificationToken, hashVerificationToken, sendVerificationEmail,
   createResetToken, sendPasswordResetEmail,
 } = require("./_email-verification");
+const { verifyCaptcha } = require("./_turnstile");
+
+/* Form publik yang wajib lewat captcha Cloudflare Turnstile. */
+const CAPTCHA_ACTIONS = new Set(["login", "register", "resend-verification", "forgot-password"]);
 
 const RESEND_COOLDOWN_SEC = 60;
 const RESEND_HOURLY_CAP = 5;
@@ -95,6 +99,15 @@ module.exports = async function handler(request, response) {
 
     const body = bodyOf(request);
     const action = text(body.action, 20) || "login";
+
+    /* Captcha: dilewati untuk permintaan reset dari user yang sudah login
+       (halaman profil), karena sesinya sudah terverifikasi. */
+    if (CAPTCHA_ACTIONS.has(action) && !(action === "forgot-password" && sessionUserId(request))) {
+      const captcha = await verifyCaptcha(body.captchaToken, clientIp(request));
+      if (!captcha.ok) {
+        return response.status(400).json({ error: captcha.error, code: "CAPTCHA_FAILED" });
+      }
+    }
 
     /* Login/daftar lewat Google (Firebase). Akun dicocokkan berdasarkan email,
        jadi user lama tetap dapat saldo & riwayat pesanannya. */

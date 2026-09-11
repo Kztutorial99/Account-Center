@@ -13,6 +13,7 @@ import "./styles.css";
 import { applySeo, applyProductSchema, applyProductSeo } from "./seo.js";
 import { CategoryPage, CATEGORY_PAGES, CATEGORY_SLUGS } from "./category-pages.jsx";
 import { signInWithGoogle, consumeGoogleRedirect, signOutGoogle } from "./google-signin.js";
+import { useTurnstile, Captcha } from "./turnstile.jsx";
 
 /* ─── helpers ─── */
 export const formatPrice = (v) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(v) || 0);
@@ -3965,6 +3966,7 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
   const [cooldown, startCooldown] = useSendCooldown("codexa:resend-verify-until");
   const [error, setError] = useState(linkState === "invalid" ? "Link verifikasi tidak valid atau sudah kedaluwarsa. Kirim ulang link baru." : "");
   const [message, setMessage] = useState(pending && pending.message ? pending.message : "");
+  const captcha = useTurnstile();
 
   const check = async ({ silent } = {}) => {
     if (!email || !password) {
@@ -3994,15 +3996,18 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
   const resend = async () => {
     if (!email || !password) { setError("Sesi pendaftaran sudah berakhir. Silakan masuk untuk mengirim link baru."); return; }
     if (cooldown > 0) return;
+    if (!captcha.token) { setError("Selesaikan verifikasi keamanan dulu."); return; }
     setResending(true); setError(""); setMessage("");
     try {
       const res = await jsonRequest("/api/auth", {
         method: "POST",
-        body: JSON.stringify({ action: "resend-verification", email, password }),
+        body: JSON.stringify({ action: "resend-verification", email, password, captchaToken: captcha.token }),
       });
       setMessage(res.message || "Link verifikasi baru sudah dikirim.");
       startCooldown(res.retryAfter);
+      captcha.reset();
     } catch (err) {
+      captcha.reset();
       setError(err.message || "Gagal mengirim ulang link");
       if (err.retryAfter) startCooldown(err.retryAfter);
     }
@@ -4048,6 +4053,8 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
         {message && <p className="cx-form-success"><BadgeCheck size={13} /> {message}</p>}
         {error && <p className="cx-form-error">{error}</p>}
 
+        <Captcha state={captcha} />
+
         <div className="cx-verify-actions">
           <button type="button" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy} onClick={() => check()}>
             {busy ? <><RefreshCw size={13} /> Memeriksa...</> : <><ShieldCheck size={13} /> Saya sudah verifikasi email</>}
@@ -4055,7 +4062,7 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
           <button
             type="button"
             className="cx-btn cx-btn-secondary cx-btn-full"
-            disabled={resending || cooldown > 0}
+            disabled={resending || cooldown > 0 || !captcha.token}
             onClick={resend}
           >
             {resending
@@ -4120,19 +4127,23 @@ function ForgotPasswordPage({ onBackToLogin, onRegister }) {
   const [notRegistered, setNotRegistered] = useState(false);
   const [message, setMessage] = useState("");
   const [cooldown, startCooldown] = useSendCooldown("codexa:reset-link-until");
+  const captcha = useTurnstile();
 
   const submit = async (e) => {
     e.preventDefault();
     if (cooldown > 0 || busy) return;
+    if (!captcha.token) { setError("Selesaikan verifikasi keamanan dulu."); return; }
     setBusy(true); setError(""); setMessage(""); setNotRegistered(false);
     try {
       const res = await jsonRequest("/api/auth", {
         method: "POST",
-        body: JSON.stringify({ action: "forgot-password", email: email.trim() }),
+        body: JSON.stringify({ action: "forgot-password", email: email.trim(), captchaToken: captcha.token }),
       });
       setMessage(res.message || "Link reset password sudah dikirim. Cek inbox atau folder spam.");
       startCooldown(res.retryAfter);
+      captcha.reset();
     } catch (err) {
+      captcha.reset();
       setError(err.message || "Gagal mengirim link reset password");
       setNotRegistered(err.code === "EMAIL_NOT_REGISTERED");
       if (err.retryAfter) startCooldown(err.retryAfter);
@@ -4168,7 +4179,8 @@ function ForgotPasswordPage({ onBackToLogin, onRegister }) {
               <UserPlus size={13} /> Daftar akun baru dengan email ini
             </button>
           )}
-          <button type="submit" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy || cooldown > 0}>
+          <Captcha state={captcha} />
+          <button type="submit" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy || cooldown > 0 || !captcha.token}>
             {busy
               ? <><RefreshCw size={13} /> Mengirim...</>
               : cooldown > 0
@@ -4279,6 +4291,7 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
   });
   const [canResend, setCanResend] = useState(false);
   const [busy, setBusy]         = useState(false);
+  const captcha = useTurnstile();
   useEffect(() => { setMode(initialMode); }, [initialMode]);
   /* Email dari halaman Lupa password langsung terisi di form Daftar. */
   useEffect(() => {
@@ -4301,11 +4314,13 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
   };
 
   const submit = async (e) => {
-    e.preventDefault(); setError(""); setMessage(""); setCanResend(false); setBusy(true);
+    e.preventDefault();
+    if (!captcha.token) { setError("Selesaikan verifikasi keamanan dulu."); return; }
+    setError(""); setMessage(""); setCanResend(false); setBusy(true);
     try {
       const payload = mode === "register"
-        ? { action: "register", name: form.name, email: form.email, phone: form.phone, password: form.password }
-        : { action: "login", email: form.email, password: form.password };
+        ? { action: "register", name: form.name, email: form.email, phone: form.phone, password: form.password, captchaToken: captcha.token }
+        : { action: "login", email: form.email, password: form.password, captchaToken: captcha.token };
       const res = await jsonRequest("/api/auth", { method: "POST", body: JSON.stringify(payload) });
       if (res.verificationRequired) {
         if (onVerificationSent) {
@@ -4326,6 +4341,7 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
     } catch (err) {
       /* Untuk keamanan, kegagalan kredensial saat masuk selalu memakai pesan
          netral: email belum terdaftar tidak dibocorkan ke penyerang. */
+      captcha.reset();
       const invalidLogin = mode === "login" && err.status === 401 && !err.code;
       setError(invalidLogin ? "Email atau password salah" : err.message);
       setCanResend(err.code === "EMAIL_NOT_VERIFIED");
@@ -4334,15 +4350,17 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
   };
 
   const resendVerification = async () => {
+    if (!captcha.token) { setError("Selesaikan verifikasi keamanan dulu."); return; }
     setError(""); setMessage(""); setBusy(true);
     try {
       const res = await jsonRequest("/api/auth", {
         method: "POST",
-        body: JSON.stringify({ action: "resend-verification", email: form.email, password: form.password }),
+        body: JSON.stringify({ action: "resend-verification", email: form.email, password: form.password, captchaToken: captcha.token }),
       });
       setMessage(res.message);
       setCanResend(false);
-    } catch (err) { setError(err.message); }
+      captcha.reset();
+    } catch (err) { captcha.reset(); setError(err.message); }
     finally { setBusy(false); }
   };
 
@@ -4423,12 +4441,13 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
             )}
             {message && <p className="cx-form-success"><BadgeCheck size={14} /> {message}</p>}
             {error && <p className="cx-form-error">{error}</p>}
+            <Captcha state={captcha} />
             {canResend && (
               <button type="button" className="cx-btn cx-btn-secondary cx-btn-full" disabled={busy} onClick={resendVerification}>
                 <Mail size={13} /> Kirim ulang link verifikasi
               </button>
             )}
-            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full cx-auth-submit" disabled={busy}>
+            <button type="submit" className="cx-btn cx-btn-primary cx-btn-full cx-auth-submit" disabled={busy || !captcha.token}>
               {busy ? <><RefreshCw size={13} /> Memproses...</> : <><LogIn size={13} /> {mode === "register" ? "Daftar sekarang" : "Masuk"}</>}
             </button>
           </form>
