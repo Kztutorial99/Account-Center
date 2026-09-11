@@ -1194,8 +1194,9 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cx-tabbar-center:active .cx-tabbar-center-btn { transform: scale(.92); }
   .cx-tabbar-center-label { text-shadow: 0 1px 2px rgba(0,0,0,.25); }
 
-  /* Ruang untuk tab bar dipindah ke DALAM footer supaya tidak ada celah kosong di bawahnya. */
-  .cx-app:not(.cx-land) > .cx-footer { padding-bottom: calc(10px + var(--tab-h) + env(safe-area-inset-bottom)); }
+  /* Footer rapat di semua halaman (sama seperti Profil): tanpa ruang kosong ekstra. */
+  .cx-app:not(.cx-land) > .cx-footer { padding: 12px 0 calc(6px + env(safe-area-inset-bottom)); }
+  .cx-app:not(.cx-land) > .cx-footer .cx-footer-inner { padding-bottom: 0 !important; }
   .cx-ai-fab { bottom: calc(var(--tab-h) + 16px + env(safe-area-inset-bottom)) !important; }
   .cx-toast { bottom: calc(var(--tab-h) + 18px + env(safe-area-inset-bottom)); }
 
@@ -2974,7 +2975,6 @@ html { scroll-behavior: smooth; }
   .cx-account-page:not(.cx-topup-page) .cx-balance-card strong { font-size: 18px; }
   .cx-account-page:not(.cx-topup-page) .cx-profile-activity-row { padding: 8px 12px; gap: 2px 10px; }
   .cx-account-page:not(.cx-topup-page) .cx-profile-activity-row .cx-act-amount { font-size: 12.5px; }
-  .cx-account-page:not(.cx-topup-page) + .cx-footer { padding: 12px 0; }
 }
 
 /* ── WELCOME / LANDING PAGE ─────────────────── */
@@ -4063,3 +4063,4 @@ html { scroll-behavior: smooth; }
   .cx-prodpage-buy { flex-direction: column; align-items: stretch; }
   .cx-prodpage-buy .cx-btn { width: 100%; justify-content: center; }
 }
+
