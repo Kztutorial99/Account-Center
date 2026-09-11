@@ -7,7 +7,7 @@ import {
   FileText, Home, LayoutDashboard, LockKeyhole, LogIn, LogOut, Menu,
   MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw, QrCode, Download,
   Search, Settings, ShieldCheck, ShoppingBag, Trash2, X,
-  User, UserPlus, Wallet, Mail, Phone, Clock, Sparkles, Send, Zap,
+  User, UserPlus, Wallet, Mail, Phone, Clock, Sparkles, Send, Zap, KeyRound,
 } from "lucide-react";
 import "./styles.css";
 import { applySeo, applyProductSchema, applyProductSeo } from "./seo.js";
@@ -942,6 +942,8 @@ const authScreenFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
   if (slug === "login" || slug === "register") return slug;
   if (slug === "email-verifikasi") return "verify";
+  if (slug === "lupa-password") return "forgot";
+  if (slug === "reset-password") return "reset";
   return "welcome";
 };
 
@@ -1020,7 +1022,8 @@ function App() {
     }
     setAuthScreen(screen);
     if (typeof window !== "undefined") {
-      const path = screen === "welcome" ? "/" : screen === "verify" ? "/email-verifikasi" : `/${screen}`;
+      const AUTH_PATHS = { welcome: "/", verify: "/email-verifikasi", forgot: "/lupa-password", reset: "/reset-password" };
+      const path = AUTH_PATHS[screen] || `/${screen}`;
       window.history.pushState({}, "", path);
     }
   };
@@ -1420,6 +1423,27 @@ function App() {
   }
   if (!auth.user && !auth.loading) {
     // Layar Masuk/Daftar hanya muncul saat diminta (klik tombol yang butuh login).
+    if (authScreen === "forgot") {
+      return (
+        <ForgotPasswordPage
+          onBackToLogin={() => goAuthScreen("login")}
+        />
+      );
+    }
+    if (authScreen === "reset") {
+      return (
+        <ResetPasswordPage
+          onAuthenticated={(user) => {
+            setAuth({ user, loading: false });
+            setAuthScreen("welcome");
+            setAuthReturn(null);
+            navigate("store");
+            setWelcomeSplash(true);
+          }}
+          onBackToLogin={() => goAuthScreen("login")}
+        />
+      );
+    }
     if (authScreen === "verify") {
       return (
         <VerifyEmailPage
@@ -1443,6 +1467,7 @@ function App() {
       return (
         <AuthPage
           initialMode={authScreen === "register" ? "register" : "login"}
+          onForgotPassword={() => goAuthScreen("forgot")}
           onAuthenticated={(user) => {
             setAuth({ user, loading: false });
             setAuthScreen("welcome");
@@ -3949,28 +3974,43 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
     finally { setResending(false); }
   };
 
+  const [stepsOpen, setStepsOpen] = useState(false);
+
   return (
     <div className="cx-auth-shell cx-verify-shell">
       <div className="cx-auth-glow cx-auth-glow-a" aria-hidden="true" />
       <div className="cx-auth-glow cx-auth-glow-b" aria-hidden="true" />
 
       <div className="cx-verify-card">
-        <div className="cx-verify-icon" aria-hidden="true"><Mail size={26} /></div>
-        <div className="cx-verify-brand"><span className="cx-verify-mark">AI</span> Akun Instan</div>
+        <div className="cx-verify-top">
+          <div className="cx-verify-icon" aria-hidden="true"><Mail size={20} /></div>
+          <div className="cx-verify-brand"><span className="cx-verify-mark">AI</span> Akun Instan</div>
+        </div>
         <h1>Verifikasi email kamu</h1>
         <p className="cx-verify-lead">
-          Kami sudah mengirim link verifikasi ke alamat email di bawah ini. Buka email tersebut lalu
-          klik tombol <strong>Verifikasi akun</strong> untuk mengaktifkan akun kamu.
+          Kami sudah mengirim link verifikasi ke email kamu. Buka email lalu klik
+          <strong> Verifikasi akun</strong> untuk mengaktifkan akun.
         </p>
-        {email && <div className="cx-verify-email"><Mail size={13} /> {email}</div>}
+        {email && <div className="cx-verify-email"><Mail size={12} /> <span>{email}</span></div>}
 
-        <ol className="cx-verify-steps">
-          <li><span>1</span> Buka aplikasi email kamu (cek juga folder Spam/Promosi).</li>
-          <li><span>2</span> Klik tombol Verifikasi akun di email dari Akun Instan.</li>
-          <li><span>3</span> Halaman ini otomatis mendeteksi dan membawa kamu ke beranda.</li>
-        </ol>
+        <button
+          type="button"
+          className="cx-verify-help"
+          aria-expanded={stepsOpen}
+          onClick={() => setStepsOpen((v) => !v)}
+        >
+          <span><CircleHelp size={13} /> Cara verifikasi</span>
+          <ChevronDown size={13} style={stepsOpen ? { transform: "rotate(180deg)" } : undefined} />
+        </button>
+        {stepsOpen && (
+          <ol className="cx-verify-steps">
+            <li><span>1</span> Buka aplikasi email kamu (cek juga folder Spam/Promosi).</li>
+            <li><span>2</span> Klik tombol Verifikasi akun di email dari Akun Instan.</li>
+            <li><span>3</span> Halaman ini otomatis mendeteksi dan membawa kamu ke beranda.</li>
+          </ol>
+        )}
 
-        {message && <p className="cx-form-success"><BadgeCheck size={14} /> {message}</p>}
+        {message && <p className="cx-form-success"><BadgeCheck size={13} /> {message}</p>}
         {error && <p className="cx-form-error">{error}</p>}
 
         <div className="cx-verify-actions">
@@ -3978,12 +4018,12 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
             {busy ? <><RefreshCw size={13} /> Memeriksa...</> : <><ShieldCheck size={13} /> Saya sudah verifikasi email</>}
           </button>
           <button type="button" className="cx-btn cx-btn-secondary cx-btn-full" disabled={resending} onClick={resend}>
-            {resending ? <><RefreshCw size={13} /> Mengirim...</> : <><Send size={13} /> Kirim ulang link verifikasi</>}
+            {resending ? <><RefreshCw size={13} /> Mengirim...</> : <><Send size={13} /> Kirim ulang link</>}
           </button>
         </div>
 
         <p className="cx-verify-foot">
-          Link berlaku 24 jam dan hanya bisa dipakai sekali.{" "}
+          Link berlaku 24 jam dan sekali pakai.{" "}
           <button type="button" onClick={onBackToLogin}>Masuk dengan akun lain</button>
         </p>
       </div>
@@ -3991,7 +4031,140 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
   );
 }
 
-function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome, onVerificationSent }) {
+/* Halaman /lupa-password: kirim link reset password ke email user. */
+function ForgotPasswordPage({ onBackToLogin }) {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const res = await jsonRequest("/api/auth", {
+        method: "POST",
+        body: JSON.stringify({ action: "forgot-password", email: email.trim() }),
+      });
+      setMessage(res.message || "Link reset password sudah dikirim. Cek inbox atau folder spam.");
+    } catch (err) { setError(err.message || "Gagal mengirim link reset password"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="cx-auth-shell cx-verify-shell">
+      <div className="cx-auth-glow cx-auth-glow-a" aria-hidden="true" />
+      <div className="cx-auth-glow cx-auth-glow-b" aria-hidden="true" />
+
+      <div className="cx-verify-card">
+        <div className="cx-verify-top">
+          <div className="cx-verify-icon" aria-hidden="true"><KeyRound size={20} /></div>
+          <div className="cx-verify-brand"><span className="cx-verify-mark">AI</span> Akun Instan</div>
+        </div>
+        <h1>Lupa password?</h1>
+        <p className="cx-verify-lead">
+          Masukkan email akun kamu. Kami kirim link untuk membuat password baru.
+        </p>
+
+        <form onSubmit={submit} className="cx-auth-form cx-verify-form">
+          <Field label="Email akun">
+            <InputWrap icon={Mail}>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com" required />
+            </InputWrap>
+          </Field>
+          {message && <p className="cx-form-success"><BadgeCheck size={13} /> {message}</p>}
+          {error && <p className="cx-form-error">{error}</p>}
+          <button type="submit" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy}>
+            {busy ? <><RefreshCw size={13} /> Mengirim...</> : <><Send size={13} /> Kirim link reset password</>}
+          </button>
+        </form>
+
+        <p className="cx-verify-foot">
+          Link berlaku 1 jam dan sekali pakai.{" "}
+          <button type="button" onClick={onBackToLogin}>Kembali ke halaman masuk</button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* Halaman /reset-password?token=...: buat password baru lalu langsung masuk. */
+function ResetPasswordPage({ onAuthenticated, onBackToLogin }) {
+  const token = new URLSearchParams(window.location.search).get("token") || "";
+  const [form, setForm] = useState({ password: "", confirm: "" });
+  const [showPass, setShowPass] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(token ? "" : "Link reset tidak lengkap. Minta link baru dari halaman Lupa password.");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (form.password.length < 6) { setError("Password minimal 6 karakter"); return; }
+    if (form.password !== form.confirm) { setError("Konfirmasi password belum sama"); return; }
+    setBusy(true); setError("");
+    try {
+      const res = await jsonRequest("/api/auth", {
+        method: "POST",
+        body: JSON.stringify({ action: "reset-password", token, password: form.password }),
+      });
+      onAuthenticated(res.user);
+    } catch (err) { setError(err.message || "Gagal menyimpan password baru"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="cx-auth-shell cx-verify-shell">
+      <div className="cx-auth-glow cx-auth-glow-a" aria-hidden="true" />
+      <div className="cx-auth-glow cx-auth-glow-b" aria-hidden="true" />
+
+      <div className="cx-verify-card">
+        <div className="cx-verify-top">
+          <div className="cx-verify-icon" aria-hidden="true"><LockKeyhole size={20} /></div>
+          <div className="cx-verify-brand"><span className="cx-verify-mark">AI</span> Akun Instan</div>
+        </div>
+        <h1>Buat password baru</h1>
+        <p className="cx-verify-lead">Password baru langsung aktif dan kamu otomatis masuk ke akun.</p>
+
+        <form onSubmit={submit} className="cx-auth-form cx-verify-form">
+          <Field label="Password baru" hint="Minimal 6 karakter.">
+            <InputWrap icon={LockKeyhole}>
+              <input
+                type={showPass ? "text" : "password"}
+                value={form.password}
+                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                placeholder="••••••"
+                required
+              />
+              <button type="button" onClick={() => setShowPass((v) => !v)} style={{ color: "var(--muted)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
+                {showPass ? <EyeOff size={13} /> : <Eye size={13} />}
+              </button>
+            </InputWrap>
+          </Field>
+          <Field label="Ulangi password baru">
+            <InputWrap icon={ShieldCheck}>
+              <input
+                type={showPass ? "text" : "password"}
+                value={form.confirm}
+                onChange={(e) => setForm((f) => ({ ...f, confirm: e.target.value }))}
+                placeholder="••••••"
+                required
+              />
+            </InputWrap>
+          </Field>
+          {error && <p className="cx-form-error">{error}</p>}
+          <button type="submit" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy || !token}>
+            {busy ? <><RefreshCw size={13} /> Menyimpan...</> : <><ShieldCheck size={13} /> Simpan & masuk</>}
+          </button>
+        </form>
+
+        <p className="cx-verify-foot">
+          <button type="button" onClick={onBackToLogin}>Kembali ke halaman masuk</button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome, onVerificationSent, onForgotPassword }) {
   const [mode, setMode]         = useState(initialMode);
   const [form, setForm]         = useState({ name: "", email: "", phone: "", password: "" });
   const [showPass, setShowPass] = useState(false);
@@ -4129,6 +4302,11 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome, onV
                 </button>
               </InputWrap>
             </Field>
+            {mode === "login" && onForgotPassword && (
+              <button type="button" className="cx-auth-forgot" onClick={onForgotPassword}>
+                Lupa password?
+              </button>
+            )}
             {message && <p className="cx-form-success"><BadgeCheck size={14} /> {message}</p>}
             {error && <p className="cx-form-error">{error}</p>}
             {canResend && (

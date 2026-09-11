@@ -83,6 +83,9 @@ async function ensureTablesUncached(sql) {
     sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ DEFAULT NOW()`,
     sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS verification_token_hash TEXT`,
     sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS verification_expires_at TIMESTAMPTZ`,
+    // Reset password lewat link email (berlaku 1 jam, sekali pakai).
+    sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS reset_token_hash TEXT`,
+    sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS reset_expires_at TIMESTAMPTZ`,
   ]);
   await sql`UPDATE codexa_users SET role = 'user' WHERE role NOT IN ('user','admin')`;
 }

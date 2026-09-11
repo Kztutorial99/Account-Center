@@ -7,7 +7,10 @@ const {
 
 const { verifyFirebaseIdToken } = require("./_firebase");
 const { verifyGoogleAccessToken } = require("./_google");
-const { createVerificationToken, hashVerificationToken, sendVerificationEmail } = require("./_email-verification");
+const {
+  createVerificationToken, hashVerificationToken, sendVerificationEmail,
+  createResetToken, sendPasswordResetEmail,
+} = require("./_email-verification");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -146,6 +149,68 @@ module.exports = async function handler(request, response) {
     }
     const email = text(body.email, 160).toLowerCase();
     const password = typeof body.password === "string" ? body.password : "";
+
+    /* Lupa password: kirim link reset ke email (jawaban selalu sama supaya
+       email yang terdaftar tidak bisa ditebak dari respons). */
+    if (action === "forgot-password") {
+      if (!EMAIL_RE.test(email)) return response.status(400).json({ error: "Format email tidak valid" });
+      const gate = await rateLimit(sql, { key: `auth:forgot:${clientIp(request)}`, limit: 8, windowSec: 600 });
+      if (!gate.allowed) {
+        response.setHeader("Retry-After", String(gate.retryAfter));
+        return response.status(429).json({ error: `Terlalu banyak permintaan. Coba lagi dalam ${gate.retryAfter} detik.` });
+      }
+      const generic = { message: "Kalau email kamu terdaftar, link reset password sudah kami kirim. Cek inbox atau folder spam." };
+      const rows = await sql`SELECT id, name, provider, status FROM codexa_users WHERE email = ${email} LIMIT 1`;
+      const user = rows[0];
+      if (!user || user.provider === "google" || (user.status && user.status !== "active")) {
+        return response.status(200).json(generic);
+      }
+      const reset = createResetToken();
+      await sql`
+        UPDATE codexa_users
+        SET reset_token_hash = ${reset.hash}, reset_expires_at = ${reset.expiresAt}
+        WHERE id = ${user.id}
+      `;
+      try {
+        await sendPasswordResetEmail({ request, email, name: user.name, token: reset.token });
+      } catch (error) {
+        console.error("Reset email failure", error && error.message);
+        return response.status(502).json({ error: "Email reset password gagal dikirim. Coba lagi sebentar." });
+      }
+      return response.status(200).json(generic);
+    }
+
+    /* Simpan password baru memakai token dari link email. */
+    if (action === "reset-password") {
+      const token = typeof body.token === "string" ? body.token.trim() : "";
+      const gate = await rateLimit(sql, { key: `auth:reset:${clientIp(request)}`, limit: 20, windowSec: 600 });
+      if (!gate.allowed) {
+        response.setHeader("Retry-After", String(gate.retryAfter));
+        return response.status(429).json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${gate.retryAfter} detik.` });
+      }
+      if (!/^[A-Za-z0-9_-]{40,100}$/.test(token)) {
+        return response.status(400).json({ error: "Link reset tidak valid atau sudah kedaluwarsa" });
+      }
+      if (password.length < 6) return response.status(400).json({ error: "Password minimal 6 karakter" });
+      const tokenHash = hashVerificationToken(token);
+      const updated = await sql`
+        UPDATE codexa_users
+        SET password_hash = ${hashPassword(password)},
+            reset_token_hash = NULL,
+            reset_expires_at = NULL,
+            email_verified_at = COALESCE(email_verified_at, NOW())
+        WHERE reset_token_hash = ${tokenHash}
+          AND reset_expires_at > NOW()
+          AND status = 'active'
+        RETURNING id, name, email, phone, balance, role, avatar, provider, created_at AS "createdAt"
+      `;
+      if (!updated.length) {
+        return response.status(400).json({ error: "Link reset tidak valid atau sudah kedaluwarsa" });
+      }
+      const row = updated[0];
+      setSession(response, row.id);
+      return response.status(200).json({ user: shapeUser(row) });
+    }
 
     if (!EMAIL_RE.test(email)) return response.status(400).json({ error: "Format email tidak valid" });
     if (password.length < 6) return response.status(400).json({ error: "Password minimal 6 karakter" });

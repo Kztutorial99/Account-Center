@@ -58,4 +58,40 @@ async function sendVerificationEmail({ request, email, name, token }) {
   }
 }
 
-module.exports = { createVerificationToken, hashVerificationToken, sendVerificationEmail };
+
+const RESET_TTL_MS = 60 * 60 * 1000;
+
+function createResetToken() {
+  const token = crypto.randomBytes(32).toString("base64url");
+  return {
+    token,
+    hash: crypto.createHash("sha256").update(token).digest("hex"),
+    expiresAt: new Date(Date.now() + RESET_TTL_MS),
+  };
+}
+
+async function sendPasswordResetEmail({ request, email, name, token }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("RESEND_API_KEY belum dikonfigurasi");
+
+  const resetUrl = `${appOrigin(request)}/reset-password?token=${encodeURIComponent(token)}`;
+  const safeName = escapeHtml(name || "Pengguna");
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: "Akun Instan <noreplay@akuninstan.com>",
+      to: [email],
+      subject: "Reset password Akun Instan",
+      html: `<!doctype html><html><body style="margin:0;background:#f7f5fa;font-family:Arial,sans-serif;color:#241832"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:32px 16px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#fff;border:1px solid #e7dff0;border-radius:12px"><tr><td style="padding:32px"><div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:18px">AKUN INSTAN</div><h1 style="font-size:24px;line-height:1.3;margin:0 0 12px">Reset password kamu</h1><p style="font-size:15px;line-height:1.7;color:#62566f;margin:0 0 12px">Halo ${safeName}, kami menerima permintaan reset password untuk akun kamu. Klik tombol berikut untuk membuat password baru.</p><p style="margin:24px 0"><a href="${resetUrl}" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-weight:700;padding:13px 22px;border-radius:8px">Buat password baru</a></p><p style="font-size:13px;line-height:1.6;color:#81758c;margin:0">Link ini berlaku 1 jam dan hanya bisa dipakai sekali. Jika kamu tidak meminta reset password, abaikan email ini &mdash; password kamu tidak berubah.</p></td></tr></table></td></tr></table></body></html>`,
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error(`Resend reset failed [${response.status}]: ${detail}`);
+    throw new Error("Email reset password gagal dikirim");
+  }
+}
+
+module.exports = { createVerificationToken, hashVerificationToken, sendVerificationEmail, createResetToken, sendPasswordResetEmail };

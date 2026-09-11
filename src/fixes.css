@@ -852,126 +852,153 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 .cx-topup-page .cx-panel{ border-radius:16px }
 
 
-/* ═══ Halaman verifikasi email (/email-verifikasi) ═══ */
+/* ═══ Halaman verifikasi email, lupa & reset password ═══ */
 .cx-verify-shell {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: max(24px, env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  padding: max(20px, env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom));
 }
 .cx-verify-card {
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 460px;
-  background: var(--surface, #fff);
-  border: 1px solid var(--border, #e7dff0);
-  border-radius: 18px;
-  padding: 26px 22px 22px;
-  box-shadow: 0 18px 46px rgba(60, 24, 110, .12);
+  max-width: 372px;
+  background: linear-gradient(180deg, var(--s2), var(--s1));
+  border: 1px solid var(--b2);
+  border-radius: 16px;
+  padding: 18px 16px 15px;
+  box-shadow: 0 16px 40px rgba(8, 4, 18, .55);
+  color: var(--ink);
   text-align: center;
 }
+.cx-verify-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
 .cx-verify-icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 14px;
-  border-radius: 16px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   color: #fff;
-  background: linear-gradient(135deg, var(--primary, #7c3aed), #a855f7);
-  box-shadow: 0 10px 24px rgba(124, 58, 237, .3);
+  background: linear-gradient(135deg, var(--indigo), var(--indigo2));
+  box-shadow: 0 8px 18px rgba(168, 85, 247, .28);
 }
 .cx-verify-brand {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 12px;
+  gap: 6px;
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: .06em;
+  letter-spacing: .08em;
   text-transform: uppercase;
-  color: var(--muted, #7b6f88);
-  margin-bottom: 8px;
+  color: var(--ink2);
 }
 .cx-verify-mark {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 19px;
+  height: 19px;
   border-radius: 6px;
-  font-size: 10px;
+  font-size: 9.5px;
   letter-spacing: 0;
   color: #fff;
-  background: var(--primary, #7c3aed);
+  background: var(--indigo);
 }
 .cx-verify-card h1 {
-  margin: 0 0 8px;
-  font-size: 21px;
+  margin: 0 0 6px;
+  font-size: 17px;
   line-height: 1.3;
   letter-spacing: -.01em;
+  color: var(--ink);
 }
 .cx-verify-lead {
-  margin: 0 0 14px;
-  font-size: 13.5px;
-  line-height: 1.65;
-  color: var(--muted, #6f6379);
+  margin: 0 0 12px;
+  font-size: 12.2px;
+  line-height: 1.6;
+  color: var(--muted);
 }
+.cx-verify-lead strong { color: var(--indigo3); font-weight: 700; }
 .cx-verify-email {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  padding: 8px 13px;
-  margin-bottom: 16px;
+  padding: 6px 11px;
+  margin-bottom: 11px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--primary, #7c3aed);
-  background: rgba(124, 58, 237, .1);
-  border: 1px solid rgba(124, 58, 237, .22);
+  color: var(--indigo3);
+  background: rgba(168, 85, 247, .12);
+  border: 1px solid var(--b3);
 }
+.cx-verify-email span { overflow-wrap: anywhere; }
+.cx-verify-help {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 11px;
+  border-radius: 11px;
+  border: 1px solid var(--b2);
+  background: rgba(255, 255, 255, .03);
+  color: var(--ink2);
+  font-size: 12px;
+  font-weight: 600;
+}
+.cx-verify-help > span { display: inline-flex; align-items: center; gap: 7px; }
+.cx-verify-help:hover { border-color: var(--b3); color: var(--ink); }
 .cx-verify-steps {
   list-style: none;
-  margin: 0 0 16px;
-  padding: 14px;
+  margin: 8px 0 0;
+  padding: 11px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   text-align: left;
-  border-radius: 13px;
-  background: var(--surface-2, rgba(124, 58, 237, .05));
-  border: 1px solid var(--border, #eee4f5);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .025);
+  border: 1px solid var(--b1);
 }
 .cx-verify-steps li {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
-  font-size: 12.8px;
-  line-height: 1.55;
-  color: var(--text, #2a1f38);
+  gap: 8px;
+  font-size: 11.8px;
+  line-height: 1.5;
+  color: var(--ink2);
 }
 .cx-verify-steps li > span {
   flex: none;
-  width: 19px;
-  height: 19px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #fff;
-  background: var(--primary, #7c3aed);
+  background: var(--indigo);
 }
 .cx-verify-actions {
   display: grid;
-  gap: 9px;
-  margin-top: 4px;
+  gap: 8px;
+  margin-top: 11px;
 }
+.cx-verify-form { margin-top: 4px; text-align: left; }
+.cx-verify-card .cx-form-success,
+.cx-verify-card .cx-form-error { text-align: left; font-size: 11.8px; }
 .cx-verify-foot {
-  margin: 14px 0 0;
-  font-size: 11.8px;
-  line-height: 1.6;
-  color: var(--muted, #857a90);
+  margin: 11px 0 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--faint);
 }
 .cx-verify-foot button {
   background: none;
@@ -979,11 +1006,26 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   padding: 0;
   font: inherit;
   font-weight: 700;
-  color: var(--primary, #7c3aed);
+  color: var(--indigo2);
   cursor: pointer;
-  text-decoration: underline;
 }
+.cx-verify-foot button:hover { text-decoration: underline; }
+
+/* Tautan "Lupa password?" di form masuk */
+.cx-auth-forgot {
+  align-self: flex-end;
+  margin: -2px 0 2px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: 11.8px;
+  font-weight: 700;
+  color: var(--indigo2);
+  cursor: pointer;
+}
+.cx-auth-forgot:hover { text-decoration: underline; }
+
 @media (max-width: 480px) {
-  .cx-verify-card { padding: 22px 16px 18px; border-radius: 16px; }
-  .cx-verify-card h1 { font-size: 19px; }
+  .cx-verify-card { padding: 16px 14px 14px; border-radius: 15px; }
+  .cx-verify-card h1 { font-size: 16px; }
 }
