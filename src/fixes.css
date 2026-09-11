@@ -1103,3 +1103,26 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   color: var(--muted, #9089b0); background: none; border: 0;
   cursor: pointer; padding: 0; display: grid; place-items: center;
 }
+
+
+/* ── Fix: autofill browser membuat background input jadi putih ──
+   Chrome/WebKit memaksa warna latar autofill; inset shadow besar
+   mengembalikannya ke surface gelap tema Akun Instan. */
+.cx-input-wrap input:-webkit-autofill,
+.cx-input-wrap input:-webkit-autofill:hover,
+.cx-input-wrap input:-webkit-autofill:focus,
+.cx-input-wrap input:-webkit-autofill:active,
+.cx-input-wrap textarea:-webkit-autofill,
+.cx-input-wrap select:-webkit-autofill {
+  -webkit-text-fill-color: var(--ink) !important;
+  caret-color: var(--ink) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--s2) inset !important;
+  box-shadow: 0 0 0 1000px var(--s2) inset !important;
+  background-color: var(--s2) !important;
+  background-image: none !important;
+  transition: background-color 9999s ease-out 0s !important;
+}
+.cx-input-wrap input:autofill {
+  -webkit-text-fill-color: var(--ink) !important;
+  box-shadow: 0 0 0 1000px var(--s2) inset !important;
+}

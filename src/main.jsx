@@ -283,6 +283,7 @@ export async function jsonRequest(url, opts = {}) {
     const error = new Error(p.error || "Permintaan gagal diproses");
     error.code = p.code || "";
     error.retryAfter = Number(p.retryAfter) || 0;
+    error.status = r.status;
     throw error;
   }
   return p;
@@ -1054,6 +1055,8 @@ function App() {
     }
   };
   const [menuOpen, setMenuOpen] = useState(false);
+  /* Email yang dibawa dari halaman Lupa password ke form Daftar. */
+  const [authPrefillEmail, setAuthPrefillEmail] = useState("");
   const [checkout, setCheckout] = useState({ loading: false, error: "", order: null });
   const [customEmails, setCustomEmails] = useState([]);
   const [emailDraft, setEmailDraft] = useState("");
@@ -1458,7 +1461,7 @@ function App() {
       return (
         <ForgotPasswordPage
           onBackToLogin={() => goAuthScreen("login")}
-          onRegister={() => goAuthScreen("register")}
+          onRegister={(mail) => { setAuthPrefillEmail(mail || ""); goAuthScreen("register"); }}
         />
       );
     }
@@ -1499,6 +1502,7 @@ function App() {
       return (
         <AuthPage
           initialMode={authScreen === "register" ? "register" : "login"}
+          initialEmail={authPrefillEmail}
           onForgotPassword={() => goAuthScreen("forgot")}
           onAuthenticated={(user) => {
             setAuth({ user, loading: false });
@@ -4160,7 +4164,7 @@ function ForgotPasswordPage({ onBackToLogin, onRegister }) {
           {message && <p className="cx-form-success"><BadgeCheck size={13} /> {message}</p>}
           {error && <p className="cx-form-error">{error}</p>}
           {notRegistered && onRegister && (
-            <button type="button" className="cx-verify-inline" onClick={onRegister}>
+            <button type="button" className="cx-verify-inline" onClick={() => onRegister(email.trim())}>
               <UserPlus size={13} /> Daftar akun baru dengan email ini
             </button>
           )}
@@ -4261,9 +4265,9 @@ function ResetPasswordPage({ onAuthenticated, onBackToLogin }) {
   );
 }
 
-function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome, onVerificationSent, onForgotPassword }) {
+function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, onBackToWelcome, onVerificationSent, onForgotPassword }) {
   const [mode, setMode]         = useState(initialMode);
-  const [form, setForm]         = useState({ name: "", email: "", phone: "", password: "" });
+  const [form, setForm]         = useState({ name: "", email: initialEmail, phone: "", password: "" });
   const [showPass, setShowPass] = useState(false);
   const [error, setError]       = useState("");
   const [message, setMessage]   = useState(() => {
@@ -4276,6 +4280,10 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome, onV
   const [canResend, setCanResend] = useState(false);
   const [busy, setBusy]         = useState(false);
   useEffect(() => { setMode(initialMode); }, [initialMode]);
+  /* Email dari halaman Lupa password langsung terisi di form Daftar. */
+  useEffect(() => {
+    if (initialEmail) setForm((f) => (f.email ? f : { ...f, email: initialEmail }));
+  }, [initialEmail]);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const googleSignIn = async () => {
@@ -4316,7 +4324,10 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome, onV
         onAuthenticated(res.user);
       }
     } catch (err) {
-      setError(err.message);
+      /* Untuk keamanan, kegagalan kredensial saat masuk selalu memakai pesan
+         netral: email belum terdaftar tidak dibocorkan ke penyerang. */
+      const invalidLogin = mode === "login" && err.status === 401 && !err.code;
+      setError(invalidLogin ? "Email atau password salah" : err.message);
       setCanResend(err.code === "EMAIL_NOT_VERIFIED");
     }
     finally { setBusy(false); }
