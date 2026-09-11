@@ -5,6 +5,7 @@ import {
 import {
   ACCENT_COLORS, ActionBtn, AssistantWidget, agedInfoOf, AGED_DEFAULTS, jsonRequest, CUSTOM_EMAIL_FEE, CUSTOM_EMAIL_STATUS_LABEL, CUSTOM_GENDER_LABEL, ExpandableText, Field, InputWrap, LOGIN_TYPES, PRODUCT_TEMPLATES, ProductDescription, ProviderIcon, RowSkeleton, SessionSplash, Spinner, customEmailsOf, emptyListing, formatBirthDate, formatDate, formatPrice, useConfirmDialog, usePendingActions,
 } from "./main.jsx";
+import "./admin-ui.css";
 
 function AdminPage({ onBack, onNotice }) {
   const [authenticated, setAuthenticated] = useState(null);
@@ -1048,7 +1049,7 @@ function AdminPage({ onBack, onNotice }) {
                   { label: "Total Produk", value: totalProducts, delta: `${listings.length} listing`, up: true },
                   { label: "Terjual",      value: totalSold,     delta: "dari total listing", up: totalSold > 0 },
                   { label: "Revenue",      value: formatPrice(revenue), delta: "akumulasi terjual", up: revenue > 0 },
-                  { label: "Stok Rendah",  value: lowStock,      delta: "perlu restock", up: false },
+                  { label: "Stok Menipis", value: lowStock,      delta: "perlu restock", up: false },
                 ].map(({ label, value, delta, up }) => (
                   <div key={label} className="cx-stat-card">
                     <div className="cx-stat-label">{label}</div>
@@ -1489,9 +1490,9 @@ function AdminPage({ onBack, onNotice }) {
 
           {/* ══ PENGATURAN ══ */}
           {activeNav === "Pengaturan" && (
-            <div className="cx-two-col">
+            <div className="cx-settings-grid">
               <div className="cx-panel">
-                <div className="cx-panel-header"><h3>Sesi Admin</h3></div>
+                <div className="cx-panel-header"><h3>Sesi Admin</h3><span className="cx-panel-sub">akses panel</span></div>
                 <div className="cx-setting-row">
                   <div><strong>Status sesi</strong><small>Sesi admin aktif di perangkat ini.</small></div>
                   <span className="cx-status cx-status-ok">Aktif</span>
@@ -1500,27 +1501,43 @@ function AdminPage({ onBack, onNotice }) {
                   <div><strong>Keluar dari panel</strong><small>Akhiri sesi admin sekarang.</small></div>
                   <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={logout}><LogOut size={11} /> Keluar</button>
                 </div>
+              </div>
+              <div className="cx-panel">
+                <div className="cx-panel-header"><h3>Toko</h3><span className="cx-panel-sub">tampilan pembeli</span></div>
                 <div className="cx-setting-row">
                   <div><strong>Kembali ke store</strong><small>Buka tampilan pembeli.</small></div>
                   <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={onBack}><ArrowRight size={11} /> Store</button>
                 </div>
+                <div className="cx-setting-row">
+                  <div><strong>Produk aktif</strong><small>Jumlah listing yang tampil di toko.</small></div>
+                  <span className="cx-status cx-status-ok">{listings.length} listing</span>
+                </div>
               </div>
               <div className="cx-panel">
-                <div className="cx-panel-header"><h3>Data & Pemeliharaan</h3></div>
+                <div className="cx-panel-header"><h3>Data &amp; Pemeliharaan</h3><span className="cx-panel-sub">sinkronisasi data</span></div>
                 <div className="cx-setting-row">
                   <div><strong>Muat ulang semua data</strong><small>Produk, pengguna, top up, dan pesanan.</small></div>
                   <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={refreshAll} disabled={refreshing}>
                     <RefreshCw size={11} className={refreshing ? "cx-spin" : ""} /> Refresh
                   </button>
                 </div>
-                <div className="cx-setting-row">
+                <div className="cx-setting-row is-danger">
                   <div><strong>Bersihkan riwayat top up</strong><small>Hapus permintaan yang sudah disetujui/ditolak.</small></div>
                   <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={clearTopupHistory} disabled={topups.length - pendingTopups === 0}>
                     <Trash2 size={11} /> Bersihkan
                   </button>
                 </div>
+              </div>
+              <div className="cx-panel">
+                <div className="cx-panel-header"><h3>Assistant AI</h3><span className="cx-panel-sub">asisten otomatis</span></div>
                 <div className="cx-setting-row">
-                  <div><strong>Assisten AI</strong><small>{aiCfg && aiCfg.enabled && aiCfg.hasKey ? "Terhubung dan aktif" : "Belum dikonfigurasi"}</small></div>
+                  <div><strong>Status koneksi</strong><small>{aiCfg && aiCfg.enabled && aiCfg.hasKey ? "Terhubung dan aktif" : "Belum dikonfigurasi"}</small></div>
+                  <span className={`cx-status ${aiCfg && aiCfg.enabled && aiCfg.hasKey ? "cx-status-ok" : "cx-status-low"}`}>
+                    {aiCfg && aiCfg.enabled && aiCfg.hasKey ? "Aktif" : "Nonaktif"}
+                  </span>
+                </div>
+                <div className="cx-setting-row">
+                  <div><strong>Pengaturan asisten</strong><small>Atur kunci API dan perilaku asisten.</small></div>
                   <button className="cx-btn cx-btn-secondary cx-btn-sm" onClick={() => goNav("Assisten")}><Sparkles size={11} /> Atur</button>
                 </div>
               </div>
@@ -1547,43 +1564,77 @@ function AdminPage({ onBack, onNotice }) {
               <button className="cx-icon-btn" onClick={() => setUserForm(null)}><X size={14} /></button>
             </div>
             <div className="cx-modal-body">
-              <div className="cx-form-grid">
-                <Field label="Nama">
-                  <InputWrap><input value={userForm.name} onChange={(e) => updateUserForm("name", e.target.value)} /></InputWrap>
-                </Field>
-                <Field label="Email">
-                  <InputWrap><input value={userForm.email} onChange={(e) => updateUserForm("email", e.target.value)} /></InputWrap>
-                </Field>
-                <Field label="Nomor WhatsApp">
-                  <InputWrap><input value={userForm.phone} onChange={(e) => updateUserForm("phone", e.target.value)} placeholder="0812xxxx" /></InputWrap>
-                </Field>
-                <Field label="Saldo (IDR)" hint="Ubah manual bila perlu koreksi">
-                  <InputWrap><input type="number" value={userForm.balance} onChange={(e) => updateUserForm("balance", e.target.value)} /></InputWrap>
-                </Field>
-                <Field label="Status Akun">
-                  <InputWrap>
-                    <select value={userForm.status} onChange={(e) => updateUserForm("status", e.target.value)}>
-                      <option value="active">Aktif</option>
-                      <option value="suspended">Ditangguhkan</option>
-                      <option value="banned">Diblokir</option>
-                    </select>
-                  </InputWrap>
-                </Field>
-                <Field label="Role" hint="Admin bisa memakai Assisten mode admin">
-                  <InputWrap>
-                    <select value={userForm.role} onChange={(e) => updateUserForm("role", e.target.value)}>
-                      <option value="user">User biasa</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </InputWrap>
-                </Field>
-                <Field label="Reset Password" hint="Kosongkan bila tidak diubah">
-                  <InputWrap><input type="text" value={userForm.password} onChange={(e) => updateUserForm("password", e.target.value)} placeholder="min. 6 karakter" /></InputWrap>
-                </Field>
-                <div className="cx-full-span">
-                  <Field label="Catatan Admin">
-                    <InputWrap><textarea value={userForm.note} onChange={(e) => updateUserForm("note", e.target.value)} placeholder="Catatan internal tentang user ini..." /></InputWrap>
+              <div className="cx-form-section">
+                <div className="cx-form-divider">DATA AKUN <small>identitas & kontak</small></div>
+                <div className="cx-form-grid">
+                  <Field label="Nama">
+                    <InputWrap><input value={userForm.name} onChange={(e) => updateUserForm("name", e.target.value)} /></InputWrap>
                   </Field>
+                  <Field label="Email">
+                    <InputWrap><input value={userForm.email} onChange={(e) => updateUserForm("email", e.target.value)} /></InputWrap>
+                  </Field>
+                  <div className="cx-full-span">
+                    <Field label="Nomor WhatsApp">
+                      <InputWrap><input value={userForm.phone} onChange={(e) => updateUserForm("phone", e.target.value)} placeholder="0812xxxx" /></InputWrap>
+                    </Field>
+                  </div>
+                </div>
+              </div>
+
+              <div className="cx-form-section">
+                <div className="cx-form-divider">SALDO &amp; TOP UP</div>
+                <div className="cx-form-balance">
+                  <div>
+                    <small>Saldo saat ini</small>
+                    <strong>{formatPrice(Number(userForm.balance) || 0)}</strong>
+                  </div>
+                  <span>total top up<br />{formatPrice(userForm.topupTotal)}</span>
+                </div>
+                <div className="cx-form-grid">
+                  <div className="cx-full-span">
+                    <Field label="Saldo (IDR)" hint="Ubah manual bila perlu koreksi">
+                      <InputWrap><input type="number" value={userForm.balance} onChange={(e) => updateUserForm("balance", e.target.value)} /></InputWrap>
+                    </Field>
+                  </div>
+                </div>
+              </div>
+
+              <div className="cx-form-section">
+                <div className="cx-form-divider">STATUS &amp; ROLE</div>
+                <div className="cx-form-grid">
+                  <Field label="Status Akun">
+                    <InputWrap>
+                      <select value={userForm.status} onChange={(e) => updateUserForm("status", e.target.value)}>
+                        <option value="active">Aktif</option>
+                        <option value="suspended">Ditangguhkan</option>
+                        <option value="banned">Diblokir</option>
+                      </select>
+                    </InputWrap>
+                  </Field>
+                  <Field label="Role" hint="Admin bisa memakai Assisten mode admin">
+                    <InputWrap>
+                      <select value={userForm.role} onChange={(e) => updateUserForm("role", e.target.value)}>
+                        <option value="user">User biasa</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </InputWrap>
+                  </Field>
+                  <div className="cx-full-span">
+                    <Field label="Catatan Admin">
+                      <InputWrap><textarea value={userForm.note} onChange={(e) => updateUserForm("note", e.target.value)} placeholder="Catatan internal tentang user ini..." /></InputWrap>
+                    </Field>
+                  </div>
+                </div>
+              </div>
+
+              <div className="cx-form-section is-secure">
+                <div className="cx-form-divider">KEAMANAN <small>tindakan sensitif</small></div>
+                <div className="cx-form-grid">
+                  <div className="cx-full-span">
+                    <Field label="Reset Password" hint="Kosongkan bila tidak diubah">
+                      <InputWrap><input type="text" value={userForm.password} onChange={(e) => updateUserForm("password", e.target.value)} placeholder="min. 6 karakter" /></InputWrap>
+                    </Field>
+                  </div>
                 </div>
               </div>
               <div className="cx-form-divider">RINGKASAN <small>bergabung {formatDate(userForm.createdAt)} · total top up {formatPrice(userForm.topupTotal)}</small></div>
