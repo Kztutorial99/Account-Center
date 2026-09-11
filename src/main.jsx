@@ -3984,15 +3984,8 @@ function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
     }
   };
 
-  /* Deteksi otomatis: begitu link diklik di email, user langsung masuk. */
-  useEffect(() => {
-    if (!email || !password) return;
-    let active = true;
-    const tick = () => { if (active) check({ silent: true }); };
-    tick();
-    const id = window.setInterval(tick, 6000);
-    return () => { active = false; window.clearInterval(id); };
-  }, [email, password]);
+  /* Tanpa deteksi otomatis: status hanya dicek saat user menekan tombol. */
+
 
   const resend = async () => {
     if (!email || !password) { setError("Sesi pendaftaran sudah berakhir. Silakan masuk untuk mengirim link baru."); return; }
