@@ -1,6 +1,6 @@
 /* Verifikasi Cloudflare Turnstile (captcha) di sisi server.
-   Kalau TURNSTILE_SECRET_KEY belum diisi, captcha dilewati supaya
-   form tetap jalan sampai secret dipasang di environment. */
+   TURNSTILE_SECRET_KEY diambil dari environment Vercel.
+   Kalau secret belum diisi, captcha dilewati supaya form tetap jalan sampai secret dipasang. */
 const ENDPOINT = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 const captchaEnabled = () => Boolean(process.env.TURNSTILE_SECRET_KEY);
