@@ -10,7 +10,7 @@ import {
   User, UserPlus, Wallet, Mail, Phone, Clock, Sparkles, Send, Zap,
 } from "lucide-react";
 import "./styles.css";
-import { applySeo, applyProductSchema } from "./seo.js";
+import { applySeo, applyProductSchema, applyProductSeo } from "./seo.js";
 import { CategoryPage, CATEGORY_PAGES, CATEGORY_SLUGS } from "./category-pages.jsx";
 import { signInWithGoogle, consumeGoogleRedirect, signOutGoogle } from "./google-signin.js";
 
@@ -813,10 +813,36 @@ const PAGE_LABELS = {
   disclaimer: "Disclaimer", admin: "Admin Panel",
   ...Object.fromEntries(CATEGORY_SLUGS.map((s) => [s, CATEGORY_PAGES[s].label])),
 };
+/* ─── Halaman detail produk: setiap listing punya URL sendiri ───
+   Contoh: /produk/akun/gmail-fresh-no-pva-a1b2c3 */
+export const PRODUCT_PATH_PREFIX = "produk/akun";
+export const slugifyText = (value) =>
+  String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "akun";
+export const productPagePath = (p) => {
+  const tail = String((p && p.id) || "").replace(/[^a-zA-Z0-9]/g, "").slice(-6).toLowerCase();
+  return `${PRODUCT_PATH_PREFIX}/${slugifyText(p && p.title)}${tail ? `-${tail}` : ""}`;
+};
+export const isProductPage = (page) => String(page || "").startsWith(`${PRODUCT_PATH_PREFIX}/`);
+export const findProductByPage = (list, page) => {
+  const items = Array.isArray(list) ? list : [];
+  const slug = String(page || "").slice(PRODUCT_PATH_PREFIX.length + 1);
+  return (
+    items.find((p) => productPagePath(p) === page) ||
+    items.find((p) => {
+      const tail = String(p.id || "").replace(/[^a-zA-Z0-9]/g, "").slice(-6).toLowerCase();
+      return tail && slug.endsWith(tail);
+    }) ||
+    items.find((p) => slugifyText(p.title) === slug.replace(/-[a-z0-9]{1,6}$/, "")) ||
+    null
+  );
+};
+
 const pageFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
+  if (isProductPage(slug) && slug.length > PRODUCT_PATH_PREFIX.length + 1) return slug;
   return PAGE_PATHS.includes(slug) ? slug : "store";
 };
+const isPublicPage = (page) => PUBLIC_PAGES.includes(page) || isProductPage(page);
 // /login dan /register punya URL sendiri agar bisa dibagikan & dikenali crawler.
 const authScreenFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
@@ -1025,10 +1051,15 @@ function App() {
     if (document.body) document.body.scrollTop = 0;
   };
   // SEO: judul/meta/canonical mengikuti halaman aktif (SPA).
+  const activeProduct = useMemo(
+    () => (isProductPage(activePage) ? findProductByPage(data.products, activePage) : null),
+    [activePage, data.products],
+  );
   useEffect(() => {
     const guestScreen = !auth.user && !auth.loading && authScreen !== "welcome" ? authScreen : null;
+    if (!guestScreen && isProductPage(activePage)) { applyProductSeo(activeProduct, activePage); return; }
     applySeo(guestScreen || activePage);
-  }, [activePage, authScreen, auth.user, auth.loading]);
+  }, [activePage, activeProduct, authScreen, auth.user, auth.loading]);
   useEffect(() => { applyProductSchema(data.products); }, [data.products]);
 
   useEffect(() => {
@@ -1046,8 +1077,8 @@ function App() {
     // Untuk tamu, simpan menu publik yang sedang dibuka sebelum mengarahkan
     // menu terkunci ke Login. Tombol "Kembali" lalu pulang ke menu asal,
     // bukan selalu ke halaman utama.
-    if (!auth.user && !PUBLIC_PAGES.includes(page) && page !== "admin") {
-      setAuthReturn(PUBLIC_PAGES.includes(activePage) ? activePage : "store");
+    if (!auth.user && !isPublicPage(page) && page !== "admin") {
+      setAuthReturn(isPublicPage(activePage) ? activePage : "store");
       setAuthScreen("login");
       window.history.pushState({}, "", "/login");
       setCartOpen(false);
@@ -1237,7 +1268,7 @@ function App() {
   }
   if (!auth.user && !auth.loading) {
     // Layar Masuk/Daftar hanya muncul saat diminta (klik tombol yang butuh login).
-    if (authScreen === "login" || authScreen === "register" || !PUBLIC_PAGES.includes(activePage)) {
+    if (authScreen === "login" || authScreen === "register" || !isPublicPage(activePage)) {
       return (
         <AuthPage
           initialMode={authScreen === "register" ? "register" : "login"}
@@ -1250,7 +1281,7 @@ function App() {
           }}
           onBackToWelcome={() => {
             // Kembali ke halaman sebelumnya (bukan selalu beranda).
-            const target = PUBLIC_PAGES.includes(authReturn) ? authReturn : "store";
+            const target = isPublicPage(authReturn) ? authReturn : "store";
             setAuthScreen("welcome");
             setAuthReturn(null);
             navigate(target);
@@ -1625,6 +1656,21 @@ function App() {
     </div>
   );
 
+  if (isProductPage(activePage)) return (
+    <div className={shellClass}>
+      {topbar}
+      <ProductPage
+        product={activeProduct}
+        loading={data.loading}
+        navigate={navigate}
+        onAdd={addToCart}
+      />
+      <StoreFooter navigate={navigate} guest={guest} />
+      {tabbar}
+      {overlays}
+    </div>
+  );
+
   if (activePage === "katalog") return (
     <div className={`${shellClass} cx-catv2`}>
       {topbar}
@@ -1676,7 +1722,13 @@ function App() {
         {!data.loading && products.length > 0 && (
           <div className="cx-grid">
             {products.map((p, i) => (
-              <ProductCard key={p.id || i} product={p} colorIdx={i} onBuy={(sel) => { setBuyItem(p); setBuySel(Array.isArray(sel) ? sel : []); }} />
+              <ProductCard
+                key={p.id || i}
+                product={p}
+                colorIdx={i}
+                onOpen={() => navigate(productPagePath(p))}
+                onBuy={(sel) => { setBuyItem(p); setBuySel(Array.isArray(sel) ? sel : []); }}
+              />
             ))}
           </div>
         )}
@@ -3332,7 +3384,7 @@ function ProductDetailModal({ product, color, open, onClose }) {
   );
 }
 
-function ProductCard({ product, colorIdx, onBuy }) {
+function ProductCard({ product, colorIdx, onBuy, onOpen }) {
   const color = ACCENT_COLORS[colorIdx % ACCENT_COLORS.length];
   const accounts = Array.isArray(product.accounts) ? product.accounts : [];
   const [selected, setSelected] = useState([]);
@@ -3351,10 +3403,14 @@ function ProductCard({ product, colorIdx, onBuy }) {
         <span className={`cx-pc-stock${stock > 0 ? "" : " is-out"}`}>{stock > 0 ? `${stock} stok` : "Kosong"}</span>
       </div>
 
-      <h3 className="cx-pc-title">{product.title}</h3>
+      <h3 className="cx-pc-title">
+        {onOpen ? (
+          <button type="button" className="cx-pc-title-link" onClick={onOpen}>{product.title}</button>
+        ) : product.title}
+      </h3>
 
-      <button type="button" className="cx-pc-detail-toggle" onClick={() => setDetailOpen(true)}>
-        Lihat detail akun
+      <button type="button" className="cx-pc-detail-toggle" onClick={() => (onOpen ? onOpen() : setDetailOpen(true))}>
+        Buka halaman produk <ArrowRight size={13} />
       </button>
 
       {accounts.length > 0 && (
@@ -3390,6 +3446,117 @@ function ProductCard({ product, colorIdx, onBuy }) {
         onClose={() => setDetailOpen(false)}
       />
     </article>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   HALAMAN PRODUK (URL sendiri per listing)
+════════════════════════════════════════════════════ */
+function ProductPage({ product, loading, navigate, onAdd }) {
+  const [selected, setSelected] = useState([]);
+  useEffect(() => { setSelected([]); }, [product && product.id]);
+
+  if (loading && !product) {
+    return (
+      <main className="cx-container cx-prodpage">
+        <div className="cx-skeleton" style={{ height: 16, width: "40%", marginBottom: 14 }} />
+        <div className="cx-skeleton" style={{ height: 26, width: "70%", marginBottom: 10 }} />
+        <div className="cx-skeleton" style={{ height: 120 }} />
+      </main>
+    );
+  }
+
+  if (!product) {
+    return (
+      <main className="cx-container cx-prodpage">
+        <div className="cx-empty">
+          <Package size={28} />
+          <h3>Produk tidak ditemukan</h3>
+          <p>Listing ini mungkin sudah terjual atau dihapus dari katalog.</p>
+          <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
+            <ShoppingBag size={13} /> Lihat katalog
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  const accounts = Array.isArray(product.accounts) ? product.accounts : [];
+  const stock = Number(product.stock) || accounts.length;
+  const total = sumSelected(product, selected);
+  const toggle = (index) =>
+    setSelected((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
+
+  return (
+    <main className="cx-container cx-prodpage">
+      <nav className="cx-prodpage-crumbs" aria-label="Breadcrumb">
+        <button type="button" onClick={() => navigate("store")}>Beranda</button>
+        <span>/</span>
+        <button type="button" onClick={() => navigate("katalog")}>Katalog</button>
+        <span>/</span>
+        <strong>{product.title}</strong>
+      </nav>
+
+      <header className="cx-prodpage-head">
+        <span className="cx-prodpage-plat">
+          <ProviderIcon type={product.loginType} size={16} />
+          {product.loginType}
+        </span>
+        <h1>{product.title}</h1>
+        <div className="cx-prodpage-meta">
+          <span className={`cx-prodpage-chip${stock > 0 ? "" : " is-out"}`}>{stock > 0 ? `${stock} akun tersedia` : "Stok kosong"}</span>
+          <span className="cx-prodpage-chip">Kirim instan setelah bayar</span>
+          <span className="cx-prodpage-chip">Garansi login</span>
+        </div>
+      </header>
+
+      <section className="cx-prodpage-card">
+        <h2>Deskripsi produk</h2>
+        <ProductDescription text={product.description || "Akun digital siap digunakan. Detail login dikirim otomatis setelah pembayaran."} />
+      </section>
+
+      <section className="cx-prodpage-card">
+        <h2>Yang kamu dapat</h2>
+        <ul className="cx-feature-list">
+          <li><Check size={13} /><span>Jumlah akun sesuai jumlah yang kamu beli</span></li>
+          <li><Check size={13} /><span>Tipe login: <strong style={{ color: "var(--ink2)" }}>{product.loginType}</strong></span></li>
+          <li><Check size={13} /><span>Detail login muncul otomatis di menu Pesanan</span></li>
+          <li><Check size={13} /><span>Penggantian akun bila gagal login pada pengecekan pertama</span></li>
+        </ul>
+      </section>
+
+      {accounts.length > 0 && (
+        <section className="cx-prodpage-card">
+          <h2>Pilih akun</h2>
+          <AccountPicker product={product} accounts={accounts} selected={selected} onToggle={toggle} pageSize={5} size="lg" />
+          <div className="cx-prodpage-actions">
+            <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => setSelected(accounts.map((a) => a.index))}>Pilih semua</button>
+            <button className="cx-btn cx-btn-ghost cx-btn-sm" onClick={() => setSelected([])}>Kosongkan</button>
+          </div>
+        </section>
+      )}
+
+      <div className="cx-prodpage-buy">
+        <div className="cx-prodpage-total">
+          <small>{selected.length ? `${selected.length} akun dipilih` : "Belum ada akun dipilih"}</small>
+          <strong>{formatPrice(total)}</strong>
+        </div>
+        <button className="cx-btn cx-btn-primary" disabled={selected.length === 0} onClick={() => onAdd(product, selected)}>
+          <ShoppingBag size={14} /> Tambah ke keranjang
+        </button>
+      </div>
+
+      <section className="cx-prodpage-card cx-prodpage-more">
+        <h2>Kategori lain</h2>
+        <div className="cx-prodpage-links">
+          {CATEGORY_SLUGS.map((slug) => (
+            <button key={slug} type="button" onClick={() => navigate(slug)}>
+              {CATEGORY_PAGES[slug].label} <ArrowRight size={13} />
+            </button>
+          ))}
+        </div>
+      </section>
+    </main>
   );
 }
 
