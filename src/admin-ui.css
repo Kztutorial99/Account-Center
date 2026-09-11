@@ -587,12 +587,33 @@
 .cx-admin-shell .cx-user-modal .cx-ud-status-list .cx-chip {
   font-size: 10px; padding: 3px 9px; white-space: nowrap;
 }
-.cx-admin-shell .cx-chip-ok { color: #4ade80; }
-.cx-admin-shell .cx-chip-warn { color: #fbbf24; }
-.cx-admin-shell .cx-chip-bad { color: #f87171; }
-.cx-admin-shell .cx-chip-admin { color: #c4b5fd; background: rgba(167, 139, 250, .16); }
-.cx-admin-shell .cx-chip-user { color: #a5b4fc; }
-.cx-admin-shell .cx-chip-none { color: #9ca3af; }
+/* warna status semantik — dipaksa agar tidak tertimpa gaya chip global */
+.cx-chip.cx-chip-ok,
+.cx-chip.cx-chip-warn,
+.cx-chip.cx-chip-bad,
+.cx-chip.cx-chip-admin,
+.cx-chip.cx-chip-user,
+.cx-chip.cx-chip-none {
+  font-family: inherit !important;
+  cursor: default !important;
+  border: 1px solid currentColor !important;
+  background: color-mix(in srgb, currentColor 14%, transparent) !important;
+}
+.cx-chip.cx-chip-ok > i,
+.cx-chip.cx-chip-warn > i,
+.cx-chip.cx-chip-bad > i,
+.cx-chip.cx-chip-admin > i,
+.cx-chip.cx-chip-user > i,
+.cx-chip.cx-chip-none > i {
+  width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+}
+.cx-chip.cx-chip-ok { color: #34d399 !important; }
+.cx-chip.cx-chip-warn { color: #fbbf24 !important; }
+.cx-chip.cx-chip-bad { color: #f87171 !important; }
+.cx-chip.cx-chip-admin { color: #c4b5fd !important; }
+.cx-chip.cx-chip-user { color: #93c5fd !important; }
+.cx-chip.cx-chip-none { color: #9ca3af !important; }
+
 
 /* Aktivitas terbaru */
 .cx-admin-shell .cx-user-modal .cx-ud-activity > div {
