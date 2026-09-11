@@ -724,3 +724,9 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   .cx-filter-select>select{width:100%}
   .cx-filter-reset{grid-column:1 / -1}
 }
+@media (max-width:520px){
+  .cx-filterbar{gap:14px}
+  .cx-filter-chips{align-items:center}
+  .cx-filter-chip{height:36px;display:inline-flex;align-items:center;justify-content:center}
+  .cx-filter-selects{gap:10px}
+}
