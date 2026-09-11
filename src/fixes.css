@@ -761,3 +761,91 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
     border:2px solid var(--bg); box-sizing:content-box;
   }
 }
+
+/* ══ Rapikan UI Custom Email & Top Up (spacing, hierarchy, bottom balance) ══ */
+
+/* — Custom Email: card konsisten & lebih compact — */
+.cx-cev2{ gap:10px; padding-bottom:6px }
+.cx-cev2-card{ border-radius:16px; padding:0; overflow:hidden }
+.cx-cev2-card-head{ padding:11px 13px 9px; gap:8px; align-items:center }
+.cx-cev2-card-head h2{ font-size:13.5px; line-height:1.25; display:flex; align-items:center; gap:7px }
+.cx-cev2-card-body{ padding:0 13px 13px; display:grid; gap:10px }
+.cx-cev2-hero{ padding:13px; border-radius:18px }
+.cx-cev2-hero-copy h1{ font-size:19px }
+.cx-cev2-hint{ margin:0; font-size:11px; color:var(--muted); line-height:1.45 }
+.cx-cev2-field > span{ font-size:11px; letter-spacing:.01em }
+.cx-cev2-field input,
+.cx-cev2 .cx-input-wrap input{ height:42px; border-radius:11px }
+.cx-cev2-grid2{ gap:9px }
+.cx-cev2-chip{ height:34px; display:inline-flex; align-items:center; border-radius:10px }
+.cx-cev2-rules{ margin:0; gap:4px }
+.cx-cev2-rules li{ font-size:10.5px }
+
+/* Step 3: empty state compact, bukan area kosong besar */
+.cx-cev2-empty.is-compact{
+  display:flex; align-items:center; gap:9px;
+  min-height:0; padding:10px 11px; border-radius:12px; text-align:left;
+  border:1px dashed var(--b3); background:rgba(168,85,247,.05);
+}
+.cx-cev2-empty.is-compact .cx-cev2-empty-ic{
+  flex:0 0 auto; width:26px; height:26px; border-radius:9px; display:grid; place-items:center;
+  background:rgba(168,85,247,.14); color:var(--indigo2);
+}
+.cx-cev2-empty.is-compact p{ margin:0; font-size:11px; line-height:1.45; color:var(--muted) }
+
+/* Step 4: total pembayaran lebih menonjol */
+.cx-cev2-sum-row{ padding:6px 0; font-size:11.5px }
+.cx-cev2-sum-total{
+  margin-top:4px; padding:11px 12px; border-radius:13px; align-items:center;
+  border:1px solid rgba(168,85,247,.32);
+  background:linear-gradient(135deg, rgba(168,85,247,.16), rgba(99,102,241,.08));
+}
+.cx-cev2-sum-total span{ font-size:11px; color:var(--ink2) }
+.cx-cev2-sum-total small{ font-size:10px; color:var(--muted) }
+.cx-cev2-sum-total strong{ font-size:20px; letter-spacing:-.02em; color:var(--ink) }
+.cx-cev2-cta{ height:46px; border-radius:13px; margin-top:2px }
+.cx-cev2-back{ padding:6px 0 0; font-size:11px }
+
+/* Cara Kerja & Informasi Penting: lebih padat */
+.cx-cev2-steps,
+.cx-cev2-notes{ margin:0; padding:0 13px 12px; display:grid; gap:6px }
+.cx-cev2-steps li,
+.cx-cev2-notes li{ gap:8px; font-size:11px; line-height:1.4; padding:0 }
+.cx-cev2-steps{ grid-template-columns:repeat(2, minmax(0,1fr)) }
+@media (max-width:420px){ .cx-cev2-steps{ grid-template-columns:1fr } }
+
+/* Bawah halaman: konten berakhir natural, footer menyatu, aman dari bottom nav */
+.cx-custom-page{ padding-bottom:0 }
+.cx-custom-page + .cx-footer,
+.cx-topup-page + .cx-footer{ margin-top:10px; padding:10px 0 }
+.cx-custom-page .cx-cev2{ padding-bottom:4px }
+@media (max-width:900px){
+  .cx-custom-page,
+  .cx-topup-page{ padding-bottom:6px }
+  .cx-footer-inner{ padding-bottom:calc(70px + env(safe-area-inset-bottom, 0px)) }
+}
+
+/* — Top Up: kartu nominal dengan bonus — */
+.cx-nominal-tile{ display:grid; gap:2px; align-content:start }
+.cx-nominal-bonus{
+  justify-self:start; margin-top:3px; padding:2px 7px; border-radius:999px;
+  font:700 9.5px/1.4 Inter, system-ui, sans-serif; letter-spacing:.04em;
+  color:var(--green, #4ade80); border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.1);
+}
+.cx-nominal-tile small{ margin-top:3px; font-size:10px; color:var(--muted) }
+.cx-nominal-note{
+  display:flex; align-items:center; gap:6px; margin:8px 0 0;
+  font-size:10.5px; color:var(--muted);
+}
+.cx-nominal-invalid{ display:block; margin-top:4px; font-size:10.5px; color:var(--red, #f87171) }
+.cx-nominal-bonus-hint{ display:block; margin-top:4px; font-size:10.5px; color:var(--green, #4ade80) }
+
+/* Section nominal custom terasa bagian natural halaman */
+.nk-custom{
+  margin-top:12px; padding:11px 12px; border-radius:14px;
+  border:1px solid var(--b2); background:rgba(255,255,255,.02);
+}
+.nk-custom-input{ margin-top:7px; gap:8px }
+.nk-custom-input input{ height:42px }
+.cx-topup-page .cx-account-grid{ gap:10px }
+.cx-topup-page .cx-panel{ border-radius:16px }

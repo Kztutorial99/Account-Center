@@ -2809,9 +2809,9 @@ function CustomEmailPage({ draft, setDraft, check, onVerify, list, status, quota
           </div>
           <div className="cx-cev2-card-body">
             {list.length === 0 ? (
-              <div className="cx-cev2-empty">
-                <Mail size={14} />
-                <p>Belum ada nama. Cek ketersediaan lalu tambahkan.</p>
+              <div className="cx-cev2-empty is-compact">
+                <span className="cx-cev2-empty-ic"><Mail size={13} /></span>
+                <p>Belum ada nama dipilih — cek ketersediaan di Step 2, lalu tambahkan.</p>
               </div>
             ) : (
               <ul className="cx-cev2-items">
@@ -4022,7 +4022,23 @@ const QRIS_NAME    = "KZ.TUTORIAL";
 const QRIS_NMID    = "ID1026476486182";
 const WA_NUMBER    = "62895325844493";
 const TG_USERNAME  = "Kztutorial";
-const TOPUP_PRESETS = [500, 25000, 50000, 100000, 250000, 500000];
+const TOPUP_MIN = 10000;
+const TOPUP_PRESETS = [
+  { amount: 10000, bonus: 500 },
+  { amount: 25000, bonus: 1000 },
+  { amount: 50000, bonus: 2500 },
+  { amount: 100000, bonus: 5000 },
+  { amount: 250000, bonus: 15000 },
+  { amount: 500000, bonus: 35000 },
+  { amount: 1000000, bonus: 75000 },
+];
+/* Bonus saldo mengikuti nominal terbesar yang tercapai (juga untuk nominal custom). */
+const topupBonus = (value) => {
+  const v = Math.round(Number(value) || 0);
+  let bonus = 0;
+  for (const t of TOPUP_PRESETS) if (v >= t.amount) bonus = t.bonus;
+  return bonus;
+};
 
 
 const topupStatusBadge = (status) =>
@@ -4316,7 +4332,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
   /* Klik nominal → langsung buka popup konfirmasi singkat. */
   const openConfirm = (value) => {
     const v = Math.round(Number(value) || 0);
-    if (!Number.isFinite(v) || v < 500) { setFormError("Minimal top up Rp500."); return; }
+    if (!Number.isFinite(v) || v < TOPUP_MIN) { setFormError(`Minimal top up ${formatPrice(TOPUP_MIN)}.`); return; }
     setFormError("");
     setAmount(String(v));
     setStep("confirm");
@@ -4463,7 +4479,7 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
           <div className="cx-nominal-head">
             <div>
               <h2>Pilih Nominal</h2>
-              <p>Min {formatPrice(500)} · Max {formatPrice(10000000)}</p>
+              <p>Min {formatPrice(TOPUP_MIN)} · Max {formatPrice(10000000)}</p>
             </div>
             <div className="cx-nominal-actions">
               <span className="cx-nominal-tag"><Sparkles size={11} /> QRIS instan</span>
@@ -4481,34 +4497,42 @@ function TopUpPage({ user, onBack, onNotice, onRefresh }) {
 
           <div className="cx-topup-form">
             <div className="cx-nominal-grid">
-              {TOPUP_PRESETS.map((v) => (
+              {TOPUP_PRESETS.map((t) => (
                 <button
                   type="button"
-                  key={v}
+                  key={t.amount}
                   className="cx-nominal-tile"
-                  onClick={() => openConfirm(v)}
+                  onClick={() => openConfirm(t.amount)}
                 >
                   <span className="cx-nominal-cap">Top up</span>
-                  <strong>{formatPrice(v)}</strong>
-                  <small>Saldo masuk otomatis</small>
+                  <strong>{formatPrice(t.amount)}</strong>
+                  <span className="cx-nominal-bonus">BONUS +{formatPrice(t.bonus)}</span>
+                  <small>Saldo diterima {formatPrice(t.amount + t.bonus)}</small>
                 </button>
               ))}
             </div>
+            <p className="cx-nominal-note"><Sparkles size={11} /> Bonus otomatis masuk setelah pembayaran berhasil.</p>
 
             <div className="nk-custom">
               <span className="cx-field-label">Atau nominal custom</span>
               <div className="nk-custom-input">
                 <span className="nk-custom-rp">Rp</span>
                 <input
-                  type="number" min="500" step="100" value={custom} inputMode="numeric" placeholder="500"
+                  type="number" min="10000" step="500" value={custom} inputMode="numeric" placeholder="10000"
                   onChange={(e) => setCustom(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); openConfirm(custom); } }}
                 />
-                <button type="button" className="cx-btn cx-btn-primary cx-btn-sm nk-custom-go" disabled={Math.round(Number(custom) || 0) < 500} onClick={() => openConfirm(custom)}>
+                <button type="button" className="cx-btn cx-btn-primary cx-btn-sm nk-custom-go" disabled={Math.round(Number(custom) || 0) < TOPUP_MIN} onClick={() => openConfirm(custom)}>
                   <span>Lanjutkan</span> <ArrowRight size={12} />
                 </button>
               </div>
-              <small className="cx-field-hint">Minimal Rp500 · Maksimal Rp10.000.000. QRIS dibuat otomatis sesuai nominal ini.</small>
+              <small className="cx-field-hint">Minimal {formatPrice(TOPUP_MIN)} · Maksimal Rp10.000.000. QRIS dibuat otomatis sesuai nominal ini.</small>
+              {Math.round(Number(custom) || 0) > 0 && Math.round(Number(custom) || 0) < TOPUP_MIN && (
+                <small className="cx-nominal-invalid">Nominal minimal {formatPrice(TOPUP_MIN)}.</small>
+              )}
+              {Math.round(Number(custom) || 0) >= TOPUP_MIN && (
+                <small className="cx-nominal-bonus-hint">Bonus +{formatPrice(topupBonus(custom))} · saldo diterima {formatPrice(Math.round(Number(custom) || 0) + topupBonus(custom))}</small>
+              )}
             </div>
 
             <div className="cx-pay-apps">

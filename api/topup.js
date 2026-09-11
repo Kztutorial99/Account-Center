@@ -7,7 +7,23 @@ const { handleStream } = require("./_stream");
 const wijayapay = require("./_wijayapay");
 const { once } = require("./_schema");
 
-const MIN_TOPUP = 500;
+const MIN_TOPUP = 10000;
+/* Bonus saldo per nominal top up (mengikuti tampilan halaman Top Up). */
+const TOPUP_BONUS_TIERS = [
+  { amount: 10000, bonus: 500 },
+  { amount: 25000, bonus: 1000 },
+  { amount: 50000, bonus: 2500 },
+  { amount: 100000, bonus: 5000 },
+  { amount: 250000, bonus: 15000 },
+  { amount: 500000, bonus: 35000 },
+  { amount: 1000000, bonus: 75000 },
+];
+const topupBonus = (value) => {
+  const v = Math.round(Number(value) || 0);
+  let bonus = 0;
+  for (const t of TOPUP_BONUS_TIERS) if (v >= t.amount) bonus = t.bonus;
+  return bonus;
+};
 const MAX_TOPUP = 20000000;
 const METHOD_LABEL = "QRIS · WijayaPay";
 
@@ -37,8 +53,10 @@ async function settlePaid(sql, refId) {
   if (!claimed.length) return { credited: false };
   const row = claimed[0];
   const amount = Number(row.amount) || 0;
+  const bonus = topupBonus(amount);
+  const credit = amount + bonus;
   const [user] = await sql`
-    UPDATE codexa_users SET balance = balance + ${amount} WHERE id = ${row.userId}
+    UPDATE codexa_users SET balance = balance + ${credit} WHERE id = ${row.userId}
     RETURNING id, name, email, balance
   `;
 
@@ -46,7 +64,7 @@ async function settlePaid(sql, refId) {
     userId: row.userId,
     type: "topup_approved",
     title: "Top up berhasil",
-    body: `Pembayaran QRIS ${rupiah(amount)} sudah diterima, saldo kamu langsung bertambah.`,
+    body: `Pembayaran QRIS ${rupiah(amount)} sudah diterima${bonus ? ` + bonus ${rupiah(bonus)}` : ""}, saldo kamu langsung bertambah ${rupiah(credit)}.`,
     link: "topup",
   });
 
@@ -57,7 +75,7 @@ async function settlePaid(sql, refId) {
         chat_id: adminChatId(),
         text: [
           "<b>Top up QRIS otomatis lunas</b>",
-          `Nominal: <b>${rupiah(amount)}</b>`,
+          `Nominal: <b>${rupiah(amount)}</b>${bonus ? ` + bonus ${rupiah(bonus)}` : ""}`,
           `User: ${user ? user.name : row.userId} (${user ? user.email : "-"})`,
           `Saldo sekarang: <b>${rupiah(user && user.balance)}</b>`,
           `Ref ID: <code>${refId}</code>`,
