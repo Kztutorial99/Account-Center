@@ -677,3 +677,50 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 
 /* teks bantu mesin pencari (tidak tampil) */
 .cx-seo-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+
+/* ── Penanda umur akun (Fresh / Aged) + filter katalog ── */
+.cx-age-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 8px;border-radius:999px;
+  font-size:10.5px;font-weight:700;letter-spacing:.02em;
+  border:1px solid transparent;white-space:nowrap;line-height:1;
+}
+.cx-age-badge.is-fresh{background:rgba(123,196,139,.16);border-color:rgba(123,196,139,.42);color:#3f8b56}
+.cx-age-badge.is-aged{background:rgba(219,166,106,.16);border-color:rgba(219,166,106,.45);color:#a2701f}
+.cx-pc-tags{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.cx-prodpage-plat .cx-age-badge{margin-left:8px}
+
+.cx-filterbar{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  gap:10px;margin:14px 0 18px;padding:12px;
+  border:1px solid var(--b1);border-radius:14px;background:var(--bg2,rgba(255,255,255,.55));
+}
+.cx-filter-chips{display:flex;gap:6px;flex-wrap:wrap}
+.cx-filter-chip{
+  appearance:none;cursor:pointer;padding:8px 14px;border-radius:999px;
+  border:1px solid var(--b1);background:transparent;color:var(--ink2);
+  font-size:12px;font-weight:600;min-height:36px;
+}
+.cx-filter-chip.is-active{background:var(--ink2,#20232a);border-color:transparent;color:#fff}
+.cx-filter-selects{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cx-filter-select{display:inline-flex;flex-direction:column;gap:3px}
+.cx-filter-select>span{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3,#8b8f98)}
+.cx-filter-select>select{
+  appearance:none;min-height:36px;padding:7px 28px 7px 10px;border-radius:10px;
+  border:1px solid var(--b1);background:transparent;color:var(--ink2);font-size:12px;font-weight:600;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 15px) 55%,calc(100% - 10px) 55%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+.cx-filter-reset{
+  align-self:flex-end;cursor:pointer;min-height:36px;padding:7px 12px;border-radius:10px;
+  border:1px dashed var(--b1);background:transparent;color:var(--ink3,#8b8f98);font-size:12px;font-weight:600;
+}
+@media (max-width:520px){
+  .cx-filterbar{flex-direction:column;align-items:stretch}
+  .cx-filter-chips{justify-content:stretch}
+  .cx-filter-chip{flex:1;text-align:center}
+  .cx-filter-selects{display:grid;grid-template-columns:1fr 1fr}
+  .cx-filter-select>select{width:100%}
+  .cx-filter-reset{grid-column:1 / -1}
+}

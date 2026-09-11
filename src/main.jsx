@@ -66,6 +66,44 @@ export const agedInfoOf = (value, config) => {
   const extraPerYear = Number(cfg.extraPerYear) || 0;
   return { days, bonus: yearBonus + extraYears * extraPerYear, label: `Aged ${1 + extraYears} tahun+` };
 };
+/* Penanda umur produk (Fresh / Aged) untuk badge katalog + filter.
+   Sumber utama: agedDays per akun dari /api/data. Kalau umur belum diisi
+   admin, jatuh ke tebakan dari judul/deskripsi supaya badge tetap muncul. */
+const agedLabelFromDays = (days) => {
+  if (days <= 30) return `Aged ${days} hari`;
+  if (days < 365) return `Aged ${Math.max(1, Math.round(days / 30))} bulan`;
+  const years = Math.floor(days / 365);
+  return `Aged ${years} tahun+`;
+};
+export const productAgeInfo = (product) => {
+  const accounts = Array.isArray(product && product.accounts) ? product.accounts : [];
+  const days = accounts
+    .map((a) => Number(a && a.agedDays))
+    .filter((n) => Number.isFinite(n) && n >= 0);
+  if (days.length) {
+    const oldest = Math.max(...days);
+    if (oldest <= 7) return { kind: "fresh", label: "Fresh", days: oldest };
+    return { kind: "aged", label: agedLabelFromDays(oldest), days: oldest };
+  }
+  const text = `${(product && product.title) || ""} ${(product && product.description) || ""}`.toLowerCase();
+  if (text.includes("aged")) return { kind: "aged", label: "Aged", days: null };
+  if (text.includes("fresh") || text.includes("no-pva") || text.includes("no pva")) {
+    return { kind: "fresh", label: "Fresh", days: null };
+  }
+  return { kind: "", label: "", days: null };
+};
+export const CATALOG_SORTS = [
+  { key: "default", label: "Paling baru" },
+  { key: "price-asc", label: "Harga termurah" },
+  { key: "price-desc", label: "Harga termahal" },
+  { key: "stock-desc", label: "Stok terbanyak" },
+  { key: "name-asc", label: "Nama A-Z" },
+];
+export const CATALOG_AGES = [
+  { key: "all", label: "Semua umur" },
+  { key: "fresh", label: "Fresh" },
+  { key: "aged", label: "Aged" },
+];
 export const LOGIN_TYPES = ["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"];
 /* Template produk siap pakai: admin cukup ganti harga, email & password. */
 export const PRODUCT_TEMPLATES = [
@@ -904,6 +942,10 @@ const authScreenFromPath = (pathname) => {
 function App() {
   const [activePage, setActivePage] = useState(() => pageFromPath(window.location.pathname));
   const [search, setSearch]   = useState("");
+  // Filter katalog: urutan harga/stok/nama, umur akun (Fresh/Aged), platform.
+  const [sortBy, setSortBy]   = useState("default");
+  const [ageFilter, setAgeFilter] = useState("all");
+  const [platFilter, setPlatFilter] = useState("all");
   const [notice, setNotice]   = useState("");
   const [cart, setCart]       = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -1090,10 +1132,30 @@ function App() {
     return () => window.removeEventListener("popstate", pop);
   }, []);
 
+  const platformOptions = useMemo(() => {
+    const seen = [];
+    for (const p of data.products) if (p.loginType && !seen.includes(p.loginType)) seen.push(p.loginType);
+    return seen;
+  }, [data.products]);
+
   const products = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return q ? data.products.filter((p) => `${p.title} ${p.description} ${p.loginType}`.toLowerCase().includes(q)) : data.products;
-  }, [data.products, search]);
+    let list = data.products.map((p) => ({ ...p, ageInfo: productAgeInfo(p) }));
+    if (q) {
+      list = list.filter((p) =>
+        `${p.title} ${p.description} ${p.loginType} ${p.ageInfo.kind} ${p.ageInfo.label}`.toLowerCase().includes(q),
+      );
+    }
+    if (ageFilter !== "all") list = list.filter((p) => p.ageInfo.kind === ageFilter);
+    if (platFilter !== "all") list = list.filter((p) => p.loginType === platFilter);
+    const priceOf = (p) => Number(p.price) || 0;
+    const stockOf = (p) => Number(p.stock) || (Array.isArray(p.accounts) ? p.accounts.length : 0);
+    if (sortBy === "price-asc") list = [...list].sort((a, b) => priceOf(a) - priceOf(b));
+    else if (sortBy === "price-desc") list = [...list].sort((a, b) => priceOf(b) - priceOf(a));
+    else if (sortBy === "stock-desc") list = [...list].sort((a, b) => stockOf(b) - stockOf(a));
+    else if (sortBy === "name-asc") list = [...list].sort((a, b) => String(a.title).localeCompare(String(b.title), "id"));
+    return list;
+  }, [data.products, search, sortBy, ageFilter, platFilter]);
 
   // Pindah halaman selalu mulai dari paling atas (window + container scroll).
   const scrollTop = () => {
@@ -1738,9 +1800,51 @@ function App() {
           </div>
           <div className="cx-search">
             <Search size={13} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari akun atau tipe login..." />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari akun, fresh, aged..." />
           </div>
         </div>
+
+        {/* Filter katalog: urutan harga/stok/nama + umur akun + platform */}
+        <div className="cx-filterbar">
+          <div className="cx-filter-chips" role="group" aria-label="Filter umur akun">
+            {CATALOG_AGES.map((a) => (
+              <button
+                key={a.key}
+                type="button"
+                className={`cx-filter-chip${ageFilter === a.key ? " is-active" : ""}`}
+                onClick={() => setAgeFilter(a.key)}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+          <div className="cx-filter-selects">
+            <label className="cx-filter-select">
+              <span>Urutkan</span>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                {CATALOG_SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+              </select>
+            </label>
+            <label className="cx-filter-select">
+              <span>Platform</span>
+              <select value={platFilter} onChange={(e) => setPlatFilter(e.target.value)}>
+                <option value="all">Semua platform</option>
+                {platformOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </label>
+            {(ageFilter !== "all" || platFilter !== "all" || sortBy !== "default" || search) && (
+              <button
+                type="button"
+                className="cx-filter-reset"
+                onClick={() => { setAgeFilter("all"); setPlatFilter("all"); setSortBy("default"); setSearch(""); }}
+              >
+                Reset filter
+              </button>
+            )}
+          </div>
+        </div>
+
+
 
 
         {data.loading && (
@@ -3450,6 +3554,7 @@ function ProductCard({ product, colorIdx, onBuy, onOpen }) {
     setSelected((prev) => prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]);
   const total = selected.length ? sumSelected(product, selected) : 0;
   const stock = Number(product.stock) || accounts.length;
+  const age = product.ageInfo || productAgeInfo(product);
   return (
     <article className="cx-pc">
       <div className="cx-pc-head">
@@ -3457,7 +3562,10 @@ function ProductCard({ product, colorIdx, onBuy, onOpen }) {
           <ProviderIcon type={product.loginType} size={15} />
           {product.loginType}
         </span>
-        <span className={`cx-pc-stock${stock > 0 ? "" : " is-out"}`}>{stock > 0 ? `${stock} stok` : "Kosong"}</span>
+        <span className="cx-pc-tags">
+          {age.kind && <span className={`cx-age-badge is-${age.kind}`}>{age.label}</span>}
+          <span className={`cx-pc-stock${stock > 0 ? "" : " is-out"}`}>{stock > 0 ? `${stock} stok` : "Kosong"}</span>
+        </span>
       </div>
 
       <h3 className="cx-pc-title">
@@ -3558,6 +3666,9 @@ function ProductPage({ product, loading, navigate, onAdd }) {
         <span className="cx-prodpage-plat">
           <ProviderIcon type={product.loginType} size={16} />
           {product.loginType}
+          {productAgeInfo(product).kind && (
+            <span className={`cx-age-badge is-${productAgeInfo(product).kind}`}>{productAgeInfo(product).label}</span>
+          )}
         </span>
         <h1>{product.title}</h1>
         <div className="cx-prodpage-meta">
