@@ -162,5 +162,25 @@
       <p>Aktifkan JavaScript untuk memakai katalog dan proses pembelian di Akun Instan.</p>
     </noscript>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      (function () {
+        setTimeout(function () {
+          var root = document.getElementById("root");
+          if (root && root.childElementCount === 0) {
+            try {
+              if (!sessionStorage.getItem("cx:reloaded")) {
+                sessionStorage.setItem("cx:reloaded", "1");
+                location.reload();
+                return;
+              }
+            } catch (e) {}
+            root.innerHTML = '<div style="min-height:70vh;display:grid;place-items:center;padding:24px;color:#e9e6f5;font-family:system-ui,sans-serif;text-align:center"><div><h2>Halaman gagal dimuat</h2><p style="color:#a99fc4;font-size:14px">Periksa koneksi lalu muat ulang halaman.</p><a href="/" style="display:inline-block;padding:11px 18px;border-radius:12px;background:linear-gradient(135deg,#7c5cff,#a06bff);color:#fff;text-decoration:none;font-weight:600">Muat ulang</a></div></div>';
+          } else {
+            try { sessionStorage.removeItem("cx:reloaded"); } catch (e) {}
+          }
+        }, 8000);
+      })();
+    </script>
+
   </body>
 </html>

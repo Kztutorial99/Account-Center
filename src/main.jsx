@@ -5080,4 +5080,25 @@ export function AssistantWidget({ open: openProp, onOpenChange, hideFab = false,
 }
 
 /* ─── mount ─── */
-createRoot(document.getElementById("root")).render(<React.StrictMode><App /></React.StrictMode>);
+class RootErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { err: null }; }
+  static getDerivedStateFromError(err) { return { err }; }
+  componentDidCatch(err) { try { console.error("[akuninstan]", err); } catch (_) {} }
+  render() {
+    if (!this.state.err) return this.props.children;
+    return (
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, color: "#e9e6f5", background: "#120a1e", fontFamily: "system-ui, sans-serif", textAlign: "center" }}>
+        <div style={{ maxWidth: 380 }}>
+          <h2 style={{ margin: "0 0 8px" }}>Halaman gagal dimuat</h2>
+          <p style={{ margin: "0 0 18px", color: "#a99fc4", fontSize: 14 }}>Coba muat ulang. Jika masih kosong, bersihkan data lokal lalu buka lagi.</p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            <button onClick={() => window.location.reload()} style={{ padding: "11px 18px", borderRadius: 12, border: 0, background: "linear-gradient(135deg,#7c5cff,#a06bff)", color: "#fff", fontWeight: 600 }}>Muat ulang</button>
+            <button onClick={() => { try { window.localStorage.removeItem("codexa:cart"); } catch (_) {} window.location.replace("/"); }} style={{ padding: "11px 18px", borderRadius: 12, border: "1px solid #2f2247", background: "transparent", color: "#e9e6f5", fontWeight: 600 }}>Bersihkan & buka ulang</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
+createRoot(document.getElementById("root")).render(<React.StrictMode><RootErrorBoundary><App /></RootErrorBoundary></React.StrictMode>);
