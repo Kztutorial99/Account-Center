@@ -8,11 +8,11 @@ export const SITE_NAME = "Akun Instan";
 const PAGE_SEO = {
   store: {
     path: "/",
-    title: "Akun Instan — Jual Akun Google, Gmail & Akun Digital Terpercaya",
+    title: "Jual Akun Gmail Fresh & Custom Gmail Murah | Akun Instan",
     description:
-      "Jual akun Google & Gmail fresh, custom email sesuai nama, serta akun digital lain (game & social media). Proses cepat, harga murah, garansi login.",
+      "Jual beli akun Gmail fresh/no-PVA, custom Gmail sesuai nama, dan akun digital lainnya. Proses instan, harga murah, stok real-time, garansi login.",
     keywords:
-      "jual akun google, jual akun gmail, beli akun gmail, custom email, akun digital murah, jual akun game, jual akun social media",
+      "jual akun gmail, beli akun gmail, jual gmail fresh, gmail fresh, custom gmail, jual akun google, beli akun google, jual email, akun digital murah",
   },
   katalog: {
     path: "/katalog",

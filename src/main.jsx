@@ -705,6 +705,7 @@ function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }
             </div>
             <div className="cx-kicker">AKUNINSTAN</div>
             <h1>Akun digital,<br /><em>tanpa drama.</em></h1>
+            <p className="cx-seo-only">Jual beli akun Gmail fresh (no-PVA), custom Gmail sesuai nama, akun Google, dan akun digital lainnya dengan harga murah dan proses instan.</p>
             <p className="cx-hero-sub">
               Akun siap pakai dari katalog nyata. Pilih akun, lakukan pembayaran, dan detail akun
               dikirim otomatis setelah pembayaran berhasil.
@@ -1686,6 +1687,7 @@ function App() {
           <div className="cx-hero-badge"><span className="cx-hero-pulse" /> Stok live · {data.loading ? "memuat" : `${totalAccounts} akun`} tersedia</div>
           <div className="cx-kicker">AKUN INSTAN ACCESS</div>
           <h1>Akun digital,<br /><em>tanpa drama.</em></h1>
+            <p className="cx-seo-only">Jual beli akun Gmail fresh (no-PVA), custom Gmail sesuai nama, akun Google, dan akun digital lainnya dengan harga murah dan proses instan.</p>
           <p className="cx-hero-sub">Akun siap pakai dari katalog nyata. Detail login hanya dibuka setelah pembayaran berhasil — otomatis, tanpa nunggu admin.</p>
           <div className="cx-hero-actions">
             <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
