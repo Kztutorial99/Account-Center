@@ -1693,7 +1693,7 @@ function AdminPage({ onBack, onNotice }) {
                       <div className="cx-ud-list cx-ud-status-list">
                         <div><BadgeCheck size={11} /><span>Status akun</span><strong><span className={`cx-chip ${chipClass(d.status)}`}><i /> {statusLabel(d.status)}</span></strong></div>
                         <div><ShieldCheck size={11} /><span>Role</span><strong><span className={`cx-chip ${d.role === "admin" ? "cx-chip-admin" : "cx-chip-user"}`}><i /> {d.role === "admin" ? "Admin" : "User"}</span></strong></div>
-                        <div><Mail size={11} /><span>Status email</span><strong>{d.provider === "google" ? <span className="cx-chip cx-chip-ok"><i /> Terverifikasi (Google)</span> : <span className="cx-chip cx-chip-warn"><i /> Belum terverifikasi</span>}</strong></div>
+                        <div><Mail size={11} /><span>Status email</span><strong>{d.provider === "google" ? <span className="cx-chip cx-chip-ok"><i /> Terverifikasi (Google)</span> : d.emailVerifiedAt ? <span className="cx-chip cx-chip-ok"><i /> Terverifikasi</span> : <span className="cx-chip cx-chip-warn"><i /> Belum terverifikasi</span>}</strong></div>
                         <div><CircleHelp size={11} /><span>Verifikasi akun</span><strong><span className="cx-chip cx-chip-none"><i /> Belum tersedia</span></strong></div>
                       </div>
                     </div>

@@ -279,7 +279,11 @@ export function ProviderIcon({ type, size = 16, className = "" }) {
 export async function jsonRequest(url, opts = {}) {
   const r = await fetch(url, { credentials: "same-origin", ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) } });
   const p = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(p.error || "Permintaan gagal diproses");
+  if (!r.ok) {
+    const error = new Error(p.error || "Permintaan gagal diproses");
+    error.code = p.code || "";
+    throw error;
+  }
   return p;
 }
 
@@ -3849,6 +3853,14 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome }) {
   const [form, setForm]         = useState({ name: "", email: "", phone: "", password: "" });
   const [showPass, setShowPass] = useState(false);
   const [error, setError]       = useState("");
+  const [message, setMessage]   = useState(() => {
+    const state = new URLSearchParams(window.location.search).get("verification");
+    if (state === "success") return "Email berhasil diverifikasi. Silakan masuk ke akun kamu.";
+    if (state === "invalid") return "Link verifikasi tidak valid atau sudah kedaluwarsa. Masuk untuk mengirim link baru.";
+    if (state === "error") return "Verifikasi belum berhasil. Silakan coba lagi.";
+    return "";
+  });
+  const [canResend, setCanResend] = useState(false);
   const [busy, setBusy]         = useState(false);
   useEffect(() => { setMode(initialMode); }, [initialMode]);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -3868,13 +3880,34 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome }) {
   };
 
   const submit = async (e) => {
-    e.preventDefault(); setError(""); setBusy(true);
+    e.preventDefault(); setError(""); setMessage(""); setCanResend(false); setBusy(true);
     try {
       const payload = mode === "register"
         ? { action: "register", name: form.name, email: form.email, phone: form.phone, password: form.password }
         : { action: "login", email: form.email, password: form.password };
       const res = await jsonRequest("/api/auth", { method: "POST", body: JSON.stringify(payload) });
-      onAuthenticated(res.user);
+      if (res.verificationRequired) {
+        setMode("login");
+        setMessage(res.message);
+      } else {
+        onAuthenticated(res.user);
+      }
+    } catch (err) {
+      setError(err.message);
+      setCanResend(err.code === "EMAIL_NOT_VERIFIED");
+    }
+    finally { setBusy(false); }
+  };
+
+  const resendVerification = async () => {
+    setError(""); setMessage(""); setBusy(true);
+    try {
+      const res = await jsonRequest("/api/auth", {
+        method: "POST",
+        body: JSON.stringify({ action: "resend-verification", email: form.email, password: form.password }),
+      });
+      setMessage(res.message);
+      setCanResend(false);
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
@@ -3949,7 +3982,13 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome }) {
                 </button>
               </InputWrap>
             </Field>
+            {message && <p className="cx-form-success"><BadgeCheck size={14} /> {message}</p>}
             {error && <p className="cx-form-error">{error}</p>}
+            {canResend && (
+              <button type="button" className="cx-btn cx-btn-secondary cx-btn-full" disabled={busy} onClick={resendVerification}>
+                <Mail size={13} /> Kirim ulang link verifikasi
+              </button>
+            )}
             <button type="submit" className="cx-btn cx-btn-primary cx-btn-full cx-auth-submit" disabled={busy}>
               {busy ? <><RefreshCw size={13} /> Memproses...</> : <><LogIn size={13} /> {mode === "register" ? "Daftar sekarang" : "Masuk"}</>}
             </button>

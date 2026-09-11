@@ -78,6 +78,11 @@ async function ensureTablesUncached(sql) {
     sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'`,
     sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT ''`,
     sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'email'`,
+    // Akun lama tetap aktif. Pendaftaran email baru secara eksplisit menyimpan NULL
+    // sampai pengguna mengeklik link verifikasi.
+    sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ DEFAULT NOW()`,
+    sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS verification_token_hash TEXT`,
+    sql`ALTER TABLE codexa_users ADD COLUMN IF NOT EXISTS verification_expires_at TIMESTAMPTZ`,
   ]);
   await sql`UPDATE codexa_users SET role = 'user' WHERE role NOT IN ('user','admin')`;
 }
@@ -134,11 +139,13 @@ async function currentUser(sql, request) {
   const id = sessionUserId(request);
   if (!id) return null;
   const rows = await sql`
-    SELECT id, name, email, phone, balance, status, role, avatar, provider, created_at AS "createdAt"
+    SELECT id, name, email, phone, balance, status, role, avatar, provider,
+           email_verified_at AS "emailVerifiedAt", created_at AS "createdAt"
     FROM codexa_users WHERE id = ${id} LIMIT 1
   `;
   if (!rows.length) return null;
   if (rows[0].status && rows[0].status !== "active") return null;
+  if (rows[0].provider !== "google" && !rows[0].emailVerifiedAt) return null;
   return { ...rows[0], balance: Number(rows[0].balance) || 0, role: rows[0].role === "admin" ? "admin" : "user" };
 }
 

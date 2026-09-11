@@ -7,6 +7,7 @@ const {
 
 const { verifyFirebaseIdToken } = require("./_firebase");
 const { verifyGoogleAccessToken } = require("./_google");
+const { createVerificationToken, sendVerificationEmail } = require("./_email-verification");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -141,6 +142,29 @@ module.exports = async function handler(request, response) {
       });
     }
 
+    if (action === "resend-verification") {
+      const rows = await sql`
+        SELECT id, name, provider, email_verified_at AS "emailVerifiedAt", password_hash AS "passwordHash"
+        FROM codexa_users WHERE email = ${email} LIMIT 1
+      `;
+      const user = rows[0];
+      if (!user || !verifyPassword(password, user.passwordHash)) {
+        return response.status(401).json({ error: "Email atau password salah" });
+      }
+      if (user.provider === "google" || user.emailVerifiedAt) {
+        return response.status(200).json({ message: "Email akun ini sudah terverifikasi." });
+      }
+      const verification = createVerificationToken();
+      await sql`
+        UPDATE codexa_users
+        SET verification_token_hash = ${verification.hash}, verification_expires_at = ${verification.expiresAt}
+        WHERE id = ${user.id}
+      `;
+      await sendVerificationEmail({ request, email, name: user.name, token: verification.token });
+      await resetRateLimit(sql, throttleKey);
+      return response.status(200).json({ message: "Link verifikasi baru sudah dikirim. Cek inbox atau folder spam." });
+    }
+
     if (action === "register") {
       const name = text(body.name, 80);
       const phone = text(body.phone, 30);
@@ -150,20 +174,34 @@ module.exports = async function handler(request, response) {
       if (existing.length) return response.status(409).json({ error: "Email sudah terdaftar, silakan masuk" });
 
       const id = crypto.randomUUID();
+      const verification = createVerificationToken();
       const rows = await sql`
-        INSERT INTO codexa_users (id, name, email, phone, password_hash, balance, provider)
-        VALUES (${id}, ${name}, ${email}, ${phone}, ${hashPassword(password)}, 0, 'email')
+        INSERT INTO codexa_users (
+          id, name, email, phone, password_hash, balance, provider,
+          email_verified_at, verification_token_hash, verification_expires_at
+        )
+        VALUES (
+          ${id}, ${name}, ${email}, ${phone}, ${hashPassword(password)}, 0, 'email',
+          NULL, ${verification.hash}, ${verification.expiresAt}
+        )
         RETURNING id, name, email, phone, balance, role, avatar, provider, created_at AS "createdAt"
       `;
+      try {
+        await sendVerificationEmail({ request, email, name, token: verification.token });
+      } catch (error) {
+        await sql`DELETE FROM codexa_users WHERE id = ${id} AND email_verified_at IS NULL`;
+        throw error;
+      }
       await resetRateLimit(sql, throttleKey);
-      setSession(response, id);
       return response.status(201).json({
-        user: { ...rows[0], balance: Number(rows[0].balance) || 0, role: rows[0].role === "admin" ? "admin" : "user" },
+        verificationRequired: true,
+        message: "Link verifikasi sudah dikirim. Cek inbox atau folder spam sebelum masuk.",
       });
     }
 
     const rows = await sql`
-      SELECT id, name, email, phone, balance, status, role, avatar, provider, password_hash AS "passwordHash", created_at AS "createdAt"
+      SELECT id, name, email, phone, balance, status, role, avatar, provider,
+             email_verified_at AS "emailVerifiedAt", password_hash AS "passwordHash", created_at AS "createdAt"
       FROM codexa_users WHERE email = ${email} LIMIT 1
     `;
     const row = rows[0];
@@ -172,6 +210,12 @@ module.exports = async function handler(request, response) {
     }
     if (row.status && row.status !== "active") {
       return response.status(403).json({ error: "Akun kamu dinonaktifkan. Hubungi admin." });
+    }
+    if (row.provider !== "google" && !row.emailVerifiedAt) {
+      return response.status(403).json({
+        error: "Email belum diverifikasi. Buka link yang kami kirim ke email kamu.",
+        code: "EMAIL_NOT_VERIFIED",
+      });
     }
     await resetRateLimit(sql, throttleKey);
     setSession(response, row.id);
