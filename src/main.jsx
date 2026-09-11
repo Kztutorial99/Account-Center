@@ -940,7 +940,18 @@ const isPublicPage = (page) => PUBLIC_PAGES.includes(page) || isProductPage(page
 // /login dan /register punya URL sendiri agar bisa dibagikan & dikenali crawler.
 const authScreenFromPath = (pathname) => {
   const slug = String(pathname || "/").replace(/^\/+|\/+$/g, "");
-  return slug === "login" || slug === "register" ? slug : "welcome";
+  if (slug === "login" || slug === "register") return slug;
+  if (slug === "email-verifikasi") return "verify";
+  return "welcome";
+};
+
+const VERIFY_PENDING_KEY = "codexa:pending-verification";
+const readVerifyPending = () => {
+  try {
+    const raw = window.sessionStorage.getItem(VERIFY_PENDING_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && parsed.email ? parsed : null;
+  } catch (_) { return null; }
 };
 
 function App() {
@@ -975,7 +986,18 @@ function App() {
   const [buySel, setBuySel]     = useState([]);
   const [data, setData]         = useState({ products: [], loading: true, error: "" });
   const [auth, setAuth]         = useState({ user: null, loading: true });
-  const [authScreen, setAuthScreen] = useState(() => authScreenFromPath(window.location.pathname)); // welcome | login | register
+  const [authScreen, setAuthScreen] = useState(() => authScreenFromPath(window.location.pathname)); // welcome | login | register | verify
+  /* Data pendaftaran sementara (email + password) supaya halaman
+     /email-verifikasi bisa memeriksa status dan langsung membuat sesi. */
+  const [verifyPending, setVerifyPending] = useState(() => readVerifyPending());
+  const saveVerifyPending = (payload) => {
+    setVerifyPending(payload);
+    try { window.sessionStorage.setItem(VERIFY_PENDING_KEY, JSON.stringify(payload)); } catch (_) {}
+  };
+  const clearVerifyPending = () => {
+    setVerifyPending(null);
+    try { window.sessionStorage.removeItem(VERIFY_PENDING_KEY); } catch (_) {}
+  };
   // Halaman terakhir sebelum masuk ke layar Masuk/Daftar, dipakai tombol "Kembali".
   const [authReturn, setAuthReturn] = useState(null);
   // Animasi transisi singkat setelah login sukses sebelum masuk beranda.
@@ -998,7 +1020,8 @@ function App() {
     }
     setAuthScreen(screen);
     if (typeof window !== "undefined") {
-      window.history.pushState({}, "", screen === "welcome" ? "/" : `/${screen}`);
+      const path = screen === "welcome" ? "/" : screen === "verify" ? "/email-verifikasi" : `/${screen}`;
+      window.history.pushState({}, "", path);
     }
   };
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1397,6 +1420,25 @@ function App() {
   }
   if (!auth.user && !auth.loading) {
     // Layar Masuk/Daftar hanya muncul saat diminta (klik tombol yang butuh login).
+    if (authScreen === "verify") {
+      return (
+        <VerifyEmailPage
+          pending={verifyPending}
+          onAuthenticated={(user) => {
+            clearVerifyPending();
+            setAuth({ user, loading: false });
+            setAuthScreen("welcome");
+            setAuthReturn(null);
+            navigate("store");
+            setWelcomeSplash(true);
+          }}
+          onBackToLogin={() => {
+            clearVerifyPending();
+            goAuthScreen("login");
+          }}
+        />
+      );
+    }
     if (authScreen === "login" || authScreen === "register" || !isPublicPage(activePage)) {
       return (
         <AuthPage
@@ -1407,6 +1449,10 @@ function App() {
             setAuthReturn(null);
             navigate("store");
             setWelcomeSplash(true);
+          }}
+          onVerificationSent={({ email, password, message }) => {
+            saveVerifyPending({ email, password, message });
+            goAuthScreen("verify");
           }}
           onBackToWelcome={() => {
             // Kembali ke halaman sebelumnya (bukan selalu beranda).
@@ -3848,7 +3894,104 @@ function GoogleGlyph() {
   );
 }
 
-function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome }) {
+/* Halaman /email-verifikasi: user diarahkan ke sini setelah daftar. */
+function VerifyEmailPage({ pending, onAuthenticated, onBackToLogin }) {
+  const email = (pending && pending.email) || "";
+  const password = (pending && pending.password) || "";
+  const linkState = new URLSearchParams(window.location.search).get("verification");
+  const [busy, setBusy] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [error, setError] = useState(linkState === "invalid" ? "Link verifikasi tidak valid atau sudah kedaluwarsa. Kirim ulang link baru." : "");
+  const [message, setMessage] = useState(pending && pending.message ? pending.message : "");
+
+  const check = async ({ silent } = {}) => {
+    if (!email || !password) {
+      if (!silent) setError("Sesi pendaftaran sudah berakhir. Silakan masuk memakai email dan password kamu.");
+      return false;
+    }
+    if (!silent) { setBusy(true); setError(""); setMessage(""); }
+    try {
+      const res = await jsonRequest("/api/auth", {
+        method: "POST",
+        body: JSON.stringify({ action: "verify-status", email, password }),
+      });
+      if (res.verified && res.user) { onAuthenticated(res.user); return true; }
+      if (!silent) setError("Kami belum menerima konfirmasi. Buka email kamu lalu klik tombol Verifikasi akun di dalamnya.");
+      return false;
+    } catch (err) {
+      if (!silent) setError(err.message || "Gagal memeriksa status verifikasi");
+      return false;
+    } finally {
+      if (!silent) setBusy(false);
+    }
+  };
+
+  /* Deteksi otomatis: begitu link diklik di email, user langsung masuk. */
+  useEffect(() => {
+    if (!email || !password) return;
+    let active = true;
+    const tick = () => { if (active) check({ silent: true }); };
+    tick();
+    const id = window.setInterval(tick, 6000);
+    return () => { active = false; window.clearInterval(id); };
+  }, [email, password]);
+
+  const resend = async () => {
+    if (!email || !password) { setError("Sesi pendaftaran sudah berakhir. Silakan masuk untuk mengirim link baru."); return; }
+    setResending(true); setError(""); setMessage("");
+    try {
+      const res = await jsonRequest("/api/auth", {
+        method: "POST",
+        body: JSON.stringify({ action: "resend-verification", email, password }),
+      });
+      setMessage(res.message || "Link verifikasi baru sudah dikirim.");
+    } catch (err) { setError(err.message || "Gagal mengirim ulang link"); }
+    finally { setResending(false); }
+  };
+
+  return (
+    <div className="cx-auth-shell cx-verify-shell">
+      <div className="cx-auth-glow cx-auth-glow-a" aria-hidden="true" />
+      <div className="cx-auth-glow cx-auth-glow-b" aria-hidden="true" />
+
+      <div className="cx-verify-card">
+        <div className="cx-verify-icon" aria-hidden="true"><Mail size={26} /></div>
+        <div className="cx-verify-brand"><span className="cx-verify-mark">AI</span> Akun Instan</div>
+        <h1>Verifikasi email kamu</h1>
+        <p className="cx-verify-lead">
+          Kami sudah mengirim link verifikasi ke alamat email di bawah ini. Buka email tersebut lalu
+          klik tombol <strong>Verifikasi akun</strong> untuk mengaktifkan akun kamu.
+        </p>
+        {email && <div className="cx-verify-email"><Mail size={13} /> {email}</div>}
+
+        <ol className="cx-verify-steps">
+          <li><span>1</span> Buka aplikasi email kamu (cek juga folder Spam/Promosi).</li>
+          <li><span>2</span> Klik tombol Verifikasi akun di email dari Akun Instan.</li>
+          <li><span>3</span> Halaman ini otomatis mendeteksi dan membawa kamu ke beranda.</li>
+        </ol>
+
+        {message && <p className="cx-form-success"><BadgeCheck size={14} /> {message}</p>}
+        {error && <p className="cx-form-error">{error}</p>}
+
+        <div className="cx-verify-actions">
+          <button type="button" className="cx-btn cx-btn-primary cx-btn-full" disabled={busy} onClick={() => check()}>
+            {busy ? <><RefreshCw size={13} /> Memeriksa...</> : <><ShieldCheck size={13} /> Saya sudah verifikasi email</>}
+          </button>
+          <button type="button" className="cx-btn cx-btn-secondary cx-btn-full" disabled={resending} onClick={resend}>
+            {resending ? <><RefreshCw size={13} /> Mengirim...</> : <><Send size={13} /> Kirim ulang link verifikasi</>}
+          </button>
+        </div>
+
+        <p className="cx-verify-foot">
+          Link berlaku 24 jam dan hanya bisa dipakai sekali.{" "}
+          <button type="button" onClick={onBackToLogin}>Masuk dengan akun lain</button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome, onVerificationSent }) {
   const [mode, setMode]         = useState(initialMode);
   const [form, setForm]         = useState({ name: "", email: "", phone: "", password: "" });
   const [showPass, setShowPass] = useState(false);
@@ -3887,8 +4030,12 @@ function AuthPage({ initialMode = "login", onAuthenticated, onBackToWelcome }) {
         : { action: "login", email: form.email, password: form.password };
       const res = await jsonRequest("/api/auth", { method: "POST", body: JSON.stringify(payload) });
       if (res.verificationRequired) {
-        setMode("login");
-        setMessage(res.message);
+        if (onVerificationSent) {
+          onVerificationSent({ email: form.email, password: form.password, message: res.message });
+        } else {
+          setMode("login");
+          setMessage(res.message);
+        }
       } else {
         onAuthenticated(res.user);
       }

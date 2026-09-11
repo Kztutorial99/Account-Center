@@ -27,7 +27,7 @@ module.exports = async function handler(request, response) {
       const token = request.query && typeof request.query.verify === "string" ? request.query.verify : "";
       if (token) {
         if (!/^[A-Za-z0-9_-]{40,100}$/.test(token)) {
-          return response.redirect(302, "/login?verification=invalid");
+          return response.redirect(302, "/email-verifikasi?verification=invalid");
         }
         const tokenHash = hashVerificationToken(token);
         const verified = await sql`
@@ -38,7 +38,9 @@ module.exports = async function handler(request, response) {
             AND email_verified_at IS NULL
           RETURNING id
         `;
-        return response.redirect(302, verified.length ? "/login?verification=success" : "/login?verification=invalid");
+        return response.redirect(302, verified.length
+          ? "/email-verifikasi?verification=success"
+          : "/email-verifikasi?verification=invalid");
       }
       const user = await currentUser(sql, request);
       return response.status(200).json({ user });
@@ -147,6 +149,36 @@ module.exports = async function handler(request, response) {
 
     if (!EMAIL_RE.test(email)) return response.status(400).json({ error: "Format email tidak valid" });
     if (password.length < 6) return response.status(400).json({ error: "Password minimal 6 karakter" });
+
+    /* Halaman /email-verifikasi memeriksa berkala apakah link sudah diklik.
+       Kalau sudah, sesi langsung dibuat supaya user tidak perlu login lagi. */
+    if (action === "verify-status") {
+      const pollKey = `auth:verify-status:${clientIp(request)}:${email}`;
+      const pollGate = await rateLimit(sql, { key: pollKey, limit: 120, windowSec: 300 });
+      if (!pollGate.allowed) {
+        response.setHeader("Retry-After", String(pollGate.retryAfter));
+        return response.status(429).json({ error: "Terlalu sering memeriksa. Tunggu sebentar ya." });
+      }
+      const rows = await sql`
+        SELECT id, name, email, phone, balance, status, role, avatar, provider,
+               email_verified_at AS "emailVerifiedAt", password_hash AS "passwordHash",
+               created_at AS "createdAt"
+        FROM codexa_users WHERE email = ${email} LIMIT 1
+      `;
+      const row = rows[0];
+      if (!row || !verifyPassword(password, row.passwordHash)) {
+        return response.status(401).json({ error: "Email atau password salah" });
+      }
+      if (row.status && row.status !== "active") {
+        return response.status(403).json({ error: "Akun kamu dinonaktifkan. Hubungi admin." });
+      }
+      if (!row.emailVerifiedAt && row.provider !== "google") {
+        return response.status(200).json({ verified: false });
+      }
+      await resetRateLimit(sql, pollKey);
+      setSession(response, row.id);
+      return response.status(200).json({ verified: true, user: shapeUser(row) });
+    }
 
     // Tahan brute force: maksimal 10 percobaan per 5 menit per IP+email.
     const throttleKey = `auth:${action}:${clientIp(request)}:${email}`;
