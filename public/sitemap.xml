@@ -15,4 +15,5 @@
   <url><loc>https://akuninstan.com/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://akuninstan.com/refund</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://akuninstan.com/disclaimer</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://akuninstan.com/produk/akun/google</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
 </urlset>
