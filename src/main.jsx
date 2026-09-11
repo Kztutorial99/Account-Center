@@ -947,8 +947,19 @@ function App() {
   const [ageFilter, setAgeFilter] = useState("all");
   const [platFilter, setPlatFilter] = useState("all");
   const [notice, setNotice]   = useState("");
-  const [cart, setCart]       = useState([]);
+  // Isi keranjang disimpan di perangkat agar tidak hilang saat halaman di-refresh.
+  const [cart, setCart]       = useState(() => {
+    try {
+      const raw = window.localStorage.getItem("codexa:cart");
+      const parsed = raw ? JSON.parse(raw) : null;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) { return []; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem("codexa:cart", JSON.stringify(cart)); } catch (_) {}
+  }, [cart]);
   const [cartOpen, setCartOpen] = useState(false);
+
   // FAB assisten disembunyikan saat drawer keranjang terbuka (mobile)
   useEffect(() => {
     if (typeof document === "undefined") return;

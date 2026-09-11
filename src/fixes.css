@@ -685,37 +685,45 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   font-size:10.5px;font-weight:700;letter-spacing:.02em;
   border:1px solid transparent;white-space:nowrap;line-height:1;
 }
-.cx-age-badge.is-fresh{background:rgba(123,196,139,.16);border-color:rgba(123,196,139,.42);color:#3f8b56}
-.cx-age-badge.is-aged{background:rgba(219,166,106,.16);border-color:rgba(219,166,106,.45);color:#a2701f}
+.cx-age-badge.is-fresh{background:rgba(134,239,172,.14);border-color:rgba(134,239,172,.34);color:var(--green)}
+.cx-age-badge.is-aged{background:rgba(252,211,77,.13);border-color:rgba(252,211,77,.32);color:var(--amber)}
 .cx-pc-tags{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .cx-prodpage-plat .cx-age-badge{margin-left:8px}
 
 .cx-filterbar{
   display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
   gap:10px;margin:14px 0 18px;padding:12px;
-  border:1px solid var(--b1);border-radius:14px;background:var(--bg2,rgba(255,255,255,.55));
+  border:1px solid var(--b1);border-radius:14px;background:var(--s1);
 }
 .cx-filter-chips{display:flex;gap:6px;flex-wrap:wrap}
 .cx-filter-chip{
   appearance:none;cursor:pointer;padding:8px 14px;border-radius:999px;
-  border:1px solid var(--b1);background:transparent;color:var(--ink2);
-  font-size:12px;font-weight:600;min-height:36px;
+  border:1px solid var(--b2);background:var(--s2);color:var(--ink2);
+  font-size:12px;font-weight:600;min-height:36px;transition:.15s;
 }
-.cx-filter-chip.is-active{background:var(--ink2,#20232a);border-color:transparent;color:#fff}
+.cx-filter-chip:hover{border-color:var(--b3);color:var(--ink)}
+.cx-filter-chip.is-active{
+  background:linear-gradient(135deg,var(--indigo),var(--indigo2));
+  border-color:transparent;color:#180d24;
+}
 .cx-filter-selects{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .cx-filter-select{display:inline-flex;flex-direction:column;gap:3px}
-.cx-filter-select>span{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3,#8b8f98)}
+.cx-filter-select>span{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .cx-filter-select>select{
   appearance:none;min-height:36px;padding:7px 28px 7px 10px;border-radius:10px;
-  border:1px solid var(--b1);background:transparent;color:var(--ink2);font-size:12px;font-weight:600;
-  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  border:1px solid var(--b2);background:var(--s2);color:var(--ink2);font-size:12px;font-weight:600;
+  background-image:linear-gradient(45deg,transparent 50%,var(--indigo3) 50%),linear-gradient(135deg,var(--indigo3) 50%,transparent 50%);
   background-position:calc(100% - 15px) 55%,calc(100% - 10px) 55%;
   background-size:5px 5px,5px 5px;background-repeat:no-repeat;
 }
+.cx-filter-select>select:hover{border-color:var(--b3)}
+.cx-filter-select>select option{background:var(--s1);color:var(--ink)}
 .cx-filter-reset{
   align-self:flex-end;cursor:pointer;min-height:36px;padding:7px 12px;border-radius:10px;
-  border:1px dashed var(--b1);background:transparent;color:var(--ink3,#8b8f98);font-size:12px;font-weight:600;
+  border:1px dashed var(--b3);background:transparent;color:var(--muted);font-size:12px;font-weight:600;
 }
+.cx-filter-reset:hover{color:var(--indigo2);border-color:var(--indigo2)}
+
 @media (max-width:520px){
   .cx-filterbar{flex-direction:column;align-items:stretch}
   .cx-filter-chips{justify-content:stretch}
@@ -734,4 +742,22 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 @media (max-width:520px){
   .cx-filter-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .cx-filter-select{position:relative}
+}
+
+/* ── Tombol keranjang di topbar (tetap tampil di mobile, di samping lonceng) ── */
+.cx-cart-btn{ position:relative; }
+@media (max-width:900px){
+  .cx-cart-btn{
+    display:inline-flex !important; width:40px; height:40px; min-width:40px;
+    padding:0; justify-content:center; align-items:center; border-radius:10px;
+    border:1px solid var(--b2); background:var(--s1); color:var(--ink2);
+  }
+  .cx-cart-btn .cx-cart-label{ display:none; }
+  .cx-cart-btn b{
+    position:absolute; top:-5px; right:-5px;
+    min-width:17px; height:17px; padding:0 4px; border-radius:9px;
+    background:var(--indigo); color:#180d24; font-size:9.5px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;
+    border:2px solid var(--bg); box-sizing:content-box;
+  }
 }
