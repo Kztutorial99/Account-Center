@@ -3747,18 +3747,22 @@ function ProductStats({ product, size = 12 }) {
   const avg = ratingOf(product);
   const count = ratingCountOf(product);
   const sold = soldOf(product);
-  if (!count && !sold) return null;
   return (
     <div className="cx-pstats" aria-label={`Rating ${avg || 0} dari 5, terjual ${sold}`}>
-      {count > 0 && (
+      {count > 0 ? (
         <span className="cx-pstats-rating">
           <Star size={size} className="is-on" />
           <strong>{avg.toFixed(1)}</strong>
           <small>({count})</small>
         </span>
+      ) : (
+        <span className="cx-pstats-rating is-empty">
+          <Star size={size} />
+          <strong>Baru</strong>
+        </span>
       )}
-      {count > 0 && sold > 0 && <span className="cx-pstats-sep">·</span>}
-      {sold > 0 && <span className="cx-pstats-sold">Terjual {sold}</span>}
+      <span className="cx-pstats-sep">·</span>
+      <span className="cx-pstats-sold">Terjual {sold}</span>
     </div>
   );
 }
