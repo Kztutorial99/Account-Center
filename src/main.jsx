@@ -738,32 +738,112 @@ function PublicTopbar({ navigate, onLogin, onRegister, activePage }) {
   );
 }
 
+const HOME_BANNERS = [
+  { src: "/banners/banner-akun-digital.webp", alt: "Akun Instan — akun digital siap pakai" },
+  { src: "/banners/banner-custom-gmail.webp", alt: "Custom Gmail sesuai nama pilihanmu" },
+  { src: "/banners/banner-promo-katalog.webp", alt: "Promo katalog akun dengan stok realtime" },
+];
+
+function HomeBannerCarousel() {
+  const slides = [HOME_BANNERS[HOME_BANNERS.length - 1], ...HOME_BANNERS, HOME_BANNERS[0]];
+  const [position, setPosition] = useState(1);
+  const [animated, setAnimated] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const pointerStart = useRef(null);
+  const activeSlide = (position - 1 + HOME_BANNERS.length) % HOME_BANNERS.length;
+
+  useEffect(() => {
+    if (paused) return undefined;
+    const timer = window.setInterval(() => {
+      setAnimated(true);
+      setPosition((current) => current + 1);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [paused]);
+
+  const move = (direction) => {
+    setAnimated(true);
+    setPosition((current) => current + direction);
+  };
+
+  const handleTransitionEnd = () => {
+    if (position === 0) {
+      setAnimated(false);
+      setPosition(HOME_BANNERS.length);
+    } else if (position === HOME_BANNERS.length + 1) {
+      setAnimated(false);
+      setPosition(1);
+    }
+  };
+
+  const handlePointerUp = (event) => {
+    if (pointerStart.current === null) return;
+    const distance = event.clientX - pointerStart.current;
+    pointerStart.current = null;
+    if (Math.abs(distance) < 40) return;
+    move(distance < 0 ? 1 : -1);
+  };
+
+  return (
+    <section
+      className="cx-banner-carousel"
+      aria-label="Banner promosi Akun Instan"
+      aria-roledescription="carousel"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onPointerDown={(event) => { pointerStart.current = event.clientX; }}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={() => { pointerStart.current = null; }}
+    >
+      <div className="cx-banner-viewport">
+        <div
+          className={`cx-banner-track${animated ? " is-animated" : ""}`}
+          style={{ transform: `translate3d(-${position * 100}%, 0, 0)` }}
+          onTransitionEnd={handleTransitionEnd}
+        >
+          {slides.map((banner, index) => (
+            <div className="cx-banner-slide" key={`${banner.src}-${index}`} aria-hidden={index !== position}>
+              <img
+                src={banner.src}
+                alt={index === position ? banner.alt : ""}
+                width="1983"
+                height="793"
+                draggable="false"
+                decoding="async"
+                fetchPriority={index === 1 ? "high" : "auto"}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="cx-banner-dots" aria-label="Pilih banner">
+        {HOME_BANNERS.map((banner, index) => (
+          <button
+            key={banner.src}
+            type="button"
+            className={index === activeSlide ? "is-active" : ""}
+            aria-label={`Tampilkan banner ${index + 1}`}
+            aria-current={index === activeSlide ? "true" : undefined}
+            onClick={() => {
+              setAnimated(true);
+              setPosition(index + 1);
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }) {
   return (
     <div className="cx-app cx-land">
       <PublicTopbar navigate={navigate} onLogin={onLogin} onRegister={onRegister} activePage="store" />
 
       <main>
-        <section className="cx-hero cx-hero-modern cx-land-hero">
-          <div className="cx-hero-glow" aria-hidden="true" />
-          <div className="cx-container cx-hero-inner">
-            <div className="cx-hero-badge">
-              <span className="cx-hero-pulse" /> Stok tersedia · {loading ? "memuat" : `${totalAccounts} akun`}
-            </div>
-            <div className="cx-kicker">AKUN INSTAN</div>
-            <h1>Akun digital.<br /><em>Siap pakai.</em></h1>
-            <p className="cx-seo-only">Jual beli akun Gmail fresh (no-PVA), custom Gmail sesuai nama, akun Google, dan akun digital lainnya dengan harga murah dan proses instan.</p>
-            <p className="cx-hero-sub">
-              Pilih akun dari katalog nyata, bayar, dan detail login dikirim otomatis setelah pembayaran berhasil.
-            </p>
-            <div className="cx-hero-actions">
-              <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
-                Lihat Katalog <ArrowRight size={13} />
-              </button>
-              <button className="cx-btn cx-btn-ghost" onClick={() => navigate("help")}>Cara Beli</button>
-            </div>
-          </div>
-        </section>
+        <HomeBannerCarousel />
+        <h1 className="cx-seo-only">Akun Instan — akun digital siap pakai dan Custom Gmail</h1>
+        <p className="cx-seo-only">Jual beli akun Gmail fresh (no-PVA), custom Gmail sesuai nama, akun Google, dan akun digital lainnya dengan harga murah dan proses instan.</p>
 
         <section className="cx-container cx-land-section" aria-labelledby="layanan">
           <h2 id="layanan" className="cx-land-h2">Layanan Akun Instan</h2>

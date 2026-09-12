@@ -3181,6 +3181,29 @@ html { scroll-behavior: smooth; }
 .cx-land-top-nav button { color: var(--ink2); font-size: 13px; }
 .cx-land-top-nav button:hover { color: var(--indigo2); }
 .cx-land-top-auth { margin-left: auto; display: flex; gap: 8px; }
+.cx-banner-carousel {
+  position: relative; width: 100%; overflow: hidden;
+  background: #05091e; user-select: none; touch-action: pan-y;
+}
+.cx-banner-viewport { width: 100%; aspect-ratio: 1983 / 793; overflow: hidden; }
+.cx-banner-track { display: flex; width: 100%; height: 100%; will-change: transform; }
+.cx-banner-track.is-animated { transition: transform .65s cubic-bezier(.22,.61,.36,1); }
+.cx-banner-slide { flex: 0 0 100%; width: 100%; height: 100%; }
+.cx-banner-slide img {
+  display: block; width: 100%; height: 100%; object-fit: contain;
+  pointer-events: none; -webkit-user-drag: none;
+}
+.cx-banner-dots {
+  position: absolute; z-index: 2; left: 50%; bottom: 12px;
+  display: flex; align-items: center; gap: 7px; transform: translateX(-50%);
+}
+.cx-banner-dots button {
+  width: 7px; height: 7px; padding: 0; border: 0; border-radius: 999px;
+  background: rgba(255,255,255,.45); box-shadow: 0 0 0 1px rgba(0,0,0,.18);
+  cursor: pointer; transition: width .2s ease, background .2s ease;
+}
+.cx-banner-dots button.is-active { width: 20px; background: rgba(255,255,255,.94); }
+.cx-banner-dots button:focus-visible { outline: 2px solid var(--indigo2); outline-offset: 3px; }
 .cx-land-hero { padding-bottom: 8px; }
 .cx-land-section { margin: 34px auto; }
 .cx-land-h2 { font: 600 20px/1.3 Inter; letter-spacing: -.03em; margin: 0 0 14px; color: var(--ink); }
@@ -3234,6 +3257,14 @@ html { scroll-behavior: smooth; }
   .cx-land-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .cx-land-steps { grid-template-columns: repeat(2, 1fr); }
   .cx-land-h2 { font-size: 24px; }
+}
+@media (max-width: 719px) {
+  .cx-banner-dots { bottom: 6px; gap: 5px; }
+  .cx-banner-dots button { width: 5px; height: 5px; }
+  .cx-banner-dots button.is-active { width: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cx-banner-track.is-animated { transition-duration: .001ms; }
 }
 
 /* ═══════════════════════════════════════════════════
