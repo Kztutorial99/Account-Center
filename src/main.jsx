@@ -1297,31 +1297,39 @@ function App() {
     goAuthScreen("login");
     return true;
   };
-  /* Simpan rating bintang pembeli, lalu perbarui angka rating di state lokal
+  /* Simpan rating bintang + ulasan pembeli, lalu perbarui state lokal
      supaya tampilan langsung berubah tanpa memuat ulang katalog. */
-  const rateProduct = async (product, rating) => {
+  const rateProduct = async (product, rating, comment = "") => {
     if (!product || !product.id) return;
     if (!auth.user) {
-      showNotice("Masuk dulu untuk memberi rating");
+      showNotice("Masuk dulu untuk memberi ulasan");
       goAuthScreen("login");
       return;
     }
+    const text = String(comment || "").trim().slice(0, 600);
     try {
       const res = await jsonRequest("/api/data", {
         method: "POST",
-        body: JSON.stringify({ listingId: product.id, rating }),
+        body: JSON.stringify({ listingId: product.id, rating, comment: text }),
       });
       setData((x) => ({
         ...x,
         products: x.products.map((p) =>
           p.id === product.id
-            ? { ...p, myRating: res.myRating, ratingAvg: res.ratingAvg, ratingCount: res.ratingCount }
+            ? {
+                ...p,
+                myRating: res.myRating,
+                myComment: res.myComment || p.myComment || "",
+                ratingAvg: res.ratingAvg,
+                ratingCount: res.ratingCount,
+                reviews: Array.isArray(res.reviews) ? res.reviews : p.reviews,
+              }
             : p,
         ),
       }));
-      showNotice(`Rating ${rating} bintang tersimpan`);
+      showNotice(text ? "Ulasanmu tersimpan" : `Rating ${rating} bintang tersimpan`);
     } catch (error) {
-      showNotice(error.message || "Rating gagal disimpan");
+      showNotice(error.message || "Ulasan gagal disimpan");
     }
   };
   const addToCart  = (product, selected) => {
@@ -3755,25 +3763,42 @@ function ProductStats({ product, size = 12 }) {
   );
 }
 
-/* Widget beri bintang (halaman produk). */
+/* Tanggal ulasan singkat: 12 Sep 2026 */
+const reviewDate = (value) => {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+};
+
+/* Widget rating bintang + ulasan produk (halaman produk). */
 function ProductRating({ product, canRate, onRate }) {
   const [hover, setHover] = useState(0);
   const [busy, setBusy] = useState(false);
   const mine = Number(product.myRating) || 0;
+  const myComment = product.myComment || "";
+  const [draftStars, setDraftStars] = useState(mine);
+  const [draft, setDraft] = useState(myComment);
+  const [showAll, setShowAll] = useState(false);
+  useEffect(() => { setDraftStars(mine); setDraft(myComment); setShowAll(false); }, [product.id, mine, myComment]);
+
   const avg = ratingOf(product);
   const count = ratingCountOf(product);
   const sold = soldOf(product);
-  const active = hover || mine;
+  const reviews = Array.isArray(product.reviews) ? product.reviews : [];
+  const visible = showAll ? reviews : reviews.slice(0, 3);
+  const active = hover || draftStars;
+  const MAX = 600;
 
-  const pick = async (value) => {
+  const submit = async (event) => {
+    event.preventDefault();
     if (busy) return;
     setBusy(true);
-    try { await onRate(product, value); } finally { setBusy(false); }
+    try { await onRate(product, draftStars, draft.trim()); } finally { setBusy(false); }
   };
 
   return (
     <section className="cx-prodpage-card cx-rating-card">
-      <h2>Rating &amp; penjualan</h2>
+      <h2>Ulasan &amp; penilaian</h2>
       <div className="cx-rating-summary">
         <div className="cx-rating-score">
           <strong>{count ? avg.toFixed(1) : "–"}</strong>
@@ -3786,8 +3811,34 @@ function ProductRating({ product, canRate, onRate }) {
         </div>
       </div>
 
-      <div className="cx-rating-pick">
-        <span className="cx-rating-pick-label">{mine ? "Ratingmu" : "Beri rating produk ini"}</span>
+      {reviews.length > 0 && (
+        <div className="cx-reviews">
+          {visible.map((review) => (
+            <article key={review.id} className="cx-review">
+              <div className="cx-review-top">
+                <span className="cx-review-avatar" aria-hidden="true">{(review.author || "?").charAt(0).toUpperCase()}</span>
+                <span className="cx-review-who">
+                  <strong>{review.author}</strong>
+                  <small>{reviewDate(review.createdAt)}</small>
+                </span>
+                <StarRow value={review.rating} size={11} />
+              </div>
+              <p className="cx-review-text">{review.comment}</p>
+            </article>
+          ))}
+          {reviews.length > 3 && (
+            <button type="button" className="cx-review-more" onClick={() => setShowAll((v) => !v)}>
+              {showAll ? "Tampilkan lebih sedikit" : `Lihat semua ${reviews.length} ulasan`}
+            </button>
+          )}
+        </div>
+      )}
+      {reviews.length === 0 && (
+        <p className="cx-review-empty">Belum ada ulasan. Jadi yang pertama berbagi pengalamanmu.</p>
+      )}
+
+      <form className="cx-rating-pick" onSubmit={submit}>
+        <span className="cx-rating-pick-label">{mine ? "Ubah ulasanmu" : "Tulis ulasan produk ini"}</span>
         <div className="cx-rating-stars" onMouseLeave={() => setHover(0)}>
           {[1, 2, 3, 4, 5].map((n) => (
             <button
@@ -3798,15 +3849,30 @@ function ProductRating({ product, canRate, onRate }) {
               disabled={busy}
               onMouseEnter={() => setHover(n)}
               onFocus={() => setHover(n)}
-              onClick={() => pick(n)}
+              onClick={() => setDraftStars(n)}
             >
               <Star size={22} />
             </button>
           ))}
         </div>
-        {!canRate && <small className="cx-rating-note">Masuk dulu untuk memberi bintang.</small>}
-        {canRate && mine > 0 && <small className="cx-rating-note">Terima kasih! Kamu bisa mengubah rating kapan saja.</small>}
-      </div>
+        <textarea
+          className="cx-review-input"
+          rows={3}
+          maxLength={MAX}
+          value={draft}
+          disabled={busy}
+          onChange={(e) => setDraft(e.target.value.slice(0, MAX))}
+          placeholder={canRate ? "Ceritakan pengalamanmu memakai akun ini…" : "Masuk dulu untuk menulis ulasan"}
+        />
+        <div className="cx-review-actions">
+          <small className="cx-review-count">{draft.length}/{MAX}</small>
+          <button type="submit" className="cx-review-submit" disabled={busy || draftStars < 1}>
+            {busy ? "Mengirim…" : mine ? "Simpan ulasan" : "Kirim ulasan"}
+          </button>
+        </div>
+        {!canRate && <small className="cx-rating-note">Masuk dulu untuk memberi bintang dan ulasan.</small>}
+        {canRate && draftStars < 1 && <small className="cx-rating-note">Pilih bintang dulu sebelum mengirim.</small>}
+      </form>
     </section>
   );
 }

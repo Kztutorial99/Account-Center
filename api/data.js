@@ -24,13 +24,56 @@ const ensureSocialTables = once(async function ensureSocialTablesUncached(sql) {
     )
   `;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS codexa_listing_reviews_uniq ON codexa_listing_reviews (listing_id, user_id)`;
+  /* Ulasan teks ditambahkan menyusul, jadi kolomnya dibuat idempotent. */
+  await sql`ALTER TABLE codexa_listing_reviews ADD COLUMN IF NOT EXISTS comment TEXT NOT NULL DEFAULT ''`;
 });
+
+/* Nama penulis ulasan dipersingkat: "Rizky Pratama" -> "Rizky P." */
+function reviewerName(name, email) {
+  const raw = String(name || "").trim();
+  if (!raw) {
+    const local = String(email || "").split("@")[0] || "Pengguna";
+    return local.slice(0, 3) + "***";
+  }
+  const parts = raw.split(/\s+/);
+  return parts.length > 1 ? `${parts[0]} ${parts[1][0].toUpperCase()}.` : parts[0];
+}
+
+/* Ulasan terbaru (maks 30 per listing) untuk ditampilkan di halaman produk. */
+async function readReviewList(sql) {
+  const byListing = new Map();
+  try {
+    const rows = await sql`
+      SELECT r.listing_id AS "listingId", r.id, r.rating, r.comment,
+             r.updated_at AS "updatedAt", u.name, u.email
+      FROM codexa_listing_reviews r
+      LEFT JOIN codexa_users u ON u.id = r.user_id
+      WHERE r.comment <> ''
+      ORDER BY r.updated_at DESC
+    `;
+    for (const row of rows) {
+      const list = byListing.get(row.listingId) || [];
+      if (list.length >= 30) continue;
+      list.push({
+        id: row.id,
+        rating: Number(row.rating) || 0,
+        comment: String(row.comment || ""),
+        author: reviewerName(row.name, row.email),
+        createdAt: row.updatedAt,
+      });
+      byListing.set(row.listingId, list);
+    }
+  } catch (error) {
+    console.error("review list: gagal dibaca", error && error.message);
+  }
+  return byListing;
+}
 
 /* Ringkasan terjual + rating untuk semua listing sekaligus (1 round-trip per tabel). */
 async function readSocialStats(sql, userId) {
   const stats = new Map();
   const put = (id) => {
-    if (!stats.has(id)) stats.set(id, { soldCount: 0, ratingAvg: 0, ratingCount: 0, myRating: 0 });
+    if (!stats.has(id)) stats.set(id, { soldCount: 0, ratingAvg: 0, ratingCount: 0, myRating: 0, myComment: "" });
     return stats.get(id);
   };
   try {
@@ -47,9 +90,13 @@ async function readSocialStats(sql, userId) {
     }
     if (userId) {
       const mine = await sql`
-        SELECT listing_id AS "listingId", rating FROM codexa_listing_reviews WHERE user_id = ${userId}
+        SELECT listing_id AS "listingId", rating, comment FROM codexa_listing_reviews WHERE user_id = ${userId}
       `;
-      for (const row of mine) put(row.listingId).myRating = Number(row.rating) || 0;
+      for (const row of mine) {
+        const entry = put(row.listingId);
+        entry.myRating = Number(row.rating) || 0;
+        entry.myComment = String(row.comment || "");
+      }
     }
   } catch (error) {
     console.error("social stats: gagal dibaca", error && error.message);
@@ -237,21 +284,28 @@ module.exports = async function handler(request, response) {
       const body = bodyOf(request);
       const listingId = typeof body.listingId === "string" ? body.listingId.trim().slice(0, 120) : "";
       const rating = Math.round(Number(body.rating) || 0);
+      /* Ulasan teks: opsional, dibatasi 600 karakter dan disimpan sebagai teks biasa. */
+      const comment = typeof body.comment === "string" ? body.comment.trim().replace(/\s+/g, " ").slice(0, 600) : "";
       if (!listingId) return response.status(400).json({ error: "Listing tidak dikenal" });
       if (rating < 1 || rating > 5) return response.status(400).json({ error: "Rating harus 1 sampai 5 bintang" });
       await sql`
-        INSERT INTO codexa_listing_reviews (id, listing_id, user_id, rating)
-        VALUES (${crypto.randomUUID()}, ${listingId}, ${user.id}, ${rating})
+        INSERT INTO codexa_listing_reviews (id, listing_id, user_id, rating, comment)
+        VALUES (${crypto.randomUUID()}, ${listingId}, ${user.id}, ${rating}, ${comment})
         ON CONFLICT (listing_id, user_id)
-        DO UPDATE SET rating = ${rating}, updated_at = NOW()
+        DO UPDATE SET rating = ${rating},
+                      comment = CASE WHEN ${comment} <> '' THEN ${comment} ELSE codexa_listing_reviews.comment END,
+                      updated_at = NOW()
       `;
       const [agg] = await sql`
         SELECT AVG(rating)::float AS avg, COUNT(*)::int AS count
         FROM codexa_listing_reviews WHERE listing_id = ${listingId}
       `;
+      const reviewMap = await readReviewList(sql);
       return response.status(200).json({
         listingId,
         myRating: rating,
+        myComment: comment,
+        reviews: reviewMap.get(listingId) || [],
         ratingAvg: Math.round(((agg && Number(agg.avg)) || 0) * 10) / 10,
         ratingCount: (agg && Number(agg.count)) || 0,
       });
@@ -292,6 +346,7 @@ module.exports = async function handler(request, response) {
     const agedCfg = await readAgedConfig(sql);
     const viewerId = (await currentUser(sql, request).catch(() => null) || {}).id || "";
     const social = await readSocialStats(sql, viewerId);
+    const reviewsByListing = await readReviewList(sql);
     const rows = await sql`
       SELECT id, title, description, login_type AS "loginType", price, stock, status, credential_blob AS "credentialBlob"
       FROM codexa_account_listings
@@ -322,7 +377,7 @@ module.exports = async function handler(request, response) {
         };
       });
       const effectiveStock = maskedAccounts.length || Math.max(0, Number(row.stock) || 0);
-      const stats = social.get(row.id) || { soldCount: 0, ratingAvg: 0, ratingCount: 0, myRating: 0 };
+      const stats = social.get(row.id) || { soldCount: 0, ratingAvg: 0, ratingCount: 0, myRating: 0, myComment: "" };
       return {
         id: row.id,
         title: row.title,
@@ -336,6 +391,8 @@ module.exports = async function handler(request, response) {
         ratingAvg: stats.ratingAvg,
         ratingCount: stats.ratingCount,
         myRating: stats.myRating,
+        myComment: stats.myComment,
+        reviews: reviewsByListing.get(row.id) || [],
         maskedEmail: maskedAccounts[0] ? maskedAccounts[0].maskedEmail : "",
         maskedPassword: maskedAccounts[0] ? maskedAccounts[0].maskedPassword : "",
       };
