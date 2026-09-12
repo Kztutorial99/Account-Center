@@ -1319,3 +1319,56 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   .cx-benefits{ gap:12px; padding:14px 0 0; }
   .cx-ce-promo-wrap{ margin-top:20px; }
 }
+
+/* ─── Rating bintang & jumlah terjual (katalog + halaman produk) ─── */
+.cx-pstats{
+  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+  margin:-2px 0 8px; font-size:12px; color:var(--ink3, rgba(226,222,255,.62));
+}
+.cx-pstats-rating{ display:inline-flex; align-items:center; gap:4px; }
+.cx-pstats-rating svg{ color:#fbbf24; fill:#fbbf24; }
+.cx-pstats-rating strong{ color:var(--ink2, #efeaff); font-weight:700; font-size:12.5px; }
+.cx-pstats-rating small{ font-size:11.5px; opacity:.72; }
+.cx-pstats-sep{ opacity:.45; }
+.cx-pstats-sold{ font-size:11.5px; letter-spacing:.01em; }
+
+.cx-stars{ display:inline-flex; gap:2px; }
+.cx-stars svg{ color:rgba(255,255,255,.22); }
+.cx-stars svg.is-on{ color:#fbbf24; fill:#fbbf24; }
+
+.cx-rating-card .cx-rating-summary{
+  display:flex; align-items:stretch; gap:10px; margin-bottom:12px;
+}
+.cx-rating-score, .cx-rating-sold{
+  flex:1; display:flex; flex-direction:column; gap:4px; align-items:center;
+  padding:12px 10px; border-radius:14px;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+  backdrop-filter:blur(8px);
+  text-align:center;
+}
+.cx-rating-score strong, .cx-rating-sold strong{ font-size:22px; line-height:1.1; }
+.cx-rating-score small, .cx-rating-sold small{ font-size:11.5px; opacity:.68; }
+
+.cx-rating-pick{
+  display:flex; flex-direction:column; gap:8px; align-items:flex-start;
+  padding:12px; border-radius:14px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03);
+}
+.cx-rating-pick-label{ font-size:12.5px; font-weight:600; opacity:.85; }
+.cx-rating-stars{ display:flex; gap:4px; }
+.cx-rating-star{
+  border:0; background:transparent; padding:2px; cursor:pointer; line-height:0;
+  color:rgba(255,255,255,.24); transition:transform .12s ease, color .12s ease;
+}
+.cx-rating-star:hover{ transform:scale(1.12); }
+.cx-rating-star.is-on{ color:#fbbf24; }
+.cx-rating-star.is-on svg{ fill:#fbbf24; }
+.cx-rating-star:disabled{ cursor:progress; opacity:.7; }
+.cx-rating-note{ font-size:11.5px; opacity:.62; }
+
+@media (max-width: 719px){
+  .cx-rating-score strong, .cx-rating-sold strong{ font-size:19px; }
+  .cx-rating-pick{ padding:11px; }
+}

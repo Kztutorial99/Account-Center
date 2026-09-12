@@ -8,6 +8,7 @@ import {
   MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw, QrCode, Download,
   Search, Settings, ShieldCheck, ShoppingBag, Trash2, X,
   User, UserPlus, Wallet, Mail, Phone, Clock, Sparkles, Send, Zap, KeyRound,
+  Star,
 } from "lucide-react";
 import "./styles.css";
 import { applySeo, applyProductSchema, applyProductSeo } from "./seo.js";
@@ -1296,6 +1297,33 @@ function App() {
     goAuthScreen("login");
     return true;
   };
+  /* Simpan rating bintang pembeli, lalu perbarui angka rating di state lokal
+     supaya tampilan langsung berubah tanpa memuat ulang katalog. */
+  const rateProduct = async (product, rating) => {
+    if (!product || !product.id) return;
+    if (!auth.user) {
+      showNotice("Masuk dulu untuk memberi rating");
+      goAuthScreen("login");
+      return;
+    }
+    try {
+      const res = await jsonRequest("/api/data", {
+        method: "POST",
+        body: JSON.stringify({ listingId: product.id, rating }),
+      });
+      setData((x) => ({
+        ...x,
+        products: x.products.map((p) =>
+          p.id === product.id
+            ? { ...p, myRating: res.myRating, ratingAvg: res.ratingAvg, ratingCount: res.ratingCount }
+            : p,
+        ),
+      }));
+      showNotice(`Rating ${rating} bintang tersimpan`);
+    } catch (error) {
+      showNotice(error.message || "Rating gagal disimpan");
+    }
+  };
   const addToCart  = (product, selected) => {
     if (requireLogin()) return;
     const picks = (product.accounts || []).filter((a) => selected.includes(a.index));
@@ -1904,6 +1932,8 @@ function App() {
         loading={data.loading}
         navigate={navigate}
         onAdd={addToCart}
+        canRate={!!auth.user}
+        onRate={rateProduct}
       />
       <StoreFooter navigate={navigate} guest={guest} />
       {tabbar}
@@ -3687,6 +3717,100 @@ function ProductDetailModal({ product, color, open, onClose }) {
   );
 }
 
+/* ─── Rating bintang & jumlah terjual ───
+   Data terjual berasal dari counter pembelian nyata (codexa_listing_sales),
+   rating dari penilaian pembeli (codexa_listing_reviews). */
+const ratingOf = (product) => Number(product && product.ratingAvg) || 0;
+const ratingCountOf = (product) => Number(product && product.ratingCount) || 0;
+const soldOf = (product) => Number(product && product.soldCount) || 0;
+
+function StarRow({ value, size = 13 }) {
+  return (
+    <span className="cx-stars" aria-hidden="true">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star key={n} size={size} className={n <= Math.round(value) ? "is-on" : ""} />
+      ))}
+    </span>
+  );
+}
+
+/* Baris statistik ringkas untuk card & header halaman produk. */
+function ProductStats({ product, size = 12 }) {
+  const avg = ratingOf(product);
+  const count = ratingCountOf(product);
+  const sold = soldOf(product);
+  if (!count && !sold) return null;
+  return (
+    <div className="cx-pstats" aria-label={`Rating ${avg || 0} dari 5, terjual ${sold}`}>
+      {count > 0 && (
+        <span className="cx-pstats-rating">
+          <Star size={size} className="is-on" />
+          <strong>{avg.toFixed(1)}</strong>
+          <small>({count})</small>
+        </span>
+      )}
+      {count > 0 && sold > 0 && <span className="cx-pstats-sep">·</span>}
+      {sold > 0 && <span className="cx-pstats-sold">Terjual {sold}</span>}
+    </div>
+  );
+}
+
+/* Widget beri bintang (halaman produk). */
+function ProductRating({ product, canRate, onRate }) {
+  const [hover, setHover] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const mine = Number(product.myRating) || 0;
+  const avg = ratingOf(product);
+  const count = ratingCountOf(product);
+  const sold = soldOf(product);
+  const active = hover || mine;
+
+  const pick = async (value) => {
+    if (busy) return;
+    setBusy(true);
+    try { await onRate(product, value); } finally { setBusy(false); }
+  };
+
+  return (
+    <section className="cx-prodpage-card cx-rating-card">
+      <h2>Rating &amp; penjualan</h2>
+      <div className="cx-rating-summary">
+        <div className="cx-rating-score">
+          <strong>{count ? avg.toFixed(1) : "–"}</strong>
+          <StarRow value={avg} size={14} />
+          <small>{count ? `${count} penilaian` : "Belum ada penilaian"}</small>
+        </div>
+        <div className="cx-rating-sold">
+          <strong>{sold}</strong>
+          <small>akun terjual</small>
+        </div>
+      </div>
+
+      <div className="cx-rating-pick">
+        <span className="cx-rating-pick-label">{mine ? "Ratingmu" : "Beri rating produk ini"}</span>
+        <div className="cx-rating-stars" onMouseLeave={() => setHover(0)}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              type="button"
+              className={`cx-rating-star${n <= active ? " is-on" : ""}`}
+              aria-label={`Beri ${n} bintang`}
+              disabled={busy}
+              onMouseEnter={() => setHover(n)}
+              onFocus={() => setHover(n)}
+              onClick={() => pick(n)}
+            >
+              <Star size={22} />
+            </button>
+          ))}
+        </div>
+        {!canRate && <small className="cx-rating-note">Masuk dulu untuk memberi bintang.</small>}
+        {canRate && mine > 0 && <small className="cx-rating-note">Terima kasih! Kamu bisa mengubah rating kapan saja.</small>}
+      </div>
+    </section>
+  );
+}
+
 function ProductCard({ product, colorIdx, onBuy, onOpen }) {
   const color = ACCENT_COLORS[colorIdx % ACCENT_COLORS.length];
   const accounts = Array.isArray(product.accounts) ? product.accounts : [];
@@ -3715,6 +3839,10 @@ function ProductCard({ product, colorIdx, onBuy, onOpen }) {
           <button type="button" className="cx-pc-title-link" onClick={onOpen}>{product.title}</button>
         ) : product.title}
       </h3>
+
+      <ProductStats product={product} />
+
+
 
       <button type="button" className="cx-pc-detail-toggle" onClick={() => (onOpen ? onOpen() : setDetailOpen(true))}>
         Buka halaman produk <ArrowRight size={13} />
@@ -3759,7 +3887,7 @@ function ProductCard({ product, colorIdx, onBuy, onOpen }) {
 /* ═══════════════════════════════════════════════════
    HALAMAN PRODUK (URL sendiri per listing)
 ════════════════════════════════════════════════════ */
-function ProductPage({ product, loading, navigate, onAdd }) {
+function ProductPage({ product, loading, navigate, onAdd, canRate, onRate }) {
   const [selected, setSelected] = useState([]);
   useEffect(() => { setSelected([]); }, [product && product.id]);
 
@@ -3813,12 +3941,15 @@ function ProductPage({ product, loading, navigate, onAdd }) {
           )}
         </span>
         <h1>{product.title}</h1>
+        <ProductStats product={product} size={13} />
         <div className="cx-prodpage-meta">
           <span className={`cx-prodpage-chip${stock > 0 ? "" : " is-out"}`}>{stock > 0 ? `${stock} akun tersedia` : "Stok kosong"}</span>
           <span className="cx-prodpage-chip">Kirim instan setelah bayar</span>
           <span className="cx-prodpage-chip">Garansi login</span>
         </div>
       </header>
+
+
 
       <section className="cx-prodpage-card">
         <h2>Deskripsi produk</h2>
@@ -3855,6 +3986,8 @@ function ProductPage({ product, loading, navigate, onAdd }) {
           <ShoppingBag size={14} /> Tambah ke keranjang
         </button>
       </div>
+
+      {onRate && <ProductRating product={product} canRate={canRate} onRate={onRate} />}
 
       <section className="cx-prodpage-card cx-prodpage-more">
         <h2>Kategori lain</h2>

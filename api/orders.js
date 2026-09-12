@@ -983,6 +983,30 @@ module.exports = async function handler(request, response) {
       customRecords.push({ id: r.id, requested: r.requested, status: "pending", profile: r.profile });
     }
 
+    /* Counter "terjual" per listing untuk ditampilkan di katalog.
+       Best-effort: kegagalan di sini tidak boleh membatalkan pesanan. */
+    try {
+      await sql`
+        CREATE TABLE IF NOT EXISTS codexa_listing_sales (
+          listing_id TEXT PRIMARY KEY,
+          sold_count INTEGER NOT NULL DEFAULT 0,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `;
+      for (const item of orderItems) {
+        const qty = Array.isArray(item.accounts) ? item.accounts.length : 0;
+        if (!qty) continue;
+        await sql`
+          INSERT INTO codexa_listing_sales (listing_id, sold_count)
+          VALUES (${item.listingId}, ${qty})
+          ON CONFLICT (listing_id)
+          DO UPDATE SET sold_count = codexa_listing_sales.sold_count + ${qty}, updated_at = NOW()
+        `;
+      }
+    } catch (error) {
+      console.error("Sold counter update failure", error && error.message);
+    }
+
 
     await createNotification(sql, {
       userId: user.id,

@@ -2,6 +2,60 @@ const { neon } = require("@neondatabase/serverless");
 const crypto = require("crypto");
 const { once } = require("./_schema");
 const { effectiveAccountPrice, agedInfo, readAgedConfig } = require("./_aged");
+const { currentUser, bodyOf } = require("./_users");
+
+/* ── Statistik sosial listing: jumlah terjual + rating bintang dari pembeli ── */
+const ensureSocialTables = once(async function ensureSocialTablesUncached(sql) {
+  await sql`
+    CREATE TABLE IF NOT EXISTS codexa_listing_sales (
+      listing_id TEXT PRIMARY KEY,
+      sold_count INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS codexa_listing_reviews (
+      id TEXT PRIMARY KEY,
+      listing_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS codexa_listing_reviews_uniq ON codexa_listing_reviews (listing_id, user_id)`;
+});
+
+/* Ringkasan terjual + rating untuk semua listing sekaligus (1 round-trip per tabel). */
+async function readSocialStats(sql, userId) {
+  const stats = new Map();
+  const put = (id) => {
+    if (!stats.has(id)) stats.set(id, { soldCount: 0, ratingAvg: 0, ratingCount: 0, myRating: 0 });
+    return stats.get(id);
+  };
+  try {
+    const sales = await sql`SELECT listing_id AS "listingId", sold_count AS "soldCount" FROM codexa_listing_sales`;
+    for (const row of sales) put(row.listingId).soldCount = Math.max(0, Number(row.soldCount) || 0);
+    const reviews = await sql`
+      SELECT listing_id AS "listingId", AVG(rating)::float AS avg, COUNT(*)::int AS count
+      FROM codexa_listing_reviews GROUP BY listing_id
+    `;
+    for (const row of reviews) {
+      const entry = put(row.listingId);
+      entry.ratingAvg = Math.round((Number(row.avg) || 0) * 10) / 10;
+      entry.ratingCount = Number(row.count) || 0;
+    }
+    if (userId) {
+      const mine = await sql`
+        SELECT listing_id AS "listingId", rating FROM codexa_listing_reviews WHERE user_id = ${userId}
+      `;
+      for (const row of mine) put(row.listingId).myRating = Number(row.rating) || 0;
+    }
+  } catch (error) {
+    console.error("social stats: gagal dibaca", error && error.message);
+  }
+  return stats;
+}
 
 const ensureTable = once(async function ensureTableUncached(sql) {
   await sql`
@@ -172,7 +226,42 @@ async function buildSitemap(sql) {
 }
 
 module.exports = async function handler(request, response) {
-  if (request.method !== "GET") { response.setHeader("Allow", "GET"); return response.status(405).json({ error: "Method not allowed" }); }
+  /* POST = pembeli memberi rating bintang ke satu listing (1 rating per akun). */
+  if (request.method === "POST") {
+    if (!process.env.DATABASE_URL) return response.status(500).json({ error: "DATABASE_URL is not configured" });
+    try {
+      const sql = neon(process.env.DATABASE_URL);
+      await ensureSocialTables(sql);
+      const user = await currentUser(sql, request);
+      if (!user) return response.status(401).json({ error: "Masuk dulu untuk memberi rating" });
+      const body = bodyOf(request);
+      const listingId = typeof body.listingId === "string" ? body.listingId.trim().slice(0, 120) : "";
+      const rating = Math.round(Number(body.rating) || 0);
+      if (!listingId) return response.status(400).json({ error: "Listing tidak dikenal" });
+      if (rating < 1 || rating > 5) return response.status(400).json({ error: "Rating harus 1 sampai 5 bintang" });
+      await sql`
+        INSERT INTO codexa_listing_reviews (id, listing_id, user_id, rating)
+        VALUES (${crypto.randomUUID()}, ${listingId}, ${user.id}, ${rating})
+        ON CONFLICT (listing_id, user_id)
+        DO UPDATE SET rating = ${rating}, updated_at = NOW()
+      `;
+      const [agg] = await sql`
+        SELECT AVG(rating)::float AS avg, COUNT(*)::int AS count
+        FROM codexa_listing_reviews WHERE listing_id = ${listingId}
+      `;
+      return response.status(200).json({
+        listingId,
+        myRating: rating,
+        ratingAvg: Math.round(((agg && Number(agg.avg)) || 0) * 10) / 10,
+        ratingCount: (agg && Number(agg.count)) || 0,
+      });
+    } catch (error) {
+      console.error("Failed to save listing rating", error);
+      return response.status(500).json({ error: "Rating gagal disimpan" });
+    }
+  }
+
+  if (request.method !== "GET") { response.setHeader("Allow", "GET, POST"); return response.status(405).json({ error: "Method not allowed" }); }
 
   if (request.query && request.query.resource === "sitemap") {
     if (!process.env.DATABASE_URL) {
@@ -199,7 +288,10 @@ module.exports = async function handler(request, response) {
   try {
     const sql = neon(process.env.DATABASE_URL);
     await ensureTable(sql);
+    await ensureSocialTables(sql);
     const agedCfg = await readAgedConfig(sql);
+    const viewerId = (await currentUser(sql, request).catch(() => null) || {}).id || "";
+    const social = await readSocialStats(sql, viewerId);
     const rows = await sql`
       SELECT id, title, description, login_type AS "loginType", price, stock, status, credential_blob AS "credentialBlob"
       FROM codexa_account_listings
@@ -230,6 +322,7 @@ module.exports = async function handler(request, response) {
         };
       });
       const effectiveStock = maskedAccounts.length || Math.max(0, Number(row.stock) || 0);
+      const stats = social.get(row.id) || { soldCount: 0, ratingAvg: 0, ratingCount: 0, myRating: 0 };
       return {
         id: row.id,
         title: row.title,
@@ -239,6 +332,10 @@ module.exports = async function handler(request, response) {
         stock: effectiveStock,
         status: row.status,
         accounts: maskedAccounts,
+        soldCount: stats.soldCount,
+        ratingAvg: stats.ratingAvg,
+        ratingCount: stats.ratingCount,
+        myRating: stats.myRating,
         maskedEmail: maskedAccounts[0] ? maskedAccounts[0].maskedEmail : "",
         maskedPassword: maskedAccounts[0] ? maskedAccounts[0].maskedPassword : "",
       };
