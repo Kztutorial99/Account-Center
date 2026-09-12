@@ -3890,7 +3890,7 @@ function ProductRating({ product, canRate, onRate }) {
   const count = ratingCountOf(product);
   const sold = soldOf(product);
   const reviews = Array.isArray(product.reviews) ? product.reviews : [];
-  const PER_PAGE = 5;
+  const PER_PAGE = 4;
   const pageCount = Math.max(1, Math.ceil(reviews.length / PER_PAGE));
   const safePage = Math.min(page, pageCount - 1);
   const visible = reviews.slice(safePage * PER_PAGE, safePage * PER_PAGE + PER_PAGE);
