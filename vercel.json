@@ -12,6 +12,10 @@
   },
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
       "source": "/api/stream",
       "destination": "/api/topup?resource=stream"
     },
