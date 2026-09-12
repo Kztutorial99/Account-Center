@@ -48,6 +48,8 @@ function AdminPage({ onBack, onNotice }) {
   const [reviewFilter, setReviewFilter]   = useState("all");
   const [reviewListing, setReviewListing] = useState("all");
   const [injectForm, setInjectForm]       = useState({ listingId: "all", count: 8, minRating: 4, maxRating: 5, spreadDays: 60 });
+  const [sales, setSales]                 = useState([]);
+  const [soldForm, setSoldForm]           = useState({ listingId: "all", soldMode: "add", soldMin: 10, soldMax: 40 });
   const [orders, setOrders]               = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [refreshing, setRefreshing]       = useState(false);
@@ -73,7 +75,7 @@ function AdminPage({ onBack, onNotice }) {
     setActiveNav(label);
     setNavOpen(false);
     if (label === "Pengguna") setUserQuery("");
-    if (label === "Ulasan & Rating") loadReviews();
+    if (label === "Ulasan & Rating" || label === "Inject Data") loadReviews();
   };
 
   /* ── Ulasan & rating: dibaca dari sub-resource /api/admin/products?resource=reviews ── */
@@ -82,6 +84,7 @@ function AdminPage({ onBack, onNotice }) {
   const applyReviewPayload = (p) => {
     if (Array.isArray(p.reviews)) setReviews(p.reviews);
     if (p.summary) setReviewSummary(p.summary);
+    if (Array.isArray(p.sales)) setSales(p.sales);
   };
 
   const loadReviews = () => {
@@ -97,10 +100,28 @@ function AdminPage({ onBack, onNotice }) {
       try {
         const p = await jsonRequest(REVIEWS_API, { method: "POST", body: JSON.stringify(injectForm) });
         applyReviewPayload(p);
-        onNotice(`${p.inserted} ulasan ditambahkan ke ${p.listings} produk`);
+        const extra = p.skipped ? ` · ${p.skipped} dilewati (teks kembar)` : "";
+        onNotice(`${p.inserted} ulasan ditambahkan ke ${p.listings} produk${extra}`);
       } catch (e) { setApiError(e.message); }
     });
   };
+
+  /* ── Inject jumlah terjual per produk ── */
+  const injectSold = async () => {
+    await runAction("sold-inject", async () => {
+      try {
+        const p = await jsonRequest(REVIEWS_API, { method: "POST", body: JSON.stringify({ action: "sold", ...soldForm }) });
+        applyReviewPayload(p);
+        onNotice(`Jumlah terjual diperbarui di ${p.updated} produk`);
+      } catch (e) { setApiError(e.message); }
+    });
+  };
+
+  const soldOfListing = (id) => {
+    const row = sales.find((s) => s.listingId === id);
+    return row ? row.soldCount : 0;
+  };
+
 
   const deleteReview = async (row) => {
     const ok = await confirm({
@@ -698,6 +719,7 @@ function AdminPage({ onBack, onNotice }) {
     { label: "Harga Aged",  shortcut: "⌘G", icon: TrendingUp,     dot: agedCfg && agedCfg.enabled === false },
     { label: "Assisten",    shortcut: "⌘I", icon: Sparkles,       dot: !(aiCfg && aiCfg.enabled && aiCfg.hasKey) },
     { label: "Ulasan & Rating", shortcut: "⌘R", icon: Star },
+    { label: "Inject Data",  shortcut: "⌘J", icon: Plus },
     { label: "Pengaturan",  shortcut: "⌘,", icon: Settings },
   ];
 
@@ -1504,8 +1526,8 @@ function AdminPage({ onBack, onNotice }) {
             </div>
           )}
 
-                    {/* ══ ULASAN & RATING ══ */}
-          {activeNav === "Ulasan & Rating" && (
+          {/* ══ INJECT DATA ══ */}
+          {activeNav === "Inject Data" && (
             <>
               <div className="cx-panel cx-review-inject">
                 <div className="cx-panel-header">
@@ -1563,11 +1585,65 @@ function AdminPage({ onBack, onNotice }) {
                     disabled={reviewSummary.injected === 0}>
                     <Trash2 size={11} /> Hapus hasil inject
                   </ActionBtn>
-                  <span className="cx-review-hint">Nama penulis otomatis disensor di halaman produk.</span>
+                  <span className="cx-review-hint">Teks ulasan dicek agar tidak pernah kembar dengan ulasan lain.</span>
                 </div>
               </div>
 
+              {/* ── Inject jumlah terjual ── */}
+              <div className="cx-panel cx-review-inject">
+                <div className="cx-panel-header">
+                  <h3>Inject jumlah terjual</h3>
+                  <span className="cx-panel-sub">
+                    {soldForm.listingId === "all"
+                      ? "Berlaku untuk semua produk"
+                      : `Sekarang: ${soldOfListing(soldForm.listingId)} terjual`}
+                  </span>
+                </div>
+                <div className="cx-review-form">
+                  <Field label="Produk">
+                    <InputWrap>
+                      <select value={soldForm.listingId} onChange={(e) => setSoldForm((f) => ({ ...f, listingId: e.target.value }))}>
+                        <option value="all">Semua produk</option>
+                        {listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
+                      </select>
+                    </InputWrap>
+                  </Field>
+                  <Field label="Mode">
+                    <InputWrap>
+                      <select value={soldForm.soldMode} onChange={(e) => setSoldForm((f) => ({ ...f, soldMode: e.target.value }))}>
+                        <option value="add">Tambah ke jumlah sekarang</option>
+                        <option value="set">Set jadi nilai pasti</option>
+                      </select>
+                    </InputWrap>
+                  </Field>
+                  <Field label="Jumlah minimum">
+                    <InputWrap>
+                      <input type="number" min="0" max="100000" value={soldForm.soldMin}
+                        onChange={(e) => setSoldForm((f) => ({ ...f, soldMin: e.target.value }))} />
+                    </InputWrap>
+                  </Field>
+                  <Field label="Jumlah maksimum">
+                    <InputWrap>
+                      <input type="number" min="0" max="100000" value={soldForm.soldMax}
+                        onChange={(e) => setSoldForm((f) => ({ ...f, soldMax: e.target.value }))} />
+                    </InputWrap>
+                  </Field>
+                </div>
+                <div className="cx-review-form-actions">
+                  <ActionBtn className="cx-btn cx-btn-primary cx-btn-sm" onClick={injectSold} busy={isPending("sold-inject")} busyLabel="Menyimpan...">
+                    <Plus size={11} /> Terapkan jumlah terjual
+                  </ActionBtn>
+                  <span className="cx-review-hint">Angka diacak antara minimum dan maksimum untuk tiap produk.</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ══ ULASAN & RATING ══ */}
+          {activeNav === "Ulasan & Rating" && (
+            <>
               <div className="cx-panel">
+
                 <div className="cx-panel-header">
                   <h3>Semua ulasan</h3>
                   <span className="cx-panel-sub">{visibleReviews.length} ulasan ditampilkan</span>

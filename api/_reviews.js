@@ -39,33 +39,48 @@ const USERNAMES = [
   "bagusprtm", "kiky_id", "mayaa.dw", "ilhm.ar", "adit_prj", "vnnzhr", "gilanggg",
 ];
 
-/* ── Generator komentar: disusun dari beberapa potongan kalimat supaya hasilnya
-   tidak pernah sama persis dan terbaca seperti ketikan pembeli asli. ── */
+/* ── Generator komentar: disusun dari banyak potongan kalimat + variasi gaya
+   ketik, supaya kombinasinya ribuan dan tidak pernah kembar. ── */
 const OPEN = {
   5: ["akunnya aman", "prosesnya cepet", "mantap sih", "puas banget", "lancar jaya",
-      "sesuai deskripsi", "gercep banget", "recommended", "top deh", "worth it"],
+      "sesuai deskripsi", "gercep banget", "recommended", "top deh", "worth it",
+      "alhamdulillah aman", "pelayanan cepet", "mulus tanpa kendala", "sip banget",
+      "beneran instan", "amanah sellernya", "kualitas oke", "gak nyesel beli",
+      "bagus banget sih ini", "fast banget prosesnya", "murah tapi bener",
+      "akhirnya nemu yang jujur", "pengiriman kilat", "keren lah"],
   4: ["lumayan cepet", "oke sih", "akunnya normal", "bagus", "sesuai ekspektasi",
-      "aman kok", "cukup memuaskan"],
-  3: ["standar aja", "lumayan", "bisa dipakai", "ya cukup lah", "biasa aja sih"],
-  2: ["agak lama sih", "sempet kendala", "kurang sesuai ekspektasi"],
-  1: ["awalnya bermasalah", "sempet gagal login"],
+      "aman kok", "cukup memuaskan", "so far oke", "nggak mengecewakan",
+      "pelayanan ramah", "prosesnya wajar", "hasilnya memuaskan kok",
+      "lumayan puas sih", "sesuai gambar"],
+  3: ["standar aja", "lumayan", "bisa dipakai", "ya cukup lah", "biasa aja sih",
+      "not bad", "sesuai harga", "cukup oke", "ya gitu deh", "masih wajar"],
+  2: ["agak lama sih", "sempet kendala", "kurang sesuai ekspektasi", "prosesnya bertele",
+      "agak kecewa", "nunggunya lumayan"],
+  1: ["awalnya bermasalah", "sempet gagal login", "sempet deg2an gak masuk", "banyak kendala"],
 };
 const BODY = {
   5: ["langsung bisa login", "detail akun langsung muncul di pesanan", "gak nunggu lama",
       "adminnya fast respon", "harganya masuk akal", "udah beli beberapa kali di sini",
-      "ga ada kendala sama sekali", "settingnya gampang"],
+      "ga ada kendala sama sekali", "settingnya gampang", "langsung ganti password aman",
+      "prosesnya cuma hitungan menit", "adminnya sabar jawab pertanyaan",
+      "stoknya selalu ada", "datanya valid semua", "cocok buat yang butuh cepet",
+      "gampang banget pakainya", "nggak ribet verifikasi"],
   4: ["cuma nunggu bentar", "tinggal verifikasi dikit", "infonya bisa lebih lengkap lagi",
-      "loginnya normal", "stoknya semoga nambah"],
-  3: ["perlu setting manual dikit", "harus tanya admin dulu", "prosesnya agak lama dari perkiraan"],
-  2: ["harus chat admin dulu baru beres", "sempet bingung langkahnya"],
-  1: ["untung dibantu admin sampai kelar", "infonya kurang jelas buat pemula"],
+      "loginnya normal", "stoknya semoga nambah", "adminnya responsif kok",
+      "cuma perlu baca panduan dikit", "prosesnya lancar walau nggak instan banget"],
+  3: ["perlu setting manual dikit", "harus tanya admin dulu", "prosesnya agak lama dari perkiraan",
+      "panduannya kurang detail", "loginnya harus verif dulu"],
+  2: ["harus chat admin dulu baru beres", "sempet bingung langkahnya", "balesannya agak lama"],
+  1: ["untung dibantu admin sampai kelar", "infonya kurang jelas buat pemula",
+      "harus bolak balik chat dulu"],
 };
 const CLOSE = {
-  5: ["makasih", "lanjut langganan", "bakal beli lagi", "sukses terus", "", "", ""],
-  4: ["overall oke", "makasih", "", "", ""],
-  3: ["semoga next lebih cepet", "", ""],
-  2: ["semoga diperbaiki", ""],
-  1: ["tolong diperbaiki ya", ""],
+  5: ["makasih", "lanjut langganan", "bakal beli lagi", "sukses terus", "recommended seller",
+      "makasih bang", "semoga stok terus ada", "", "", "", "", ""],
+  4: ["overall oke", "makasih", "semoga makin bagus", "", "", "", ""],
+  3: ["semoga next lebih cepet", "semoga ditingkatkan", "", "", ""],
+  2: ["semoga diperbaiki", "next semoga lebih rapi", "", ""],
+  1: ["tolong diperbaiki ya", "semoga next lebih baik", ""],
 };
 const TYPOS = [
   [/\bakunnya\b/, "akun nya"],
@@ -73,6 +88,11 @@ const TYPOS = [
   [/\bgak\b/, "ga"],
   [/\bbanget\b/, "bgt"],
   [/\bsudah\b/, "udh"],
+  [/\byang\b/, "yg"],
+  [/\btapi\b/, "tp"],
+  [/\bdengan\b/, "dgn"],
+  [/\bmakasih\b/, "mksh"],
+  [/\bnggak\b/, "ngga"],
 ];
 
 function randInt(min, max) {
@@ -90,6 +110,10 @@ function randomComment(rating) {
   const level = OPEN[rating] ? rating : 4;
   const parts = [pick(OPEN[level])];
   if (chance(0.82)) parts.push(pick(BODY[level]));
+  if (chance(0.3)) {
+    const extra = pick(BODY[level]);
+    if (!parts.includes(extra)) parts.push(extra);
+  }
   if (chance(0.45)) {
     const close = pick(CLOSE[level]);
     if (close) parts.push(close);
@@ -100,6 +124,7 @@ function randomComment(rating) {
   }
   if (chance(0.55)) text = text.charAt(0).toUpperCase() + text.slice(1);
   if (chance(0.6)) text += chance(0.25) ? "!" : ".";
+  if (chance(0.06)) text = text.replace(/[.!]$/, "..");
   if (chance(0.08)) text += chance(0.5) ? " 👍" : " 🙏";
   return text.trim().slice(0, 600);
 }
@@ -126,6 +151,11 @@ function randomDate(spreadDays) {
   const days = Math.max(1, Math.min(365, Number(spreadDays) || 60));
   const ms = randInt(1, days * 24 * 60) * 60 * 1000;
   return new Date(Date.now() - ms).toISOString();
+}
+
+/* Normalisasi teks untuk pengecekan duplikat (abaikan huruf besar & tanda baca). */
+function normalizeText(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 /* Daftar lengkap ulasan untuk panel admin (asli + hasil inject). */
@@ -189,25 +219,101 @@ async function injectReviews(sql, options) {
   }
   if (!targets.length) return { error: "Belum ada produk untuk diberi ulasan" };
 
+  /* Semua komentar & nama yang sudah ada di database dikumpulkan dulu supaya
+     ulasan baru tidak pernah kembar dengan ulasan lama di produk mana pun. */
+  const existing = await sql`SELECT comment, author_name AS "authorName" FROM codexa_listing_reviews`;
+  const usedComments = new Set(existing.map((r) => normalizeText(r.comment)));
+  const usedNames = new Set(existing.map((r) => normalizeText(r.authorName)));
+
   let inserted = 0;
+  let skipped = 0;
   for (const target of targets) {
-    const used = new Set();
     for (let i = 0; i < count; i += 1) {
       const rating = randomRating(minRating, maxRating);
-      let comment = randomComment(rating);
-      for (let tries = 0; tries < 6 && used.has(comment); tries += 1) comment = randomComment(rating);
-      used.add(comment);
+      let comment = "";
+      for (let tries = 0; tries < 60; tries += 1) {
+        comment = randomComment(rating);
+        if (!usedComments.has(normalizeText(comment))) break;
+        comment = "";
+      }
+      if (!comment) { skipped += 1; continue; }
+      usedComments.add(normalizeText(comment));
+
+      let author = "";
+      for (let tries = 0; tries < 40; tries += 1) {
+        author = randomName();
+        if (!usedNames.has(normalizeText(author))) break;
+        author = "";
+      }
+      if (!author) author = `${randomName()} ${String.fromCharCode(65 + randInt(0, 25))}.`;
+      usedNames.add(normalizeText(author));
+
       /* created_at = updated_at supaya tidak terlihat pernah "diedit" sistem. */
       const at = randomDate(spreadDays);
       await sql`
         INSERT INTO codexa_listing_reviews (id, listing_id, user_id, rating, comment, author_name, source, created_at, updated_at)
         VALUES (${crypto.randomUUID()}, ${target}, ${`inject:${crypto.randomUUID()}`}, ${rating},
-                ${comment}, ${randomName()}, 'injected', ${at}, ${at})
+                ${comment}, ${author}, 'injected', ${at}, ${at})
       `;
       inserted += 1;
     }
   }
-  return { inserted, listings: targets.length };
+  return { inserted, skipped, listings: targets.length };
+}
+
+/* ── Inject jumlah terjual per produk (tambah atau set nilai pasti) ── */
+async function ensureSalesTable(sql) {
+  await sql`
+    CREATE TABLE IF NOT EXISTS codexa_listing_sales (
+      listing_id TEXT PRIMARY KEY,
+      sold_count INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+}
+
+async function injectSold(sql, options) {
+  await ensureSalesTable(sql);
+  const listingId = String(options.listingId || "").trim();
+  const mode = options.soldMode === "set" ? "set" : "add";
+  const min = Math.max(0, Math.min(100000, Math.round(Number(options.soldMin) || 0)));
+  const max = Math.max(min, Math.min(100000, Math.round(Number(options.soldMax) || min)));
+
+  let targets = [];
+  if (!listingId || listingId === "all") {
+    const rows = await sql`SELECT id FROM codexa_account_listings ORDER BY created_at DESC`;
+    targets = rows.map((r) => r.id);
+  } else {
+    const [row] = await sql`SELECT id FROM codexa_account_listings WHERE id = ${listingId} LIMIT 1`;
+    if (!row) return { error: "Produk tidak ditemukan" };
+    targets = [row.id];
+  }
+  if (!targets.length) return { error: "Belum ada produk" };
+
+  let updated = 0;
+  for (const target of targets) {
+    const value = randInt(min, max);
+    if (mode === "set") {
+      await sql`
+        INSERT INTO codexa_listing_sales (listing_id, sold_count) VALUES (${target}, ${value})
+        ON CONFLICT (listing_id) DO UPDATE SET sold_count = ${value}, updated_at = NOW()
+      `;
+    } else {
+      await sql`
+        INSERT INTO codexa_listing_sales (listing_id, sold_count) VALUES (${target}, ${value})
+        ON CONFLICT (listing_id)
+        DO UPDATE SET sold_count = codexa_listing_sales.sold_count + ${value}, updated_at = NOW()
+      `;
+    }
+    updated += 1;
+  }
+  return { updated, mode };
+}
+
+async function listSales(sql) {
+  await ensureSalesTable(sql);
+  const rows = await sql`SELECT listing_id AS "listingId", sold_count AS "soldCount" FROM codexa_listing_sales`;
+  return rows.map((r) => ({ listingId: r.listingId, soldCount: Math.max(0, Number(r.soldCount) || 0) }));
 }
 
 async function deleteReviews(sql, body) {
@@ -232,14 +338,21 @@ async function handleReviewRequest(sql, request, response) {
   await ensureReviewTables(sql);
 
   if (request.method === "GET") {
-    const [reviews, summary] = await Promise.all([listReviews(sql), reviewSummary(sql)]);
+    const [reviews, summary, sales] = await Promise.all([listReviews(sql), reviewSummary(sql), listSales(sql)]);
     const products = await sql`SELECT id, title FROM codexa_account_listings ORDER BY created_at DESC`;
-    return response.status(200).json({ reviews, summary, products });
+    return response.status(200).json({ reviews, summary, products, sales });
   }
 
   const body = typeof request.body === "string" ? JSON.parse(request.body || "{}") : (request.body || {});
 
   if (request.method === "POST") {
+    /* action=sold → inject jumlah terjual, selain itu inject ulasan. */
+    if (String(body.action || "") === "sold") {
+      const result = await injectSold(sql, body);
+      if (result.error) return response.status(400).json({ error: result.error });
+      const sales = await listSales(sql);
+      return response.status(201).json({ ...result, sales });
+    }
     const result = await injectReviews(sql, body);
     if (result.error) return response.status(400).json({ error: result.error });
     const [reviews, summary] = await Promise.all([listReviews(sql), reviewSummary(sql)]);
