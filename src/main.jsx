@@ -739,9 +739,9 @@ function PublicTopbar({ navigate, onLogin, onRegister, activePage }) {
 }
 
 const HOME_BANNERS = [
-  { src: "/banners/banner-akun-digital.webp", alt: "Akun Instan — akun digital siap pakai" },
-  { src: "/banners/banner-custom-gmail.webp", alt: "Custom Gmail sesuai nama pilihanmu" },
-  { src: "/banners/banner-promo-katalog.webp", alt: "Promo katalog akun dengan stok realtime" },
+  { src: "/banners/banner-akun-digital.webp?v=2", alt: "Akun Instan — akun digital siap pakai" },
+  { src: "/banners/banner-custom-gmail.webp?v=2", alt: "Custom Gmail sesuai nama pilihanmu" },
+  { src: "/banners/banner-promo-katalog.webp?v=2", alt: "Promo katalog akun dengan stok realtime" },
 ];
 
 function HomeBannerCarousel() {
