@@ -1298,7 +1298,8 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 
 /* Hero: lebih compact, badge lebih kecil */
 .cx-hero{ padding:52px 0 44px; }
-.cx-hero-badge{ padding:4px 11px; font-size:10.5px; margin-bottom:12px; }
+.cx-hero-badge{ display:inline-flex; align-items:center; gap:8px; padding:6px 14px; font-size:12px; font-weight:600; margin-bottom:14px; color:#f3e8ff; background:rgba(168,85,247,.22); border:1px solid rgba(168,85,247,.55); border-radius:999px; box-shadow:0 0 14px rgba(168,85,247,.25), inset 0 0 10px rgba(168,85,247,.08); }
+.cx-hero-pulse{ width:8px; height:8px; }
 .cx-hero-sub{ font-size:13.5px; line-height:1.65; margin-bottom:22px; }
 
 /* Section spacing: -10–15% */
