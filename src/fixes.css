@@ -1305,9 +1305,9 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 /* Section spacing: -10–15% */
 .cx-land-section{ margin:28px auto; }
 .cx-land-h2{ font-size:19px; margin-bottom:12px; }
-.cx-land-card{ padding:14px; }
-.cx-land-card h3{ margin:8px 0 5px; font-size:14.5px; }
-.cx-land-card p{ font-size:12.5px; line-height:1.55; }
+.cx-land-card{ padding:13px; }
+.cx-land-card h3{ margin:8px 0 4px; font-size:13.5px; }
+.cx-land-card p{ font-size:11.5px; line-height:1.45; }
 .cx-land-steps li{ padding:12px 12px 12px 48px; }
 .cx-land-steps li::before{ left:12px; top:12px; }
 .cx-land-faq-item{ padding:11px 13px; }
@@ -1319,7 +1319,12 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   .cx-hero-sub{ font-size:13px; margin-bottom:18px; }
   .cx-kicker{ margin-bottom:12px; }
   .cx-land-section{ margin:22px auto; }
-  .cx-land-grid{ gap:10px; }
+  .cx-land-grid{ gap:8px; }
+  .cx-land-card{ padding:11px; }
+  .cx-land-card h3{ font-size:12.5px; }
+  .cx-land-card p{ font-size:11px; line-height:1.4; }
+  .cx-land-card .cx-land-icon{ width:30px; height:30px; border-radius:9px; }
+  .cx-land-card .cx-land-icon svg{ width:15px; height:15px; }
   .cx-land-steps{ gap:8px; }
   .cx-benefits{ gap:12px; padding:14px 0 0; }
   .cx-ce-promo-wrap{ margin-top:20px; }
