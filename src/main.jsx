@@ -4481,24 +4481,19 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
                 </InputWrap>
               </Field>
             )}
-            {mode === "login" && onForgotPassword && (
+            {mode === "login" && onForgotPassword && emailCheck !== "notfound" && (
               <button type="button" className="cx-auth-forgot" onClick={onForgotPassword}>
                 Lupa password?
               </button>
             )}
             {mode === "login" && emailCheck === "notfound" && (
-              <div className="cx-signup-hint">
-                <span className="cx-signup-hint-text">
-                  Belum punya akun? <strong>Daftar gratis</strong> untuk melanjutkan.
-                </span>
-                <button
-                  type="button"
-                  className="cx-btn cx-btn-primary cx-btn-full cx-signup-hint-btn"
-                  onClick={() => { setError(""); setMessage(""); switchMode("register"); }}
-                >
-                  Daftar sekarang <ArrowRight size={13} />
-                </button>
-              </div>
+              <button
+                type="button"
+                className="cx-btn cx-btn-primary cx-btn-full cx-signup-cta"
+                onClick={() => { setError(""); setMessage(""); switchMode("register"); }}
+              >
+                Daftar sekarang <ArrowRight size={13} />
+              </button>
             )}
             {mode === "login" && googleAccount && (
               <div className="cx-google-hint">
@@ -4520,12 +4515,14 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
             )}
           </form>
 
-          <p className="cx-auth-switch">
-            {mode === "register" ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
-            <button type="button" onClick={() => switchMode(mode === "register" ? "login" : "register")}>
-              {mode === "register" ? "Masuk di sini" : "Daftar gratis"}
-            </button>
-          </p>
+          {mode === "register" && (
+            <p className="cx-auth-switch">
+              Sudah punya akun?{" "}
+              <button type="button" onClick={() => switchMode("login")}>
+                Masuk di sini
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>

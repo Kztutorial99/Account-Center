@@ -539,7 +539,7 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 .cx-auth-card {
   width: 100%;
   border-radius: 18px;
-  padding: clamp(18px, 5vw, 24px);
+  padding: clamp(16px, 4.5vw, 22px);
   background: linear-gradient(180deg, rgba(34,23,53,.92), rgba(20,13,32,.94));
   border: 1px solid var(--b2);
   box-shadow: 0 20px 50px rgba(8,4,18,.55), inset 0 1px 0 rgba(255,255,255,.05);
@@ -547,30 +547,30 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   -webkit-backdrop-filter: blur(14px);
   animation: cx-rise .35s cubic-bezier(.22,.8,.28,1) both;
 }
-.cx-auth-card .cx-auth-back { margin: 0 0 12px -2px; }
+.cx-auth-card .cx-auth-back { margin: 0 0 10px -2px; }
 
-.cx-auth-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.cx-auth-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
 .cx-auth-mark {
-  width: 38px; height: 38px; flex: none; border-radius: 11px;
+  width: 36px; height: 36px; flex: none; border-radius: 11px;
   display: grid; place-items: center; overflow: hidden;
   background: linear-gradient(135deg, #a855f7, #6366f1);
   box-shadow: 0 6px 18px rgba(168,85,247,.35);
 }
 .cx-auth-mark img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
 .cx-auth-card h1 {
-  font: 700 clamp(17px, 4.8vw, 20px)/1.22 Outfit, Inter, system-ui, sans-serif;
+  font: 700 clamp(16px, 4.6vw, 19px)/1.22 Outfit, Inter, system-ui, sans-serif;
   letter-spacing: -.02em; margin: 0 0 2px; color: var(--ink);
 }
-.cx-auth-card > .cx-auth-head p { margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--muted); }
+.cx-auth-card > .cx-auth-head p { margin: 0; font-size: 11px; line-height: 1.35; color: var(--muted); }
 
 .cx-auth-tabs {
-  display: flex; gap: 3px; margin: 0 0 14px;
+  display: flex; gap: 3px; margin: 0 0 12px;
   background: rgba(255,255,255,.04);
   border: 1px solid var(--b1);
   border-radius: 10px; padding: 3px;
 }
 .cx-auth-tabs button {
-  flex: 1; padding: 8px 0; border-radius: 8px;
+  flex: 1; padding: 7px 0; border-radius: 8px;
   font: 600 12px Figtree, Inter, system-ui, sans-serif;
   color: var(--muted); transition: background .18s, color .18s, box-shadow .18s;
   position: relative;
@@ -582,80 +582,66 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 }
 
 .cx-google-btn {
-  padding: 10px 12px;
+  padding: 9px 12px;
   border-radius: 11px;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   gap: 8px;
 }
 .cx-google-btn svg,
-.cx-google-btn img { width: 18px; height: 18px; flex: none; }
-.cx-auth-or { margin: 12px 0 2px; font-size: 11px; gap: 8px; }
+.cx-google-btn img { width: 17px; height: 17px; flex: none; }
+.cx-auth-or { margin: 10px 0 0; font-size: 11px; gap: 8px; }
 
-.cx-auth-form { display: grid; gap: 10px; }
+.cx-auth-form { display: grid; gap: 9px; }
 .cx-auth-form .cx-field { margin: 0; }
 .cx-auth-form .cx-field label { font-size: 10.5px; margin-bottom: 4px; }
 .cx-auth-form .cx-input-wrap {
-  min-height: 42px;
+  min-height: 40px;
   padding: 0 10px;
   border-radius: 10px;
 }
-.cx-auth-form .cx-input-wrap input { padding: 9px 0; font-size: 12.5px; }
-.cx-auth-submit { margin-top: 2px; height: 44px; border-radius: 11px; font-weight: 700; font-size: 12.5px; }
-.cx-auth-switch { margin: 14px 0 0; text-align: center; font-size: 11.5px; color: var(--muted); }
-.cx-auth-switch button { font-size: 11.5px; }
+.cx-auth-form .cx-input-wrap input { padding: 8px 0; font-size: 12px; }
+.cx-auth-submit { margin-top: 2px; height: 42px; border-radius: 11px; font-weight: 700; font-size: 12px; }
+.cx-auth-switch { margin: 12px 0 0; text-align: center; font-size: 11px; color: var(--muted); }
+.cx-auth-switch button { font-size: 11px; }
 
-/* Compact signup hint — replaces big warning card */
-.cx-signup-hint {
-  margin: 2px 0 0;
-  padding: 11px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  border: 1px solid rgba(168,85,247,.22);
-  border-radius: 11px;
-  background: linear-gradient(135deg, rgba(168,85,247,.10), rgba(99,102,241,.05));
-}
-.cx-signup-hint-text {
-  font-size: 11.5px;
-  line-height: 1.45;
-  color: var(--ink2);
-  flex: 1 1 160px;
-}
-.cx-signup-hint-text strong { color: #fff; font-weight: 650; }
-.cx-signup-hint-btn {
-  flex: 0 0 auto;
-  min-width: 132px;
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 8px;
-  font-size: 11.5px;
+/* Compact signup CTA — replaces big warning card */
+.cx-signup-cta {
+  margin: 3px 0 0;
+  height: 38px;
+  border-radius: 10px;
+  font-size: 12px;
   font-weight: 650;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(168,85,247,.95), rgba(99,102,241,.95));
+  box-shadow: 0 4px 14px rgba(168,85,247,.28), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.cx-signup-cta:hover {
+  filter: brightness(1.08);
 }
 
 @media (max-width: 430px) {
-  .cx-auth-shell { padding: 12px 12px calc(14px + env(safe-area-inset-bottom)); }
-  .cx-auth-layout { gap: 12px; }
-  .cx-auth-card { padding: 16px; border-radius: 16px; }
-  .cx-auth-card .cx-auth-back { margin-bottom: 10px; }
-  .cx-auth-head { gap: 9px; margin-bottom: 12px; }
-  .cx-auth-mark { width: 34px; height: 34px; border-radius: 10px; }
-  .cx-auth-card h1 { font-size: 16px; }
-  .cx-auth-card > .cx-auth-head p { font-size: 11px; }
-  .cx-auth-tabs { margin-bottom: 12px; border-radius: 9px; }
-  .cx-auth-tabs button { padding: 7px 0; font-size: 11.5px; border-radius: 7px; }
-  .cx-google-btn { padding: 9px 10px; font-size: 12px; }
-  .cx-auth-or { margin: 10px 0 0; font-size: 10.5px; }
-  .cx-auth-form { gap: 9px; }
-  .cx-auth-form .cx-input-wrap { min-height: 40px; border-radius: 9px; }
-  .cx-auth-form .cx-input-wrap input { padding: 8px 0; font-size: 12px; }
-  .cx-auth-submit { height: 42px; font-size: 12px; border-radius: 10px; }
-  .cx-auth-switch { margin-top: 12px; font-size: 11px; }
-  .cx-signup-hint { padding: 10px; border-radius: 10px; gap: 8px; }
-  .cx-signup-hint-text { font-size: 11px; flex: 1 1 100%; }
-  .cx-signup-hint-btn { width: 100%; height: 36px; }
+  .cx-auth-shell { padding: 10px 10px calc(12px + env(safe-area-inset-bottom)); }
+  .cx-auth-layout { gap: 10px; }
+  .cx-auth-card { padding: 14px; border-radius: 15px; }
+  .cx-auth-card .cx-auth-back { margin-bottom: 8px; }
+  .cx-auth-head { gap: 8px; margin-bottom: 10px; }
+  .cx-auth-mark { width: 32px; height: 32px; border-radius: 9px; }
+  .cx-auth-card h1 { font-size: 15px; }
+  .cx-auth-card > .cx-auth-head p { font-size: 10.5px; }
+  .cx-auth-tabs { margin-bottom: 10px; border-radius: 9px; }
+  .cx-auth-tabs button { padding: 6px 0; font-size: 11px; border-radius: 7px; }
+  .cx-google-btn { padding: 8px 10px; font-size: 11.5px; }
+  .cx-google-btn svg,
+  .cx-google-btn img { width: 16px; height: 16px; }
+  .cx-auth-or { margin: 9px 0 0; font-size: 10px; }
+  .cx-auth-form { gap: 8px; }
+  .cx-auth-form .cx-field label { font-size: 10px; }
+  .cx-auth-form .cx-input-wrap { min-height: 38px; border-radius: 9px; }
+  .cx-auth-form .cx-input-wrap input { padding: 7px 0; font-size: 11.5px; }
+  .cx-auth-submit { height: 40px; font-size: 11.5px; border-radius: 10px; }
+  .cx-auth-switch { margin-top: 10px; font-size: 10.5px; }
+  .cx-signup-cta { height: 36px; border-radius: 9px; font-size: 11.5px; }
 }
 
 @media (min-width: 900px) {
@@ -1243,13 +1229,4 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 .cx-email-check.is-google{ color:#c084fc; }
 .cx-email-check.is-ok{ color:#4ade80; }
 .cx-email-check.is-warn{ color:#fbbf24; white-space:normal; }
-.cx-signup-hint{
-  margin:2px 0 0; padding:12px 13px; display:grid; gap:10px;
-  border:1px solid rgba(251,191,36,.32); border-radius:14px;
-  background:linear-gradient(180deg, rgba(251,191,36,.12), rgba(251,191,36,.04));
-}
-.cx-signup-hint-body{ display:grid; gap:4px; }
-.cx-signup-hint-body strong{ font-size:13px; font-weight:650; color:#fde68a; }
-.cx-signup-hint-body span{ font-size:11.5px; line-height:1.5; color:var(--muted,#b9a8d8); }
-.cx-signup-hint-body b{ color:#e9ddff; font-weight:600; word-break:break-all; }
 .cx-captcha-loading{ color:var(--muted,#9d8fbb); text-align:center; }
