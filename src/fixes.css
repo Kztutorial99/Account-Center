@@ -1423,3 +1423,70 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   .cx-review{ padding:10px 11px; }
   .cx-review-submit{ padding:9px 14px; }
 }
+
+/* ─── Redesign katalog v3: kartu produk compact & premium ─── */
+.cx-catv2 .cx-cat-header { gap: 12px; margin-bottom: 14px; }
+.cx-catv2 .cx-cat-header h1 { letter-spacing: -.02em; }
+.cx-catv2 .cx-search { height: 40px; border-radius: 12px; }
+.cx-catv2 .cx-filterbar { margin-bottom: 16px; }
+.cx-catv2 .cx-filter-chips {
+  gap: 4px; padding: 3px; border: 1px solid var(--b1); border-radius: 999px;
+  background: color-mix(in srgb, var(--s1, #14141d) 80%, transparent);
+}
+.cx-catv2 .cx-filter-chip { border: 0; background: transparent; border-radius: 999px; height: 32px; padding: 0 14px; }
+.cx-catv2 .cx-filter-chip.is-active {
+  background: color-mix(in srgb, var(--indigo, #818cf8) 18%, transparent);
+  color: var(--ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--indigo, #818cf8) 40%, transparent);
+}
+.cx-catv2 .cx-filter-select > select { height: 34px; border-radius: 10px; }
+
+.cx-pc-v3 { gap: 8px; padding: 16px; border-radius: 16px; }
+.cx-pc-v3 .cx-pc-head { margin-bottom: 2px; }
+.cx-pc-v3 .cx-pc-plat { font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; }
+.cx-pc-v3 .cx-pc-title { font-size: 17px; line-height: 1.3; margin: 0; }
+.cx-pc-v3 .cx-pc-cond { margin: 0; font: 500 12px Inter, system-ui, sans-serif; color: var(--muted); }
+.cx-pc-v3 .cx-pc-meta {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  font: 500 12px Inter, system-ui, sans-serif; color: var(--muted);
+}
+.cx-pc-v3 .cx-pc-rate { display: inline-flex; align-items: center; gap: 4px; }
+.cx-pc-v3 .cx-pc-rate svg { color: var(--faint, #8b8ba7); }
+.cx-pc-v3 .cx-pc-rate svg.is-on { color: #fbbf24; fill: #fbbf24; }
+.cx-pc-v3 .cx-pc-rate strong { color: var(--ink2, #e6e6f0); font-weight: 700; }
+.cx-pc-v3 .cx-pc-sep { color: var(--faint, #8b8ba7); }
+.cx-pc-v3 .cx-pc-stockline.is-out { color: #fca5a5; }
+.cx-pc-v3 .cx-pc-foot {
+  margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--b1);
+  display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 10px;
+}
+.cx-pc-v3 .cx-pc-amount { font-size: 19px; }
+.cx-pc-v3 .cx-pc-cta { height: 40px; padding: 0 16px; font-size: 13px; width: auto; }
+
+/* ─── Spesifikasi produk ─── */
+.cx-spec { display: grid; gap: 0; margin: 0; }
+.cx-spec-row {
+  display: grid; grid-template-columns: 96px minmax(0,1fr); gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--b1);
+}
+.cx-spec-row:last-child { border-bottom: 0; }
+.cx-spec-row dt { font: 500 12px Inter, system-ui, sans-serif; color: var(--muted); margin: 0; }
+.cx-spec-row dd { margin: 0; font: 600 12.5px Inter, system-ui, sans-serif; color: var(--ink2, #e6e6f0); }
+
+/* ─── Sticky CTA mobile pada halaman produk ─── */
+@media (max-width: 640px) {
+  .cx-prodpage { padding-bottom: 132px; }
+  .cx-prodpage-buy.is-sticky {
+    position: sticky; bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    z-index: 30; border-radius: 16px;
+    background: color-mix(in srgb, var(--s1, #14141d) 92%, transparent);
+    backdrop-filter: blur(14px); box-shadow: 0 -6px 24px rgba(0,0,0,.35);
+    flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px;
+  }
+  .cx-prodpage-buy.is-sticky .cx-prodpage-total { flex: 1; min-width: 0; }
+  .cx-prodpage-buy.is-sticky .cx-btn { width: auto; flex: none; }
+  .cx-pc-v3 { padding: 14px; }
+  .cx-pc-v3 .cx-pc-title { font-size: 16px; }
+  .cx-pc-v3 .cx-pc-amount { font-size: 18px; }
+  .cx-pc-v3 .cx-pc-cta { height: 38px; padding: 0 14px; }
+  .cx-spec-row { grid-template-columns: 88px minmax(0,1fr); }
+}

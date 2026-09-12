@@ -102,7 +102,7 @@ export const CATALOG_SORTS = [
   { key: "name-asc", label: "Nama A-Z" },
 ];
 export const CATALOG_AGES = [
-  { key: "all", label: "Semua umur" },
+  { key: "all", label: "Semua" },
   { key: "fresh", label: "Fresh" },
   { key: "aged", label: "Aged" },
 ];
@@ -1955,8 +1955,8 @@ function App() {
             <main className="cx-container cx-cat-main" id="catalog" style={{ paddingTop: 20, paddingBottom: 64 }}>
         <div className="cx-section-header cx-section-header-stack cx-cat-header">
           <div>
-            <h1>Katalog akun</h1>
-            <p className="cx-section-sub">{data.loading ? "Memuat..." : `${products.length} produk tersedia`}</p>
+            <h1>Katalog</h1>
+            <p className="cx-section-sub">{data.loading ? "Memuat katalog..." : `${products.length} akun siap pakai · stok realtime`}</p>
           </div>
           <div className="cx-search">
             <Search size={13} />
@@ -3882,26 +3882,25 @@ function ProductRating({ product, canRate, onRate }) {
 }
 
 function ProductCard({ product, colorIdx, onBuy, onOpen }) {
+  void onBuy;
   const color = ACCENT_COLORS[colorIdx % ACCENT_COLORS.length];
   const accounts = Array.isArray(product.accounts) ? product.accounts : [];
-  const [selected, setSelected] = useState([]);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const toggle = (index) =>
-    setSelected((prev) => prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]);
-  const total = selected.length ? sumSelected(product, selected) : 0;
   const stock = Number(product.stock) || accounts.length;
   const age = product.ageInfo || productAgeInfo(product);
+  const prices = accounts.map((a) => accountPriceOf(a, product)).filter((v) => v > 0);
+  const minPrice = prices.length ? Math.min(...prices) : Number(product.price) || 0;
+  const maxPrice = prices.length ? Math.max(...prices) : minPrice;
+  const hasRange = maxPrice > minPrice;
+  const avg = ratingOf(product);
+  const count = ratingCountOf(product);
   return (
-    <article className="cx-pc">
+    <article className="cx-pc cx-pc-v3">
       <div className="cx-pc-head">
         <span className="cx-pc-plat" style={{ color }}>
-          <ProviderIcon type={product.loginType} size={15} />
+          <ProviderIcon type={product.loginType} size={14} />
           {product.loginType}
         </span>
-        <span className="cx-pc-tags">
-          {age.kind && <span className={`cx-age-badge is-${age.kind}`}>{age.label}</span>}
-          <span className={`cx-pc-stock${stock > 0 ? "" : " is-out"}`}>{stock > 0 ? `${stock} stok` : "Kosong"}</span>
-        </span>
+        {age.kind && <span className={`cx-age-badge is-${age.kind}`}>{age.label}</span>}
       </div>
 
       <h3 className="cx-pc-title">
@@ -3910,46 +3909,36 @@ function ProductCard({ product, colorIdx, onBuy, onOpen }) {
         ) : product.title}
       </h3>
 
-      <ProductStats product={product} />
+      <p className="cx-pc-cond">{age.label ? `${age.label} — Siap pakai` : "Siap pakai"}</p>
 
-
-
-      <button type="button" className="cx-pc-detail-toggle" onClick={() => (onOpen ? onOpen() : setDetailOpen(true))}>
-        Buka halaman produk <ArrowRight size={13} />
-      </button>
-
-      {accounts.length > 0 && (
-        <AccountPicker product={product} accounts={accounts} selected={selected} onToggle={toggle} pageSize={3} variant="v2" />
-      )}
-
-      <div className="cx-pc-foot">
-        {selected.length ? (
-          <div className="cx-pc-price">
-            <span className="cx-pc-amount">{formatPrice(total)}</span>
-            <small>{selected.length} akun dipilih</small>
-          </div>
-        ) : (
-          <div className="cx-pc-price is-empty">
-            <span className="cx-pc-hint">Pilih akun untuk melihat harga</span>
-          </div>
-        )}
-        <button
-          className={`cx-pc-cta${selected.length ? " is-ready" : ""}`}
-          disabled={selected.length === 0}
-          onClick={() => onBuy(selected)}
-          aria-label={`Beli ${product.title}`}
-        >
-          <span>{selected.length ? "Beli sekarang" : "Pilih akun"}</span>
-          <ArrowRight size={16} />
-        </button>
+      <div className="cx-pc-meta">
+        <span className="cx-pc-rate">
+          <Star size={12} className={count > 0 ? "is-on" : ""} />
+          {count > 0 ? <><strong>{avg.toFixed(1)}</strong> <small>· {count} ulasan</small></> : <small>Belum ada ulasan</small>}
+        </span>
+        <span className="cx-pc-sep">·</span>
+        <span className={`cx-pc-stockline${stock > 0 ? "" : " is-out"}`}>
+          {stock > 0 ? `${stock} stok tersedia` : "Stok habis"}
+        </span>
       </div>
 
-      <ProductDetailModal
-        product={product}
-        color={color}
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
-      />
+      <div className="cx-pc-foot">
+        <div className="cx-pc-price">
+          <span className="cx-pc-amount">
+            {minPrice > 0 ? (hasRange ? `${formatPrice(minPrice)}+` : formatPrice(minPrice)) : "Harga di detail"}
+          </span>
+          {soldOf(product) > 0 && <small>Terjual {soldOf(product)}</small>}
+        </div>
+        <button
+          type="button"
+          className="cx-pc-cta is-ready"
+          onClick={() => onOpen && onOpen()}
+          aria-label={`Lihat ${product.title}`}
+        >
+          <span>Pilih akun</span>
+          <ArrowRight size={15} />
+        </button>
+      </div>
     </article>
   );
 }
@@ -4012,28 +4001,24 @@ function ProductPage({ product, loading, navigate, onAdd, canRate, onRate }) {
         </span>
         <h1>{product.title}</h1>
         <ProductStats product={product} size={13} />
-        <div className="cx-prodpage-meta">
-          <span className={`cx-prodpage-chip${stock > 0 ? "" : " is-out"}`}>{stock > 0 ? `${stock} akun tersedia` : "Stok kosong"}</span>
-          <span className="cx-prodpage-chip">Kirim instan setelah bayar</span>
-          <span className="cx-prodpage-chip">Garansi login</span>
-        </div>
       </header>
 
 
 
       <section className="cx-prodpage-card">
-        <h2>Deskripsi produk</h2>
-        <ProductDescription text={product.description || "Akun digital siap digunakan. Detail login dikirim otomatis setelah pembayaran."} />
+        <h2>Tentang produk</h2>
+        <ProductDescription text={product.description || "Akun digital siap digunakan. Detail login dikirim otomatis setelah pembayaran."} compact />
       </section>
 
       <section className="cx-prodpage-card">
-        <h2>Yang kamu dapat</h2>
-        <ul className="cx-feature-list">
-          <li><Check size={13} /><span>Jumlah akun sesuai jumlah yang kamu beli</span></li>
-          <li><Check size={13} /><span>Tipe login: <strong style={{ color: "var(--ink2)" }}>{product.loginType}</strong></span></li>
-          <li><Check size={13} /><span>Detail login muncul otomatis di menu Pesanan</span></li>
-          <li><Check size={13} /><span>Penggantian akun bila gagal login pada pengecekan pertama</span></li>
-        </ul>
+        <h2>Spesifikasi</h2>
+        <dl className="cx-spec">
+          <div className="cx-spec-row"><dt>Login</dt><dd>{product.loginType}</dd></div>
+          <div className="cx-spec-row"><dt>Status</dt><dd>{productAgeInfo(product).label || "Siap pakai"}</dd></div>
+          <div className="cx-spec-row"><dt>Stok</dt><dd>{stock > 0 ? `${stock} tersedia` : "Kosong"}</dd></div>
+          <div className="cx-spec-row"><dt>Pengiriman</dt><dd>Otomatis setelah bayar</dd></div>
+          <div className="cx-spec-row"><dt>Garansi</dt><dd>Sesuai ketentuan</dd></div>
+        </dl>
       </section>
 
       {accounts.length > 0 && (
@@ -4047,7 +4032,7 @@ function ProductPage({ product, loading, navigate, onAdd, canRate, onRate }) {
         </section>
       )}
 
-      <div className="cx-prodpage-buy">
+      <div className="cx-prodpage-buy is-sticky">
         <div className="cx-prodpage-total">
           <small>{selected.length ? `${selected.length} akun dipilih` : "Belum ada akun dipilih"}</small>
           <strong>{formatPrice(total)}</strong>
