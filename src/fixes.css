@@ -1479,13 +1479,17 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 
 /* ─── Sticky CTA mobile pada halaman produk ─── */
 @media (max-width: 640px) {
-  .cx-prodpage { padding-bottom: 132px; }
+  .cx-prodpage { padding-bottom: 96px; }
+  .cx-app:not(.cx-land) .cx-prodpage { padding-bottom: 132px; }
   .cx-prodpage-buy.is-sticky {
-    position: sticky; bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    position: sticky; bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     z-index: 30; border-radius: 16px;
     background: color-mix(in srgb, var(--s1, #14141d) 92%, transparent);
     backdrop-filter: blur(14px); box-shadow: 0 -6px 24px rgba(0,0,0,.35);
     flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px;
+  }
+  .cx-app:not(.cx-land) .cx-prodpage-buy.is-sticky {
+    bottom: calc(var(--tab-h, 62px) + 6px + env(safe-area-inset-bottom, 0px));
   }
   .cx-prodpage-buy.is-sticky .cx-prodpage-total { flex: 1; min-width: 0; }
   .cx-prodpage-buy.is-sticky .cx-btn { width: auto; flex: none; }

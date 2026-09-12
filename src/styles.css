@@ -4076,8 +4076,11 @@ html { scroll-behavior: smooth; }
   .cx-prodpage { padding-bottom: 24px; }
   .cx-prodpage-buy.is-sticky {
     position: sticky;
-    bottom: calc(var(--tab-h) + 8px + env(safe-area-inset-bottom));
+    bottom: calc(12px + env(safe-area-inset-bottom));
     margin-bottom: 0;
+  }
+  .cx-app:not(.cx-land) .cx-prodpage-buy.is-sticky {
+    bottom: calc(var(--tab-h) + 8px + env(safe-area-inset-bottom));
   }
 }
 
