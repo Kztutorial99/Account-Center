@@ -28,15 +28,22 @@ const ensureSocialTables = once(async function ensureSocialTablesUncached(sql) {
   await sql`ALTER TABLE codexa_listing_reviews ADD COLUMN IF NOT EXISTS comment TEXT NOT NULL DEFAULT ''`;
 });
 
-/* Nama penulis ulasan dipersingkat: "Rizky Pratama" -> "Rizky P." */
+/* Nama penulis ulasan disensor bagian tengahnya: "Rizky Pratama" -> "Ri***y Pr***a" */
+function maskWord(word) {
+  const w = String(word || "");
+  if (!w) return "";
+  if (w.length <= 2) return w[0] + "*";
+  if (w.length === 3) return w[0] + "**" + w[2];
+  return w.slice(0, 2) + "***" + w.slice(-1);
+}
+
 function reviewerName(name, email) {
   const raw = String(name || "").trim();
   if (!raw) {
     const local = String(email || "").split("@")[0] || "Pengguna";
-    return local.slice(0, 3) + "***";
+    return maskWord(local);
   }
-  const parts = raw.split(/\s+/);
-  return parts.length > 1 ? `${parts[0]} ${parts[1][0].toUpperCase()}.` : parts[0];
+  return raw.split(/\s+/).slice(0, 2).map(maskWord).join(" ");
 }
 
 /* Ulasan terbaru (maks 30 per listing) untuk ditampilkan di halaman produk. */
