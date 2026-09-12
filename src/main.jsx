@@ -687,7 +687,7 @@ export function SessionSplash({ title = "Menyiapkan Akun Instan", subtitle = "Me
    atau elemen internal aplikasi.
 ════════════════════════════════════════════════════ */
 const LANDING_FAQ = [
-  ["Apa itu Akun Instan?", "Akun Instan adalah marketplace digital Indonesia yang menyediakan akun siap pakai, termasuk Google/Gmail, akun game, dan akun digital lainnya. Layanan Custom Email juga tersedia untuk membuat akun Gmail sesuai nama yang Anda inginkan. Setelah pembayaran terverifikasi, detail login langsung tersedia di menu Pesanan."],
+  ["Apa itu Akun Instan?", "Akun Instan adalah marketplace digital untuk akun siap pakai, Custom Email, dan berbagai akun digital lainnya. Pilih produk, lakukan pembayaran, lalu akses detail pesanan langsung dari akunmu."],
   ["Bagaimana cara membeli akun?", "Pilih produk pada katalog, lakukan checkout, selesaikan pembayaran, lalu detail akun akan terbuka otomatis di menu Pesanan."],
   ["Metode pembayaran apa yang tersedia?", "Pembayaran dapat dilakukan melalui QRIS, e-wallet (DANA, OVO, GoPay, ShopeePay), atau transfer bank melalui saldo Akun Instan."],
   ["Kapan akun saya dikirim?", "Setelah pembayaran terverifikasi, detail login langsung tersedia di akun Anda tanpa perlu menunggu konfirmasi admin."],
@@ -750,7 +750,7 @@ function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }
               <span className="cx-hero-pulse" /> Stok tersedia · {loading ? "memuat" : `${totalAccounts} akun`}
             </div>
             <div className="cx-kicker">AKUN INSTAN</div>
-            <h1>Akun digital,<br /><em>siap digunakan.</em></h1>
+            <h1>Akun digital.<br /><em>Siap pakai.</em></h1>
             <p className="cx-seo-only">Jual beli akun Gmail fresh (no-PVA), custom Gmail sesuai nama, akun Google, dan akun digital lainnya dengan harga murah dan proses instan.</p>
             <p className="cx-hero-sub">
               Pilih akun dari katalog nyata, bayar, dan detail login dikirim otomatis setelah pembayaran berhasil.
@@ -822,21 +822,19 @@ function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }
           <div className="cx-footer-top">
             <div className="cx-footer-brand">
               <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.webp" alt="Akun Instan" width="132" height="20" loading="lazy" decoding="async" />
-              <p>Akun digital siap pakai, dikirim otomatis.</p>
+              <p>Marketplace akun digital &amp; Custom Email.</p>
             </div>
             <nav className="cx-footer-col" aria-label="Navigasi">
               <strong>Navigasi</strong>
               <button onClick={() => navigate("katalog")}>Katalog</button>
               <button onClick={() => navigate("custom-email")}>Custom Email</button>
               <button onClick={() => navigate("help")}>Bantuan</button>
-              <button onClick={() => navigate("faq")}>FAQ</button>
             </nav>
             <nav className="cx-footer-col" aria-label="Informasi">
               <strong>Informasi</strong>
               <button onClick={() => navigate("terms")}>Syarat &amp; Ketentuan</button>
               <button onClick={() => navigate("privacy")}>Kebijakan Privasi</button>
               <button onClick={() => navigate("refund")}>Kebijakan Refund</button>
-              <button onClick={() => navigate("disclaimer")}>Disclaimer</button>
             </nav>
           </div>
           <p className="cx-footer-copy">© {new Date().getFullYear()} Akun Instan. Seluruh transaksi tunduk pada Syarat &amp; Ketentuan.</p>
@@ -2034,7 +2032,7 @@ function App() {
         <div className="cx-container cx-hero-inner">
           <div className="cx-hero-badge"><span className="cx-hero-pulse" /> Stok tersedia · {data.loading ? "memuat" : `${totalAccounts} akun`}</div>
           <div className="cx-kicker">AKUN INSTAN</div>
-          <h1>Akun digital,<br /><em>siap digunakan.</em></h1>
+          <h1>Akun digital.<br /><em>Siap pakai.</em></h1>
             <p className="cx-seo-only">Jual beli akun Gmail fresh (no-PVA), custom Gmail sesuai nama, akun Google, dan akun digital lainnya dengan harga murah dan proses instan.</p>
           <p className="cx-hero-sub">Pilih akun dari katalog nyata, bayar, dan detail login dikirim otomatis setelah pembayaran berhasil.</p>
           <div className="cx-hero-actions">
@@ -3529,25 +3527,19 @@ function StoreFooter({ navigate, guest }) {
             <button className="cx-brand" onClick={() => navigate("store")} style={{ fontSize: 13 }}>
               <img className="cx-brand-wordmark cx-brand-wordmark-footer" src="/akun-instan-wordmark.webp" alt="Akun Instan" width="132" height="20" loading="lazy" decoding="async" />
             </button>
-            <p>Stok dan katalog terhubung ke Neon Database.</p>
+            <p>Marketplace akun digital &amp; Custom Email.</p>
           </div>
           <nav className="cx-footer-col" aria-label="Navigasi">
             <strong>Navigasi</strong>
-            <button onClick={() => navigate("store")}>Beranda</button>
+            <button onClick={() => navigate("katalog")}>Katalog</button>
+            <button onClick={() => navigate("custom-email")}>Custom Email</button>
             <button onClick={() => navigate("help")}>Bantuan</button>
-            <button onClick={() => navigate("faq")}>FAQ</button>
-            <button onClick={() => navigate("cara-beli")}>Cara Beli</button>
-            {CATEGORY_SLUGS.map((s) => (
-              <button key={s} onClick={() => navigate(s)}>{CATEGORY_PAGES[s].label}</button>
-            ))}
-            {!guest && <button onClick={() => navigate("orders")}>Pesanan</button>}
           </nav>
           <nav className="cx-footer-col" aria-label="Informasi">
             <strong>Informasi</strong>
             <button onClick={() => navigate("terms")}>Syarat &amp; Ketentuan</button>
             <button onClick={() => navigate("privacy")}>Kebijakan Privasi</button>
             <button onClick={() => navigate("refund")}>Kebijakan Refund</button>
-            <button onClick={() => navigate("disclaimer")}>Disclaimer</button>
           </nav>
         </div>
         <p className="cx-footer-copy">© {new Date().getFullYear()} Akun Instan. Seluruh transaksi tunduk pada Syarat &amp; Ketentuan.</p>
