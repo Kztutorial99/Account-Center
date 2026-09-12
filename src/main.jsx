@@ -1956,7 +1956,7 @@ function App() {
         <div className="cx-section-header cx-section-header-stack cx-cat-header">
           <div>
             <h1>Katalog</h1>
-            <p className="cx-section-sub">{data.loading ? "Memuat katalog..." : `${products.length} akun siap pakai · stok realtime`}</p>
+            <p className="cx-section-sub">{data.loading ? "Memuat katalog..." : "Akun siap pakai · Stok realtime"}</p>
           </div>
           <div className="cx-search">
             <Search size={13} />
