@@ -26,6 +26,9 @@ const ensureSocialTables = once(async function ensureSocialTablesUncached(sql) {
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS codexa_listing_reviews_uniq ON codexa_listing_reviews (listing_id, user_id)`;
   /* Ulasan teks ditambahkan menyusul, jadi kolomnya dibuat idempotent. */
   await sql`ALTER TABLE codexa_listing_reviews ADD COLUMN IF NOT EXISTS comment TEXT NOT NULL DEFAULT ''`;
+  /* Ulasan yang dibuat dari panel admin menyimpan nama penulisnya sendiri. */
+  await sql`ALTER TABLE codexa_listing_reviews ADD COLUMN IF NOT EXISTS author_name TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE codexa_listing_reviews ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'user'`;
 });
 
 /* Nama penulis ulasan disensor bagian tengahnya: "Rizky Pratama" -> "Ri***y Pr***a" */
@@ -52,7 +55,8 @@ async function readReviewList(sql) {
   try {
     const rows = await sql`
       SELECT r.listing_id AS "listingId", r.id, r.rating, r.comment,
-             r.updated_at AS "updatedAt", u.name, u.email
+             r.updated_at AS "updatedAt",
+             COALESCE(NULLIF(r.author_name, ''), u.name) AS name, u.email
       FROM codexa_listing_reviews r
       LEFT JOIN codexa_users u ON u.id = r.user_id
       WHERE r.comment <> ''

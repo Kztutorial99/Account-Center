@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, LayoutDashboard, Wallet, ArrowUpRight, ArrowDownRight, BadgeCheck, Bell, Check, CircleHelp, Command, Eye, EyeOff, ChevronDown, FileText, LockKeyhole, LogIn, LogOut, Menu, MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingBag, Trash2, X, User, Mail, Copy, Sparkles, TrendingUp,
+  ArrowRight, LayoutDashboard, Wallet, ArrowUpRight, ArrowDownRight, BadgeCheck, Bell, Check, CircleHelp, Command, Eye, EyeOff, ChevronDown, FileText, LockKeyhole, LogIn, LogOut, Menu, MoreHorizontal, Package, PanelLeft, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingBag, Trash2, X, User, Mail, Copy, Sparkles, TrendingUp, Star,
 } from "lucide-react";
 import {
   ACCENT_COLORS, ActionBtn, AssistantWidget, agedInfoOf, AGED_DEFAULTS, jsonRequest, CUSTOM_EMAIL_FEE, CUSTOM_EMAIL_STATUS_LABEL, CUSTOM_GENDER_LABEL, ExpandableText, Field, InputWrap, LOGIN_TYPES, PRODUCT_TEMPLATES, ProductDescription, ProviderIcon, RowSkeleton, SessionSplash, Spinner, customEmailsOf, emptyListing, formatBirthDate, formatDate, formatPrice, useConfirmDialog, usePendingActions,
@@ -42,6 +42,12 @@ function AdminPage({ onBack, onNotice }) {
   const [aiNotice, setAiNotice]           = useState("");
   const [aiError, setAiError]             = useState("");
   const [testingAi, setTestingAi]         = useState(false);
+  const [reviews, setReviews]             = useState([]);
+  const [reviewSummary, setReviewSummary] = useState({ total: 0, user: 0, injected: 0, ratingAvg: 0 });
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewFilter, setReviewFilter]   = useState("all");
+  const [reviewListing, setReviewListing] = useState("all");
+  const [injectForm, setInjectForm]       = useState({ listingId: "all", count: 8, minRating: 4, maxRating: 5, spreadDays: 60 });
   const [orders, setOrders]               = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [refreshing, setRefreshing]       = useState(false);
@@ -67,7 +73,72 @@ function AdminPage({ onBack, onNotice }) {
     setActiveNav(label);
     setNavOpen(false);
     if (label === "Pengguna") setUserQuery("");
+    if (label === "Ulasan & Rating") loadReviews();
   };
+
+  /* ── Ulasan & rating: dibaca dari sub-resource /api/admin/products?resource=reviews ── */
+  const REVIEWS_API = "/api/admin/products?resource=reviews";
+
+  const applyReviewPayload = (p) => {
+    if (Array.isArray(p.reviews)) setReviews(p.reviews);
+    if (p.summary) setReviewSummary(p.summary);
+  };
+
+  const loadReviews = () => {
+    setReviewsLoading(true);
+    return jsonRequest(REVIEWS_API, { method: "GET" })
+      .then(applyReviewPayload)
+      .catch((e) => setApiError(e.message))
+      .finally(() => setReviewsLoading(false));
+  };
+
+  const injectReviews = async () => {
+    await runAction("review-inject", async () => {
+      try {
+        const p = await jsonRequest(REVIEWS_API, { method: "POST", body: JSON.stringify(injectForm) });
+        applyReviewPayload(p);
+        onNotice(`${p.inserted} ulasan ditambahkan ke ${p.listings} produk`);
+      } catch (e) { setApiError(e.message); }
+    });
+  };
+
+  const deleteReview = async (row) => {
+    const ok = await confirm({
+      title: "Hapus ulasan ini?",
+      description: "Rating produk akan langsung dihitung ulang tanpa ulasan ini.",
+      detail: `${row.author} · ${row.rating}★`,
+      confirmText: "Ya, hapus", danger: true,
+    });
+    if (!ok) return;
+    await runAction(`review-del-${row.id}`, async () => {
+      try {
+        const p = await jsonRequest(REVIEWS_API, { method: "DELETE", body: JSON.stringify({ id: row.id }) });
+        applyReviewPayload(p);
+        onNotice("Ulasan dihapus");
+      } catch (e) { setApiError(e.message); }
+    });
+  };
+
+  const clearInjectedReviews = async () => {
+    const scopeLabel = reviewListing === "all" ? "semua produk" : "produk terpilih";
+    const ok = await confirm({
+      title: "Hapus semua ulasan hasil inject?",
+      description: `Ulasan dari pembeli asli tetap aman. Hanya ulasan inject di ${scopeLabel} yang dihapus.`,
+      confirmText: "Ya, hapus", danger: true,
+    });
+    if (!ok) return;
+    await runAction("review-clear", async () => {
+      try {
+        const p = await jsonRequest(REVIEWS_API, { method: "DELETE", body: JSON.stringify({ scope: "injected", listingId: reviewListing }) });
+        applyReviewPayload(p);
+        onNotice(`${p.deleted} ulasan inject dihapus`);
+      } catch (e) { setApiError(e.message); }
+    });
+  };
+
+  const visibleReviews = reviews.filter((r) =>
+    (reviewFilter === "all" || r.source === reviewFilter)
+    && (reviewListing === "all" || r.listingId === reviewListing));
 
   const loadSettings = () =>
     jsonRequest("/api/admin/settings", { method: "GET" })
@@ -626,6 +697,7 @@ function AdminPage({ onBack, onNotice }) {
     { label: "Custom Email",shortcut: "⌘E", icon: Mail,           dot: orders.some((o) => customEmailsOf(o).length) },
     { label: "Harga Aged",  shortcut: "⌘G", icon: TrendingUp,     dot: agedCfg && agedCfg.enabled === false },
     { label: "Assisten",    shortcut: "⌘I", icon: Sparkles,       dot: !(aiCfg && aiCfg.enabled && aiCfg.hasKey) },
+    { label: "Ulasan & Rating", shortcut: "⌘R", icon: Star },
     { label: "Pengaturan",  shortcut: "⌘,", icon: Settings },
   ];
 
@@ -1430,6 +1502,107 @@ function AdminPage({ onBack, onNotice }) {
                   </div>
                 ))}
             </div>
+          )}
+
+                    {/* ══ ULASAN & RATING ══ */}
+          {activeNav === "Ulasan & Rating" && (
+            <>
+              <div className="cx-panel cx-review-inject">
+                <div className="cx-panel-header">
+                  <h3>Inject ulasan & rating</h3>
+                  <span className="cx-panel-sub">
+                    {reviewSummary.total} ulasan · {reviewSummary.user} dari pembeli · {reviewSummary.injected} hasil inject · rata-rata {reviewSummary.ratingAvg || 0}★
+                  </span>
+                  <div className="cx-panel-actions">
+                    <ActionBtn className="cx-btn cx-btn-ghost cx-btn-sm" onClick={loadReviews} busy={reviewsLoading} busyLabel="Memuat...">
+                      <RefreshCw size={11} /> Muat ulang
+                    </ActionBtn>
+                  </div>
+                </div>
+                <div className="cx-review-form">
+                  <Field label="Produk">
+                    <InputWrap>
+                      <select value={injectForm.listingId} onChange={(e) => setInjectForm((f) => ({ ...f, listingId: e.target.value }))}>
+                        <option value="all">Semua produk</option>
+                        {listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
+                      </select>
+                    </InputWrap>
+                  </Field>
+                  <Field label="Jumlah per produk">
+                    <InputWrap>
+                      <input type="number" min="1" max="200" value={injectForm.count}
+                        onChange={(e) => setInjectForm((f) => ({ ...f, count: e.target.value }))} />
+                    </InputWrap>
+                  </Field>
+                  <Field label="Rating minimum">
+                    <InputWrap>
+                      <select value={injectForm.minRating} onChange={(e) => setInjectForm((f) => ({ ...f, minRating: Number(e.target.value) }))}>
+                        {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} bintang</option>)}
+                      </select>
+                    </InputWrap>
+                  </Field>
+                  <Field label="Rating maksimum">
+                    <InputWrap>
+                      <select value={injectForm.maxRating} onChange={(e) => setInjectForm((f) => ({ ...f, maxRating: Number(e.target.value) }))}>
+                        {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} bintang</option>)}
+                      </select>
+                    </InputWrap>
+                  </Field>
+                  <Field label="Sebar tanggal (hari ke belakang)">
+                    <InputWrap>
+                      <input type="number" min="1" max="365" value={injectForm.spreadDays}
+                        onChange={(e) => setInjectForm((f) => ({ ...f, spreadDays: e.target.value }))} />
+                    </InputWrap>
+                  </Field>
+                </div>
+                <div className="cx-review-form-actions">
+                  <ActionBtn className="cx-btn cx-btn-primary cx-btn-sm" onClick={injectReviews} busy={isPending("review-inject")} busyLabel="Menambahkan...">
+                    <Plus size={11} /> Inject ulasan
+                  </ActionBtn>
+                  <ActionBtn className="cx-btn cx-btn-ghost cx-btn-sm" onClick={clearInjectedReviews} busy={isPending("review-clear")} busyLabel="Menghapus..."
+                    disabled={reviewSummary.injected === 0}>
+                    <Trash2 size={11} /> Hapus hasil inject
+                  </ActionBtn>
+                  <span className="cx-review-hint">Nama penulis otomatis disensor di halaman produk.</span>
+                </div>
+              </div>
+
+              <div className="cx-panel">
+                <div className="cx-panel-header">
+                  <h3>Semua ulasan</h3>
+                  <span className="cx-panel-sub">{visibleReviews.length} ulasan ditampilkan</span>
+                  <div className="cx-panel-actions cx-review-filters">
+                    <select value={reviewListing} onChange={(e) => setReviewListing(e.target.value)}>
+                      <option value="all">Semua produk</option>
+                      {listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
+                    </select>
+                    {[["all", "Semua"], ["user", "Pembeli"], ["injected", "Inject"]].map(([value, label]) => (
+                      <button key={value} className={`cx-chip${reviewFilter === value ? " active" : ""}`} onClick={() => setReviewFilter(value)}>{label}</button>
+                    ))}
+                  </div>
+                </div>
+                {reviewsLoading && reviews.length === 0
+                  ? <RowSkeleton rows={4} />
+                  : visibleReviews.length === 0
+                    ? <div style={{ padding: "20px 14px", color: "var(--faint)", fontSize: 11 }}>Belum ada ulasan.</div>
+                    : visibleReviews.map((r) => (
+                      <div key={r.id} className="cx-review-row">
+                        <div className="cx-review-main">
+                          <div className="cx-review-top">
+                            <strong>{r.author}</strong>
+                            <span className="cx-review-stars">{"★".repeat(r.rating)}<span className="dim">{"★".repeat(5 - r.rating)}</span></span>
+                            <span className={`cx-review-tag ${r.source}`}>{r.source === "injected" ? "Inject" : "Pembeli"}</span>
+                          </div>
+                          <small className="cx-review-meta">{r.listingTitle} · {formatDate(r.createdAt)}</small>
+                          {r.comment && <ExpandableText className="cx-review-text" text={r.comment} lines={2} limit={140} />}
+                        </div>
+                        <button className="cx-row-btn danger" onClick={() => deleteReview(r)} aria-label="Hapus ulasan" disabled={isPending(`review-del-${r.id}`)}>
+                          {isPending(`review-del-${r.id}`) ? <Spinner /> : <Trash2 size={11} />}
+                        </button>
+                      </div>
+                    ))}
+              </div>
+            </>
           )}
 
           {/* ══ PENGGUNA ══ */}

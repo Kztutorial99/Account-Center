@@ -1,6 +1,7 @@
 const { neon } = require("@neondatabase/serverless");
 const crypto = require("crypto");
 const { isAdmin } = require("./_auth");
+const { handleReviewRequest } = require("../_reviews");
 const { effectiveAccountPrice, agedInfo, readAgedConfig, DEFAULT_AGED_CONFIG } = require("../_aged");
 
 const LOGIN_TYPES = new Set(["Google", "Facebook", "Email/password", "Apple", "Microsoft", "Lainnya"]);
@@ -108,6 +109,11 @@ module.exports = async function handler(request, response) {
   if (!isAdmin(request)) return response.status(401).json({ error: "Admin login diperlukan" }); if (!process.env.DATABASE_URL) return response.status(500).json({ error: "DATABASE_URL is not configured" });
   try {
     const sql = neon(process.env.DATABASE_URL); await ensureTable(sql);
+    /* Sub-resource ulasan & rating dipegang di file yang sama supaya jumlah
+       serverless function Vercel tidak bertambah. */
+    if (((request.query && request.query.resource) || "") === "reviews") {
+      return await handleReviewRequest(sql, request, response);
+    }
     const agedCfg = await readAgedConfig(sql);
     if (request.method === "GET") { const rows = await sql`SELECT id, title, description, login_type AS "loginType", price, stock, status, credential_blob AS "credentialBlob", created_at AS "createdAt", updated_at AS "updatedAt" FROM codexa_account_listings ORDER BY created_at DESC`; return response.status(200).json({ products: rows.map((row) => view({ ...row, credentials: decryptCredentials(row.credentialBlob) }, agedCfg)) }); }
     if (request.method === "DELETE") { const id = text(bodyOf(request).id, 160) || text((request.query && request.query.id) || "", 160); if (!id) return response.status(400).json({ error: "id listing wajib diisi" }); const [row] = await sql`DELETE FROM codexa_account_listings WHERE id=${id} RETURNING id`; if (!row) return response.status(404).json({ error: "Listing tidak ditemukan" }); return response.status(200).json({ deleted: row }); }

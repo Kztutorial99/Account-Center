@@ -642,3 +642,41 @@
   }
   .cx-admin-shell .cx-user-modal .cx-ud-status-list strong { grid-column: 3; justify-self: end; }
 }
+
+/* ══ Ulasan & Rating ══ */
+.cx-admin-shell .cx-review-form {
+  display: grid; gap: 10px; padding: 12px 14px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.cx-admin-shell .cx-review-form select,
+.cx-admin-shell .cx-review-form input { width: 100%; }
+.cx-admin-shell .cx-review-form-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 0 14px 14px; border-bottom: 1px solid var(--line);
+}
+.cx-admin-shell .cx-review-hint { font-size: 10.5px; color: var(--faint); }
+.cx-admin-shell .cx-review-filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cx-admin-shell .cx-review-filters select {
+  background: rgba(255,255,255,.03); border: 1px solid var(--line); color: var(--text);
+  border-radius: 7px; font-size: 11px; padding: 4px 6px; max-width: 150px;
+}
+.cx-admin-shell .cx-review-filters .cx-chip { cursor: pointer; }
+.cx-admin-shell .cx-review-filters .cx-chip.active {
+  color: var(--text); border-color: rgba(139,92,246,.5); background: rgba(139,92,246,.14);
+}
+.cx-admin-shell .cx-review-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line);
+}
+.cx-admin-shell .cx-review-main { min-width: 0; flex: 1; }
+.cx-admin-shell .cx-review-top { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.cx-admin-shell .cx-review-top strong { font-size: 12px; }
+.cx-admin-shell .cx-review-stars { color: #fbbf24; font-size: 11px; letter-spacing: .5px; }
+.cx-admin-shell .cx-review-stars .dim { color: rgba(255,255,255,.16); }
+.cx-admin-shell .cx-review-tag {
+  font-size: 9.5px; padding: 2px 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted);
+}
+.cx-admin-shell .cx-review-tag.injected { color: #c4b5fd; border-color: rgba(139,92,246,.45); background: rgba(139,92,246,.12); }
+.cx-admin-shell .cx-review-tag.user { color: #4ade80; border-color: rgba(74,222,128,.35); background: rgba(74,222,128,.1); }
+.cx-admin-shell .cx-review-meta { display: block; margin-top: 3px; font-size: 10.5px; color: var(--faint); }
+.cx-admin-shell .cx-review-text { margin-top: 5px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
