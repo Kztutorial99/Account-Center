@@ -4481,7 +4481,7 @@ function AuthPage({ initialMode = "login", initialEmail = "", onAuthenticated, o
                 </InputWrap>
               </Field>
             )}
-            {mode === "login" && onForgotPassword && emailCheck !== "notfound" && (
+            {mode === "login" && onForgotPassword && (
               <button type="button" className="cx-auth-forgot" onClick={onForgotPassword}>
                 Lupa password?
               </button>
