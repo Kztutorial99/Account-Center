@@ -1523,3 +1523,39 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
   .cx-pc-v3 .cx-pc-cta { height: 38px; padding: 0 14px; }
   .cx-spec-row { grid-template-columns: 88px minmax(0,1fr); }
 }
+
+/* ── Label status stok di katalog (produk habis tetap tampil) ── */
+.cx-stock-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .01em;
+  border: 1px solid transparent; white-space: nowrap;
+}
+.cx-stock-badge.is-out { color: #ffb4b4; background: rgba(224,80,92,.14); border-color: rgba(224,80,92,.34); }
+.cx-stock-badge.is-soon { color: #cdb8ff; background: rgba(138,99,235,.16); border-color: rgba(138,99,235,.34); }
+.cx-pc.is-empty { opacity: .82; }
+.cx-pc.is-empty .cx-pc-amount { color: var(--ink2); }
+.cx-pc-cta.is-empty {
+  background: rgba(255,255,255,.06);
+  color: var(--ink2);
+  border: 1px solid rgba(255,255,255,.12);
+}
+.cx-pc-cta.is-empty:hover { background: rgba(255,255,255,.1); }
+.cx-stock-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin: 0 0 10px; padding: 9px 11px; border-radius: 12px;
+  font-size: 11.5px; line-height: 1.45; color: var(--ink2);
+  border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04);
+}
+.cx-stock-note strong { color: var(--ink); }
+.cx-stock-note.is-out { border-color: rgba(224,80,92,.3); background: rgba(224,80,92,.1); }
+.cx-stock-note.is-soon { border-color: rgba(138,99,235,.3); background: rgba(138,99,235,.1); }
+.cx-stock-note svg { flex: none; margin-top: 2px; }
+.cx-stock-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 18px 14px; text-align: center;
+  border: 1px dashed rgba(255,255,255,.16); border-radius: 14px;
+  color: var(--ink2);
+}
+.cx-stock-empty strong { color: var(--ink); font-size: 13px; }
+.cx-stock-empty p { margin: 0; font-size: 11.5px; line-height: 1.5; max-width: 34ch; }

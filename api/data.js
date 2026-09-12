@@ -361,7 +361,6 @@ module.exports = async function handler(request, response) {
     const rows = await sql`
       SELECT id, title, description, login_type AS "loginType", price, stock, status, credential_blob AS "credentialBlob"
       FROM codexa_account_listings
-      WHERE status = 'available'
       ORDER BY created_at DESC
     `;
 
@@ -397,6 +396,8 @@ module.exports = async function handler(request, response) {
         price: maskedAccounts.length ? Math.min(...maskedAccounts.map((a) => a.price)) : basePrice,
         stock: effectiveStock,
         status: row.status,
+        /* Listing tetap tampil di katalog meski habis; front-end memberi label. */
+        soldOut: effectiveStock <= 0 || row.status !== "available",
         accounts: maskedAccounts,
         soldCount: stats.soldCount,
         ratingAvg: stats.ratingAvg,
@@ -407,7 +408,7 @@ module.exports = async function handler(request, response) {
         maskedEmail: maskedAccounts[0] ? maskedAccounts[0].maskedEmail : "",
         maskedPassword: maskedAccounts[0] ? maskedAccounts[0].maskedPassword : "",
       };
-    }).filter((p) => p.status === "available" && p.stock > 0);
+    });
 
     return response.status(200).json({ products, source: "codexa_account_listings", generatedAt: new Date().toISOString() });
   } catch (error) {
