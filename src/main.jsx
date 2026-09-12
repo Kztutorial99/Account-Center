@@ -3215,18 +3215,40 @@ function FaqPage({ navigate, onAskAssistant }) {
         <section className="cx-help-section cx-faq-about">
           <h2>Apa itu Akun Instan?</h2>
           <p>
-            <strong>Akun Instan</strong> adalah marketplace digital Indonesia yang menyediakan akun
-            siap pakai, mulai dari Google/Gmail hingga akun game dan akun digital lainnya. Kami
-            juga melayani pembuatan <strong>Custom Email</strong>, yaitu akun Gmail dengan nama yang
-            Anda pilih sendiri. Prosesnya otomatis: isi saldo, pilih akun, lakukan pembayaran, lalu
-            detail login langsung tersedia di menu Pesanan tanpa perlu menunggu admin.
+            Akun Instan adalah marketplace digital untuk akun siap pakai, Custom Email, dan berbagai
+            akun digital lainnya. Pilih produk, lakukan pembayaran, lalu akses detail pesanan langsung
+            dari akunmu.
           </p>
-          <ul className="cx-faq-about-list">
-            <li><strong>Akun siap pakai</strong> — stok Gmail/Google dan akun digital lainnya real-time dengan harga transparan.</li>
-            <li><strong>Custom Email</strong> — pesan nama Gmail atau username sendiri, dibuatkan oleh tim kami.</li>
-            <li><strong>Instan &amp; bergaransi</strong> — akun terkirim otomatis dan dilindungi garansi login.</li>
-            <li><strong>Pembayaran lokal</strong> — QRIS, e-wallet, dan transfer bank melalui saldo Akun Instan.</li>
-          </ul>
+          <div className="cx-faq-about-grid">
+            <div className="cx-faq-about-card">
+              <div className="cx-faq-about-icon"><Package size={14} /></div>
+              <div className="cx-faq-about-text">
+                <strong>Akun siap pakai</strong>
+                <span>Stok real-time dengan harga transparan.</span>
+              </div>
+            </div>
+            <div className="cx-faq-about-card">
+              <div className="cx-faq-about-icon"><Mail size={14} /></div>
+              <div className="cx-faq-about-text">
+                <strong>Custom Email</strong>
+                <span>Pesan Gmail dengan nama atau username pilihanmu.</span>
+              </div>
+            </div>
+            <div className="cx-faq-about-card">
+              <div className="cx-faq-about-icon"><ShieldCheck size={14} /></div>
+              <div className="cx-faq-about-text">
+                <strong>Instan &amp; bergaransi</strong>
+                <span>Akun dikirim otomatis dan dilengkapi garansi login.</span>
+              </div>
+            </div>
+            <div className="cx-faq-about-card">
+              <div className="cx-faq-about-icon"><CreditCard size={14} /></div>
+              <div className="cx-faq-about-text">
+                <strong>Pembayaran lokal</strong>
+                <span>QRIS, e-wallet, dan transfer bank.</span>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="cx-help-section">

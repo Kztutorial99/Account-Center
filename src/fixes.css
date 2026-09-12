@@ -702,37 +702,68 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 /* ── FAQ: blok penjelasan "Apa itu Akun Instan" ── */
 .cx-faq-about p {
   margin: 0;
-  font-size: 13.5px;
-  line-height: 1.75;
+  font-size: 13px;
+  line-height: 1.65;
   color: var(--cx-text-muted, rgba(233, 228, 255, .78));
 }
 .cx-faq-about strong { color: var(--cx-text, #f4f1ff); font-weight: 650; }
-.cx-faq-about-list {
-  margin: 14px 0 0;
-  padding: 0;
-  list-style: none;
+.cx-faq-about-grid {
+  margin: 12px 0 0;
   display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
-.cx-faq-about-list li {
-  position: relative;
-  padding: 10px 12px 10px 30px;
+.cx-faq-about-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
   border-radius: 12px;
-  font-size: 12.8px;
-  line-height: 1.6;
-  color: var(--cx-text-muted, rgba(233, 228, 255, .78));
-  background: rgba(139, 92, 246, .07);
+  background: rgba(139, 92, 246, .08);
   border: 1px solid rgba(139, 92, 246, .16);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
-.cx-faq-about-list li::before {
-  content: "";
-  position: absolute;
-  left: 13px;
-  top: 17px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #a78bfa, #6d28d9);
+.cx-faq-about-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(167, 139, 250, .22), rgba(109, 41, 217, .18));
+  color: #c4b5fd;
+}
+.cx-faq-about-icon svg { width: 14px; height: 14px; }
+.cx-faq-about-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cx-faq-about-text strong {
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--cx-text, #f4f1ff);
+}
+.cx-faq-about-text span {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--cx-text-muted, rgba(233, 228, 255, .72));
+}
+
+@media (max-width: 430px) {
+  .cx-faq-about-grid { gap: 7px; }
+  .cx-faq-about-card { padding: 9px; border-radius: 11px; }
+  .cx-faq-about-icon { width: 24px; height: 24px; border-radius: 7px; }
+  .cx-faq-about-icon svg { width: 13px; height: 13px; }
+  .cx-faq-about-text strong { font-size: 11.5px; }
+  .cx-faq-about-text span { font-size: 11px; line-height: 1.45; }
+}
+@media (max-width: 360px) {
+  .cx-faq-about-grid { grid-template-columns: 1fr; gap: 6px; }
+  .cx-faq-about-card { padding: 8px 10px; }
 }
 
 /* teks bantu mesin pencari (tidak tampil) */
