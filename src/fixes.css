@@ -1387,6 +1387,25 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 
 /* ─── Ulasan produk dari user ─── */
 .cx-reviews{ display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.cx-reviews-wrap{ position:relative; overflow:hidden; margin-bottom:12px; }
+.cx-reviews-wrap .cx-reviews{ margin-bottom:0; }
+.cx-reviews-slide{ will-change:transform, opacity; }
+.cx-reviews-slide.from-right{ animation:cxReviewInRight .34s cubic-bezier(.22,.8,.3,1) both; }
+.cx-reviews-slide.from-left{ animation:cxReviewInLeft .34s cubic-bezier(.22,.8,.3,1) both; }
+@keyframes cxReviewInRight{ from{ opacity:0; transform:translateX(22px); } to{ opacity:1; transform:none; } }
+@keyframes cxReviewInLeft{ from{ opacity:0; transform:translateX(-22px); } to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce){ .cx-reviews-slide{ animation:none; } }
+.cx-review-nav{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:10px; }
+.cx-review-nav-info{ font-size:11px; opacity:.55; font-variant-numeric:tabular-nums; }
+.cx-review-nav-btn{
+  width:30px; height:30px; border-radius:50%; display:grid; place-items:center;
+  font-size:16px; line-height:1; cursor:pointer; color:#e9e3ff;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+  transition:border-color .18s ease, transform .18s ease;
+}
+.cx-review-nav-btn:hover{ border-color:rgba(167,139,250,.5); transform:translateY(-1px); }
+.cx-review-nav-btn:active{ transform:translateY(0); }
 .cx-review{
   padding:11px 12px; border-radius:14px;
   border:1px solid rgba(255,255,255,.07);

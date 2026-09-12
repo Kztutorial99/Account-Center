@@ -39,55 +39,69 @@ const USERNAMES = [
   "bagusprtm", "kiky_id", "mayaa.dw", "ilhm.ar", "adit_prj", "vnnzhr", "gilanggg",
 ];
 
-/* Pola komentar per level rating, ditulis dengan gaya bahasa pembeli Indonesia. */
-const COMMENTS = {
-  5: [
-    "Akun langsung masuk, prosesnya cepat banget. Mantap!",
-    "Baru bayar sebentar detail akun udah muncul di menu pesanan. Aman.",
-    "Sesuai deskripsi, login lancar tanpa kendala. Recommended.",
-    "Udah beli ketiga kali di sini, selalu aman dan gak pernah bermasalah.",
-    "Pelayanan cepat, harga masih masuk kantong. Lanjut langganan.",
-    "Login pertama langsung bisa ganti data. Puas banget.",
-    "Adminnya responsif, akunnya normal semua. Terima kasih!",
-    "Prosesnya otomatis, gak perlu nunggu lama. Top!",
-    "Kualitas akun bagus, gak ada tanda-tanda kena limit.",
-    "Worth it banget buat harganya, akun sehat.",
-  ],
-  4: [
-    "Akun oke, cuma sempat bingung di awal langkah pembayaran.",
-    "Bagus, sesuai deskripsi. Semoga stoknya lebih banyak lagi.",
-    "Aman dipakai, prosesnya cepat walau sempat delay sedikit.",
-    "Lancar sih, tapi saya harap keterangan produknya lebih detail.",
-    "Puas dengan akunnya. Minus sedikit karena harus verifikasi ulang.",
-    "Sesuai ekspektasi. Kalau ada promo lagi saya beli lagi.",
-    "Login normal, cuma perlu waktu buat setting awal.",
-    "Overall bagus, pengiriman detail akun cukup cepat.",
-  ],
-  3: [
-    "Akunnya jalan, tapi proses awalnya agak lama dari perkiraan.",
-    "Cukup oke buat harga segini, ada beberapa hal yang perlu diatur manual.",
-    "Standar. Berfungsi normal tapi belum ada yang bikin wow.",
-    "Bisa dipakai, sempat perlu tanya admin dulu buat langkahnya.",
-    "Lumayan, semoga next stoknya lebih stabil.",
-  ],
-  2: [
-    "Akun akhirnya bisa dipakai, tapi sempat gagal login beberapa kali.",
-    "Butuh bantuan admin dulu baru beres. Agak repot.",
-    "Kurang sesuai harapan, keterangannya perlu diperjelas.",
-  ],
-  1: [
-    "Awalnya gak bisa login, untung dibantu admin sampai selesai.",
-    "Prosesnya bikin bingung, informasinya kurang jelas.",
-  ],
+/* ── Generator komentar: disusun dari beberapa potongan kalimat supaya hasilnya
+   tidak pernah sama persis dan terbaca seperti ketikan pembeli asli. ── */
+const OPEN = {
+  5: ["akunnya aman", "prosesnya cepet", "mantap sih", "puas banget", "lancar jaya",
+      "sesuai deskripsi", "gercep banget", "recommended", "top deh", "worth it"],
+  4: ["lumayan cepet", "oke sih", "akunnya normal", "bagus", "sesuai ekspektasi",
+      "aman kok", "cukup memuaskan"],
+  3: ["standar aja", "lumayan", "bisa dipakai", "ya cukup lah", "biasa aja sih"],
+  2: ["agak lama sih", "sempet kendala", "kurang sesuai ekspektasi"],
+  1: ["awalnya bermasalah", "sempet gagal login"],
 };
-
-const SUFFIX = ["", "", "", "", " 👍", " 🔥", " Makasih ya!", " Semoga stok terus ada."];
+const BODY = {
+  5: ["langsung bisa login", "detail akun langsung muncul di pesanan", "gak nunggu lama",
+      "adminnya fast respon", "harganya masuk akal", "udah beli beberapa kali di sini",
+      "ga ada kendala sama sekali", "settingnya gampang"],
+  4: ["cuma nunggu bentar", "tinggal verifikasi dikit", "infonya bisa lebih lengkap lagi",
+      "loginnya normal", "stoknya semoga nambah"],
+  3: ["perlu setting manual dikit", "harus tanya admin dulu", "prosesnya agak lama dari perkiraan"],
+  2: ["harus chat admin dulu baru beres", "sempet bingung langkahnya"],
+  1: ["untung dibantu admin sampai kelar", "infonya kurang jelas buat pemula"],
+};
+const CLOSE = {
+  5: ["makasih", "lanjut langganan", "bakal beli lagi", "sukses terus", "", "", ""],
+  4: ["overall oke", "makasih", "", "", ""],
+  3: ["semoga next lebih cepet", "", ""],
+  2: ["semoga diperbaiki", ""],
+  1: ["tolong diperbaiki ya", ""],
+};
+const TYPOS = [
+  [/\bakunnya\b/, "akun nya"],
+  [/\bcepet\b/, "cepat"],
+  [/\bgak\b/, "ga"],
+  [/\bbanget\b/, "bgt"],
+  [/\bsudah\b/, "udh"],
+];
 
 function randInt(min, max) {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 function pick(list) {
   return list[Math.floor(Math.random() * list.length)];
+}
+function chance(p) {
+  return Math.random() < p;
+}
+
+/* Susun komentar acak: panjang, tanda baca, dan gaya huruf ikut divariasikan. */
+function randomComment(rating) {
+  const level = OPEN[rating] ? rating : 4;
+  const parts = [pick(OPEN[level])];
+  if (chance(0.82)) parts.push(pick(BODY[level]));
+  if (chance(0.45)) {
+    const close = pick(CLOSE[level]);
+    if (close) parts.push(close);
+  }
+  let text = parts.join(chance(0.5) ? ", " : ". ");
+  for (const [re, rep] of TYPOS) {
+    if (chance(0.12)) text = text.replace(re, rep);
+  }
+  if (chance(0.55)) text = text.charAt(0).toUpperCase() + text.slice(1);
+  if (chance(0.6)) text += chance(0.25) ? "!" : ".";
+  if (chance(0.08)) text += chance(0.5) ? " 👍" : " 🙏";
+  return text.trim().slice(0, 600);
 }
 
 function randomName() {
@@ -105,11 +119,6 @@ function randomRating(min, max) {
     for (let i = 0; i < (weights[star] || 1); i += 1) pool.push(star);
   }
   return pool.length ? pick(pool) : max;
-}
-
-function randomComment(rating) {
-  const base = pick(COMMENTS[rating] || COMMENTS[4]);
-  return `${base}${pick(SUFFIX)}`.trim().slice(0, 600);
 }
 
 /* Sebar tanggal ulasan ke belakang supaya tidak semuanya muncul di jam yang sama. */
@@ -182,12 +191,18 @@ async function injectReviews(sql, options) {
 
   let inserted = 0;
   for (const target of targets) {
+    const used = new Set();
     for (let i = 0; i < count; i += 1) {
       const rating = randomRating(minRating, maxRating);
+      let comment = randomComment(rating);
+      for (let tries = 0; tries < 6 && used.has(comment); tries += 1) comment = randomComment(rating);
+      used.add(comment);
+      /* created_at = updated_at supaya tidak terlihat pernah "diedit" sistem. */
+      const at = randomDate(spreadDays);
       await sql`
         INSERT INTO codexa_listing_reviews (id, listing_id, user_id, rating, comment, author_name, source, created_at, updated_at)
         VALUES (${crypto.randomUUID()}, ${target}, ${`inject:${crypto.randomUUID()}`}, ${rating},
-                ${randomComment(rating)}, ${randomName()}, 'injected', ${randomDate(spreadDays)}, ${randomDate(spreadDays)})
+                ${comment}, ${randomName()}, 'injected', ${at}, ${at})
       `;
       inserted += 1;
     }

@@ -3882,14 +3882,24 @@ function ProductRating({ product, canRate, onRate }) {
   const myComment = product.myComment || "";
   const [draftStars, setDraftStars] = useState(mine);
   const [draft, setDraft] = useState(myComment);
-  const [showAll, setShowAll] = useState(false);
-  useEffect(() => { setDraftStars(mine); setDraft(myComment); setShowAll(false); }, [product.id, mine, myComment]);
+  const [page, setPage] = useState(0);
+  const [slideDir, setSlideDir] = useState(1);
+  useEffect(() => { setDraftStars(mine); setDraft(myComment); setPage(0); }, [product.id, mine, myComment]);
 
   const avg = ratingOf(product);
   const count = ratingCountOf(product);
   const sold = soldOf(product);
   const reviews = Array.isArray(product.reviews) ? product.reviews : [];
-  const visible = showAll ? reviews : reviews.slice(0, 3);
+  const PER_PAGE = 5;
+  const pageCount = Math.max(1, Math.ceil(reviews.length / PER_PAGE));
+  const safePage = Math.min(page, pageCount - 1);
+  const visible = reviews.slice(safePage * PER_PAGE, safePage * PER_PAGE + PER_PAGE);
+  const goPage = (next) => {
+    const target = (next + pageCount) % pageCount;
+    if (target === safePage) return;
+    setSlideDir(next > safePage ? 1 : -1);
+    setPage(target);
+  };
   const active = hover || draftStars;
   const MAX = 600;
 
@@ -3916,24 +3926,45 @@ function ProductRating({ product, canRate, onRate }) {
       </div>
 
       {reviews.length > 0 && (
-        <div className="cx-reviews">
-          {visible.map((review) => (
-            <article key={review.id} className="cx-review">
-              <div className="cx-review-top">
-                <span className="cx-review-avatar" aria-hidden="true">{(review.author || "?").charAt(0).toUpperCase()}</span>
-                <span className="cx-review-who">
-                  <strong>{review.author}</strong>
-                  <small>{reviewDate(review.createdAt)}</small>
-                </span>
-                <StarRow value={review.rating} size={11} />
-              </div>
-              <p className="cx-review-text">{review.comment}</p>
-            </article>
-          ))}
-          {reviews.length > 3 && (
-            <button type="button" className="cx-review-more" onClick={() => setShowAll((v) => !v)}>
-              {showAll ? "Tampilkan lebih sedikit" : `Lihat semua ${reviews.length} ulasan`}
-            </button>
+        <div className="cx-reviews-wrap">
+          <div
+            className={`cx-reviews cx-reviews-slide ${slideDir > 0 ? "from-right" : "from-left"}`}
+            key={safePage}
+          >
+            {visible.map((review) => (
+              <article key={review.id} className="cx-review">
+                <div className="cx-review-top">
+                  <span className="cx-review-avatar" aria-hidden="true">{(review.author || "?").charAt(0).toUpperCase()}</span>
+                  <span className="cx-review-who">
+                    <strong>{review.author}</strong>
+                    <small>{reviewDate(review.createdAt)}</small>
+                  </span>
+                  <StarRow value={review.rating} size={11} />
+                </div>
+                <p className="cx-review-text">{review.comment}</p>
+              </article>
+            ))}
+          </div>
+          {pageCount > 1 && (
+            <div className="cx-review-nav">
+              <button
+                type="button"
+                className="cx-review-nav-btn"
+                aria-label="Ulasan sebelumnya"
+                onClick={() => goPage(safePage - 1)}
+              >
+                ‹
+              </button>
+              <span className="cx-review-nav-info">{safePage + 1} / {pageCount}</span>
+              <button
+                type="button"
+                className="cx-review-nav-btn"
+                aria-label="Ulasan berikutnya"
+                onClick={() => goPage(safePage + 1)}
+              >
+                ›
+              </button>
+            </div>
           )}
         </div>
       )}
