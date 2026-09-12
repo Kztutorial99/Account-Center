@@ -841,6 +841,26 @@ function PublicLanding({ navigate, onLogin, onRegister, totalAccounts, loading }
       <PublicTopbar navigate={navigate} onLogin={onLogin} onRegister={onRegister} activePage="store" />
 
       <main>
+        <section className="cx-hero cx-hero-modern">
+          <div className="cx-hero-glow" aria-hidden="true" />
+          <div className="cx-container cx-hero-inner">
+            <div className="cx-hero-badge">
+              <span className="cx-hero-pulse" />
+              Stok tersedia · {loading ? "memuat" : `${totalAccounts} akun`}
+            </div>
+            <div className="cx-kicker">AKUN INSTAN</div>
+            <h1>Akun digital.<br /><em>Siap pakai.</em></h1>
+            <p className="cx-hero-sub">Pilih akun dari katalog nyata, bayar, dan detail login dikirim otomatis setelah pembayaran berhasil.</p>
+            <div className="cx-hero-actions">
+              <button className="cx-btn cx-btn-primary" onClick={() => navigate("katalog")}>
+                Lihat Katalog <ArrowRight size={13} />
+              </button>
+              <button className="cx-btn cx-btn-ghost" onClick={() => navigate("help")}>
+                Cara Beli
+              </button>
+            </div>
+          </div>
+        </section>
         <HomeBannerCarousel />
         <h1 className="cx-seo-only">Akun Instan — akun digital siap pakai dan Custom Gmail</h1>
         <p className="cx-seo-only">Jual beli akun Gmail fresh (no-PVA), custom Gmail sesuai nama, akun Google, dan akun digital lainnya dengan harga murah dan proses instan.</p>
