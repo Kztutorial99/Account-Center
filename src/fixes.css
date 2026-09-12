@@ -1261,3 +1261,56 @@ body.cx-drawer-open .cx-ai-fab { display: none !important; }
 .cx-email-check.is-ok{ color:#4ade80; }
 .cx-email-check.is-warn{ color:#fbbf24; white-space:normal; }
 .cx-captcha-loading{ color:var(--muted,#9d8fbb); text-align:center; }
+
+/* ═══ FINAL UI POLISH — homepage mobile (compact & premium) ═══ */
+
+/* Footer: kolom brand + Navigasi + Informasi, readable di mobile */
+.cx-footer-col{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0; }
+.cx-footer-col strong{ font-size:11px; font-weight:600; color:var(--ink); letter-spacing:.01em; margin-bottom:2px; }
+.cx-footer-col button{
+  font-size:11px; color:var(--muted); background:transparent; border:none; cursor:pointer;
+  padding:2px 0; text-align:left; transition:color .15s; white-space:normal;
+}
+.cx-footer-col button:hover{ color:var(--indigo3); }
+
+@media (max-width: 719px){
+  .cx-footer{ padding:14px 0; }
+  .cx-footer-top{
+    grid-template-columns:1fr 1fr; align-items:start; gap:14px 20px;
+  }
+  .cx-footer-brand{ grid-column:1 / -1; flex-direction:column; align-items:flex-start; gap:6px; }
+  .cx-footer-brand p{ max-width:240px; font-size:11px; line-height:1.5; }
+  .cx-footer-copy{ padding-top:10px; font-size:10.5px; line-height:1.5; }
+}
+@media (min-width: 720px){
+  .cx-footer-top{ grid-template-columns:1fr auto auto; align-items:start; gap:32px; }
+  .cx-footer-col button{ font-size:11.5px; }
+}
+
+/* Hero: lebih compact, badge lebih kecil */
+.cx-hero{ padding:52px 0 44px; }
+.cx-hero-badge{ padding:4px 11px; font-size:10.5px; margin-bottom:12px; }
+.cx-hero-sub{ font-size:13.5px; line-height:1.65; margin-bottom:22px; }
+
+/* Section spacing: -10–15% */
+.cx-land-section{ margin:28px auto; }
+.cx-land-h2{ font-size:19px; margin-bottom:12px; }
+.cx-land-card{ padding:14px; }
+.cx-land-card h3{ margin:8px 0 5px; font-size:14.5px; }
+.cx-land-card p{ font-size:12.5px; line-height:1.55; }
+.cx-land-steps li{ padding:12px 12px 12px 48px; }
+.cx-land-steps li::before{ left:12px; top:12px; }
+.cx-land-faq-item{ padding:11px 13px; }
+
+/* Mobile 360–430px */
+@media (max-width: 719px){
+  .cx-hero{ padding:34px 0 28px; }
+  .cx-hero h1{ font-size:clamp(27px,8.8vw,38px); }
+  .cx-hero-sub{ font-size:13px; margin-bottom:18px; }
+  .cx-kicker{ margin-bottom:12px; }
+  .cx-land-section{ margin:22px auto; }
+  .cx-land-grid{ gap:10px; }
+  .cx-land-steps{ gap:8px; }
+  .cx-benefits{ gap:12px; padding:14px 0 0; }
+  .cx-ce-promo-wrap{ margin-top:20px; }
+}
